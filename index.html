@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>EstudiandoAndo · Aprendizaje adaptativo con IA</title>
-  <meta name="description" content="Prototipo de plataforma educativa adaptativa: un tutor de IA que guía con preguntas y pistas, funciona con conectividad limitada y ayuda al docente a detectar dificultades a tiempo.">
+  <meta name="description" content="Prototipo con guía de navegación accesible y aprendizaje adaptativo: un tutor de IA que guía con preguntas y pistas, funciona con conectividad limitada y ayuda al docente a detectar dificultades a tiempo.">
   <meta name="theme-color" content="#0B2F45">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230A5E88'/%3E%3Ctext x='32' y='44' font-size='36' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EE%3C/text%3E%3C/svg%3E">
@@ -1342,6 +1342,77 @@ html[data-simple="on"] .story-grid,.dashboard-charts { align-items: start; }
   .group-graph-link strong { font-size: .8rem; }
 }
 
+
+/* Navegación asistida: ayuda siempre en la misma posición y guía con teclado. */
+.guia-fab { position:fixed; right:1rem; bottom:calc(var(--tabbar-h) + 1.25rem + env(safe-area-inset-bottom)); z-index:42; min-height:3rem; display:inline-flex; align-items:center; gap:.5rem; padding:.625rem .9rem; border:2px solid #fff; border-radius:999px; background:#063A55; color:#fff; font-weight:700; font-size:.94rem; box-shadow:0 7px 26px #0B2F4570; cursor:pointer; max-width:calc(100vw - 2rem) }
+.guia-fab:hover {background:#07577e;color:#fff}
+.guia-fab:focus-visible{outline:3px solid #f2b134; outline-offset:3px; box-shadow:0 0 0 6px #063A55}
+.guia-current { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem .75rem; font-size:.875rem; color:var(--muted) }
+.guia-current button { background:none; border:0; text-decoration:underline; color:var(--brand); font:inherit; font-weight:700; cursor:pointer; min-height:2.75rem; padding:.25rem .1rem }
+.guia-choices {display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%, 13rem),1fr)); gap:.5rem}
+.guia-choices button {border:1px solid var(--line-strong); border-radius:var(--r-md); background:var(--surface); color:var(--ink); padding:.65rem .8rem; min-height:3rem; text-align:left; font-weight:700; cursor:pointer}
+.guia-choices button:hover,.guia-choices button:focus-visible {background:var(--brand-soft);border-color:var(--brand)}
+.guia-answer {border:2px solid var(--brand); border-radius:var(--r-md); padding:1rem; background:var(--brand-soft); color:var(--ink)}
+.guia-answer h3 {margin-bottom:.4rem}
+.guia-answer p + p {margin-top:.5rem}
+.guia-answer .cluster {margin-top:.85rem}
+.guia-steps {padding-left:1.4rem; margin:.6rem 0; display:grid; gap:.35rem}
+.guia-eyebrow {font-weight:700;color:var(--brand-ink);font-size:.88rem}
+.guia-tip {background:var(--brand-soft); color:var(--ink); border:2px solid var(--brand); padding:.75rem 1rem; border-radius:var(--r-md); display:flex; gap:.7rem; flex-wrap:wrap; align-items:center}
+.guia-tip > div{flex:1 1 14rem; min-width:0}
+.guia-tip strong {display:block}
+.guia-highlight {outline:4px solid #C05A0C!important; outline-offset:5px!important; box-shadow:0 0 0 8px var(--surface),0 0 0 11px #C05A0C!important; border-radius:.35rem; position:relative; z-index:2; scroll-margin-top:7rem }
+.guia-status {font-size:.875rem;color:var(--muted)}
+@media(min-width:60em) {.guia-fab{bottom:1.5rem; right:1.5rem}}
+@media(max-width:360px){.guia-fab{font-size:.86rem; padding:.6rem .8rem}}
+@media(prefers-reduced-motion:reduce){.guia-fab,.guia-highlight{transition:none!important;animation:none!important}}
+
+  
+/* --- Gráficas combinadas: barras + línea, accesibles sin depender del color --- */
+.trend-bar{fill:#4B3A9E;opacity:.92;stroke:var(--surface);stroke-width:1px}
+.trend-bar--early{fill:#0A5E88}
+.trend-bar--middle{fill:#6045A7}
+.trend-bar--alt{fill:#A65112}
+.trend-bar--latest{fill:#087A63;opacity:1;stroke:var(--ink);stroke-width:1.4}
+.trend-path{stroke:#082C44;stroke-width:3.5;stroke-dasharray:7 4;paint-order:stroke;filter:drop-shadow(0 1px 0 #fff)}
+.trend-point{fill:#FFF;stroke:#082C44;stroke-width:3}
+.chart-mixed-key{display:flex;gap:.5rem 1.1rem;flex-wrap:wrap;align-items:center;font-size:.875rem;color:var(--ink-2)}
+.chart-mixed-key>span{display:inline-flex;align-items:center;gap:.4rem}
+.chart-mixed-key i{display:inline-block;flex:none}
+.chart-key-bar{background:#6045A7;width:13px;height:16px;border-radius:3px;border:1px solid #332467}
+.chart-key-line{height:0;width:24px;border-top:3px dashed #082C44}
+.chart-key-now{background:#087A63;width:13px;height:16px;border-radius:3px;border:1px solid #02442F}
+.group-bar-tone-0{background:#0A5E88!important}.group-bar-tone-1{background:#6045A7!important}.group-bar-tone-2{background:#087A63!important}
+:root[data-theme="dark"] .trend-path{stroke:#F0C95C;filter:none}
+:root[data-theme="dark"] .trend-point{stroke:#F0C95C;fill:#14232C}
+:root[data-theme="dark"] .chart-key-line{border-color:#F0C95C}
+:root[data-theme="contrast"] .trend-bar{fill:#fff;stroke:#000;stroke-width:2}
+:root[data-theme="contrast"] .trend-bar--latest{fill:#000;stroke:#000}
+:root[data-theme="contrast"] .trend-path{stroke:#000;stroke-width:4.5;filter:none}
+:root[data-theme="contrast"] .trend-point{stroke:#000;fill:#FFD400}
+@media(forced-colors:active){.trend-bar{fill:Highlight;stroke:CanvasText;stroke-width:2}.trend-path{stroke:CanvasText;filter:none}.trend-point{fill:Canvas;stroke:CanvasText}.chart-key-bar,.chart-key-now{border-color:CanvasText}}
+/* --- Guía de ruta contextual y paso a paso --- */
+.guia-path{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;list-style:none;padding:0;margin:.4rem 0 0}
+.guia-path li{padding:.25rem .5rem;border:1px solid var(--line-strong);border-radius:.45rem;background:var(--surface);font-size:.875rem;font-weight:700}
+.guia-path li:not(:last-child)::after{content:'→';padding-inline-start:.55rem;color:var(--brand-ink)}
+.guia-plan{padding:0 0 0 1.5rem;display:grid;gap:.75rem;counter-reset:guia}
+.guia-plan>li{padding-left:.15rem}
+.guia-plan strong{display:block;color:var(--ink)}
+.guia-plan p{color:var(--ink-2);font-size:.9rem;margin:.1rem 0}
+.guia-plan .guia-where{font-size:.8rem;font-weight:700;color:var(--brand-ink)}
+.guia-guide-current{background:var(--surface);padding:.75rem;border:1px solid var(--line-strong);border-radius:.65rem}
+.guia-banner-step{font-size:.85rem;color:var(--brand-ink);font-weight:700;margin-bottom:.2rem}
+.guia-tip .guia-path{margin:.3rem 0}
+.guia-tip .guia-path li{font-size:.8rem}
+.guia-tip .guia-current-action{font-weight:700}
+.guia-tip p{margin:.2rem 0}
+.guia-actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.7rem}
+.guia-actions .btn{white-space:normal}
+.guia-guide-note{color:var(--muted);font-size:.87rem}
+.guia-answer .guia-actions{margin-top:1rem}
+@media(max-width:25rem){.guia-tip{padding:.65rem}.guia-actions .btn{flex:1 1 100%}.chart-mixed-key{gap:.35rem}}
+@media(prefers-reduced-motion:reduce){.trend-bar,.trend-point,.trend-path{transition:none!important;animation:none!important}}
+
 </style>
 </head>
 <body>
@@ -2340,23 +2411,35 @@ html[data-simple="on"] .story-grid,.dashboard-charts { align-items: start; }
  charts.line=({points,title='Así cambia el avance',help='Los datos anteriores son de ejemplo.'})=>{
    const items=(points||[]).map(p=>({label:String(p.label),score:clamp(p.score)}));
    if(!items.length)return html`<p>Aún no hay actividades para mostrar.</p>`;
-   const W=570,H=238,L=42,R=22,T=27,B=44;
-   const X=i=>L+(i*(W-L-R)/Math.max(1,items.length-1));
+   const W=570,H=258,L=45,R=19,T=34,B=51;
+   const plotW=W-L-R;
+   const X=i=>items.length===1?L+plotW/2:L+(i*plotW/(items.length-1));
    const Y=v=>T+(100-v)*(H-T-B)/100;
+   const barWidth=Math.max(17,Math.min(46,plotW/Math.max(2,items.length)*.58));
    const grid=[0,25,50,75,100].map(v=>`<line x1="${L}" y1="${Y(v)}" x2="${W-R}" y2="${Y(v)}" class="trend-guide"/><text x="${L-9}" y="${Y(v)+4}" text-anchor="end" class="trend-axis">${v}</text>`).join('');
+   const bars=items.map((p,i)=>{
+     const y=Y(p.score),h=Y(0)-y;
+     const tone=i===items.length-1?'latest':i%3===0?'early':i%3===1?'middle':'alt';
+     return `<rect class="trend-bar trend-bar--${tone}" x="${(X(i)-barWidth/2).toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="5"/>`;
+   }).join('');
    const path=items.map((p,i)=>`${i?'L':'M'} ${X(i).toFixed(2)} ${Y(p.score).toFixed(2)}`).join(' ');
-   const dots=items.map((p,i)=>`<circle cx="${X(i)}" cy="${Y(p.score)}" r="6" class="trend-point"/><text x="${X(i)}" y="${Math.max(15,Y(p.score)-12)}" text-anchor="middle" class="trend-value">${p.score}%</text><text x="${X(i)}" y="${H-13}" text-anchor="middle" class="trend-axis">${TA.esc(p.label.length>12?p.label.slice(0,10)+'…':p.label)}</text>`).join('');
+   const dots=items.map((p,i)=>`<circle cx="${X(i)}" cy="${Y(p.score)}" r="5.5" class="trend-point"/><text x="${X(i)}" y="${Math.max(18,Y(p.score)-13)}" text-anchor="middle" class="trend-value">${p.score}</text><text x="${X(i)}" y="${H-12}" text-anchor="middle" class="trend-axis">${TA.esc(p.label.length>12?p.label.slice(0,10)+'…':p.label)}</text>`).join('');
    const from=items[0].score,now=items[items.length-1].score,delta=Math.round(now-from);
    const message=delta>0?`Subió ${delta} puntos desde ${items[0].label}.`:delta<0?`Bajó ${Math.abs(delta)} puntos desde ${items[0].label}; conviene repasar.`:'Se mantuvo igual desde el primer registro.';
-   const desc=`${title}. ${items.map(p=>`${p.label}: ${p.score} de 100 puntos`).join('; ')}.`;
+   const desc=`${title}. Gráfica combinada: barras coloreadas para cada periodo y línea para reconocer la evolución. ${items.map(p=>`${p.label}: ${p.score} de 100 puntos`).join('; ')}.`;
    return html`<figure class="trend-figure">
      <figcaption class="chart-takeaway"><span class="chart-takeaway__label">Lo más importante</span><strong>Ahora: ${now} de 100</strong><span>${message}</span></figcaption>
-     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${desc}" preserveAspectRatio="xMidYMid meet"><title>${title}</title>
-       ${TA.raw(grid)}<path class="trend-path" d="${path}"/>${TA.raw(dots)}</svg>
-     <p class="trend-caption"><span class="chart-charthelp">Los puntos muestran el resultado de cada periodo, no una calificación escolar.</span> ${help}</p>
-     <details class="chart-details"><summary>Leer todos los resultados</summary>
-       <div class="table-wrap" role="region" aria-label="Valores de ${title}" tabindex="0"><table class="table"><thead><tr><th scope="col">Momento</th><th scope="col">Avance (de 100)</th></tr></thead><tbody>
-         ${items.map(p=>html`<tr><th scope="row">${p.label}</th><td>${p.score} de 100</td></tr>`)}</tbody></table></div>
+     <div class="chart-mixed-key" aria-label="Cómo leer la gráfica">
+       <span><i class="chart-key-bar" aria-hidden="true"></i> Barras: avance de cada momento</span>
+       <span><i class="chart-key-line" aria-hidden="true"></i> Línea: cómo ha cambiado</span>
+       <span><i class="chart-key-now" aria-hidden="true"></i> Verde: resultado más reciente</span>
+     </div>
+     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${desc}" preserveAspectRatio="xMidYMid meet"><title>${title}. Barras y línea de avance</title><desc>${desc}</desc>
+       ${TA.raw(grid)}${TA.raw(bars)}<path class="trend-path" d="${path}"/>${TA.raw(dots)}</svg>
+     <p class="trend-caption">Cada barra y cada punto representan el mismo resultado. <strong>Los números indican puntos de 100.</strong> ${help}</p>
+     <details class="chart-details"><summary>Leer los resultados en una tabla</summary>
+       <div class="table-wrap" role="region" aria-label="Valores de ${title}" tabindex="0"><table class="table"><thead><tr><th scope="col">Momento</th><th scope="col">Avance (de 100)</th><th scope="col">Cambio respecto al anterior</th></tr></thead><tbody>
+         ${items.map((p,i)=>html`<tr><th scope="row">${p.label}</th><td>${p.score} de 100</td><td>${i===0?'Punto de partida':`${p.score-items[i-1].score>0?'+':''}${p.score-items[i-1].score} puntos`}</td></tr>`)}</tbody></table></div>
      </details></figure>`;
  };
  charts.distribution=(segments,total)=>{
@@ -2374,7 +2457,7 @@ html[data-simple="on"] .story-grid,.dashboard-charts { align-items: start; }
      <ul class="compare-group-list">${groups.map(g=>{
        const score=TA.util.avg(TA.teacher.groupAverage(g.id))||0;
        return html`<li><a href="#/grupo" class="group-graph-link${g.id===active?' is-current':''}" data-action="choose-group" data-id="${g.id}" ${TA.attr(g.id===active,'aria-current="true"')}>
-         <span class="group-graph-name">${g.label}</span><span class="group-graph-bar" aria-hidden="true"><span style="width:${score}%"></span></span><strong>${score}/100</strong></a></li>`;
+         <span class="group-graph-name">${g.label}</span><span class="group-graph-bar" aria-hidden="true"><span class="group-bar-tone-${groups.indexOf(g)%3}" style="width:${score}%"></span></span><strong>${score}/100</strong></a></li>`;
      })}</ul></figure>`;
  };
 })(window.TA);
@@ -2674,6 +2757,7 @@ html[data-simple="on"] .story-grid,.dashboard-charts { align-items: start; }
             <a class="btn btn--primary" href="#/tutor">${icon('chat', 18)}Practicar con EstudiandoAndo</a>
             <a class="btn btn--secondary" href="#/visual">${icon('eye', 18)}Ver dibujos paso a paso</a>
             <a class="btn btn--secondary" href="#/comprobar">${icon('target', 18)}Intentar sin pistas</a>
+            <a class="btn btn--secondary" href="#/diagnostico">${icon('pen', 18)}Preguntas para empezar</a>
           </div>`
       })}
 
@@ -3956,6 +4040,228 @@ html[data-simple="on"] .story-grid,.dashboard-charts { align-items: start; }
 
 </script>
   <script>
+
+/* Guía contextual de navegación, sin conexión y sin envío de datos a servidores.
+   Muestra una ruta desde la pantalla actual, enseña pasos concretos y puede
+   resaltar el siguiente control. Es una simulación local, NO una IA remota. */
+(function(TA){
+  'use strict';
+  const {html,icon}=TA;
+  const tasks=[
+    {id:'leccion',role:'student',label:'Seguir aprendiendo',path:'/aprender',words:['leccion','aprender','estudiar','tema','continuar','ejercicio'],selector:'#c-lesson',tap:'la lección de hoy',explain:'Elige cómo quieres aprender y continúa con el ejemplo.'},
+    {id:'inicio',role:'student',label:'Regresar al inicio',path:'/inicio',words:['inicio','empezar','principal','home','perdi','equivoque','regresar'],selector:'#page-title',tap:'Inicio',explain:'Desde aquí puedes retomar la actividad que estabas haciendo.'},
+    {id:'diagnostico',role:'student',label:'Responder las preguntas iniciales',path:'/diagnostico',words:['diagnostico','preguntas','evaluacion','saber mi nivel','empezar preguntas'],selector:'form[data-submit="diagnostic"] input[type="radio"],[data-action="diag-retake"],#page-title',tap:'las preguntas para empezar',explain:'Lee las preguntas y elige las respuestas. Si ya las hiciste, puedes volver a intentarlo.'},
+    {id:'dibujos',role:'student',label:'Aprender con dibujos',path:'/visual',words:['dibujos','diagramas','visual','balanza','recta','graficas','ejemplo'],selector:'[data-action="visual-next"]:not(:disabled),[data-action="visual-reset"]',tap:'Siguiente paso',explain:'Mira el dibujo, avanza con «Siguiente paso» y repite si lo necesitas.'},
+    {id:'pistas',role:'student',label:'Pedir una pista al tutor',path:'/tutor',words:['pista','tutor','ayuda con tarea','ia','chat','preguntar','no entiendo','duda'],selector:'[data-action="tutor-quick"][data-value="hint"],#page-title',tap:'Dame una pista',explain:'Pide una pista para razonar el ejercicio por tu cuenta.'},
+    {id:'comprobar',role:'student',label:'Comprobar lo aprendido',path:'/comprobar',words:['comprobar','prueba','sin ayuda','sin pistas','examen','responder','practica'],selector:'form[data-submit="check"] input[type="text"],form[data-submit="check"] input[type="radio"],#page-title',tap:'la primera pregunta',explain:'Resuelve la actividad sin pistas y revisa el resultado.'},
+    {id:'avance',role:'student',label:'Ver mi avance',path:'/progreso',words:['avance','progreso','resultado','calificaciones','mis graficas','mi grafica','mejorado'],selector:'#progress-graph,#page-title',tap:'la gráfica de mi avance',explain:'Las barras muestran cada resultado y la línea muestra cómo has mejorado.'},
+    {id:'offline',role:'student',label:'Estudiar sin Wi-Fi',path:'/descargas',words:['sin wifi','sin internet','offline','descarga','descargar','sin conexion','guardar material'],selector:'a[href="#/visual"],#page-title',tap:'Ver dibujos sin Wi-Fi',explain:'Los dibujos y las prácticas incluidas se pueden utilizar mientras la página esté abierta sin conexión.'},
+    {id:'grupos',role:'teacher',label:'Ver el avance de un grupo',path:'/grupo',words:['grupo','grupos','comparar','promedio','reporte grupal','grafica grupo'],selector:'#teacher-group-select',tap:'Grupo que quieres analizar',explain:'Elige un grupo para ver las barras, la línea de evolución y los temas difíciles.'},
+    {id:'alumnos',role:'teacher',label:'Ver el avance de un estudiante',path:'/alumnos',words:['alumno','alumna','alumnos','estudiante','individual','expediente','historial','ficha'],selector:'.roster__item,#roster-t',tap:'el nombre de un estudiante',explain:'Selecciona un nombre para abrir sus resultados individuales.'},
+    {id:'alertas',role:'teacher',label:'Revisar quién necesita ayuda',path:'/alertas',words:['alerta','alertas','problema','dificultad','detectar','apoyo','apoyos','necesita ayuda','riesgo'],selector:'[data-action="alert-review"],#page-title',tap:'la alerta que quieres revisar',explain:'Lee el motivo y decide si quieres intervenir, descartarla o solicitar más información.'},
+    {id:'mensaje',role:'teacher',label:'Enviar un mensaje de apoyo',path:'/alumnos',words:['mensaje','retroalimentacion','contactar','escribir','comentar','felicitar','enviar'],selector:'[data-action="feedback"]',tap:'Enviar un mensaje',explain:'Revisa el trabajo del estudiante, escribe un mensaje claro y confirma antes de enviarlo.'},
+    {id:'clase',role:'teacher',label:'Preparar mi próxima clase',path:'/planeacion',words:['clase','planear','planeacion','planificacion','actividad','ejercicios grupo','recomendaciones'],selector:'[data-action="ai-plan"],#page-title',tap:'Generar nueva propuesta con IA',explain:'Revisa el borrador de actividades. Tú decides cuáles utilizar.'},
+    {id:'datos',role:'teacher',label:'Ver conexión y datos',path:'/datos',words:['datos','privacidad','conexion','internet','sin wifi','sincronizar','seguridad'],selector:'#page-title',tap:'Conexión y datos',explain:'Aquí puedes comprobar qué información se guarda en tu dispositivo.'}
+  ];
+  const nav={
+    student:[['/inicio','Inicio'],['/aprender','Aprender'],['/tutor','Tutor'],['/progreso','Mi avance'],['/descargas','Sin Wi-Fi']],
+    teacher:[['/grupo','Grupo'],['/alertas','Apoyos'],['/alumnos','Estudiantes'],['/planeacion','Mi clase'],['/datos','Datos']]
+  };
+  const home={student:'/inicio',teacher:'/grupo'};
+  const names={'/inicio':'Inicio','/aprender':'Aprender','/visual':'Aprender con dibujos','/diagnostico':'Preguntas para empezar','/tutor':'Tu tutor','/comprobar':'Comprueba lo aprendido','/progreso':'Mi avance','/descargas':'Estudiar sin Wi-Fi','/grupo':'Grupo','/alertas':'Apoyos','/alumnos':'Estudiantes','/planeacion':'Mi clase','/datos':'Datos','/acerca':'Acerca del proyecto'};
+  const direct={
+    '/inicio':[['/aprender','Continuar lección'],['/visual','Aprender con diagramas'],['/tutor','Preguntarle a EstudiandoAndo'],['/comprobar','Empezar comprobación'],['/progreso','Ver todos mis avances']],
+    '/aprender':[['/visual','Ver dibujos paso a paso'],['/diagnostico','Preguntas para empezar'],['/comprobar','Intentar sin pistas'],['/tutor','Practicar con EstudiandoAndo']],
+    '/visual':[['/comprobar','Comprobar sin ayuda'],['/tutor','Pedir una pista']],
+    '/descargas':[['/visual','Ver dibujos sin Wi-Fi'],['/comprobar','Resolver práctica']],
+    '/grupo':[['/alumnos','Ver progreso individual de cada estudiante']],
+    '/alumnos':[['/grupo','Volver al grupo']]
+  };
+  let lastPath=null,previousPath=null,selection=null,walking=null,focusNext=false,query='',expectedNext=null,offRoute=false;
+  const taskBy=id=>tasks.find(t=>t.id===id);
+  const norm=(s)=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9ñ ]/g,' ').replace(/\s+/g,' ').trim();
+  function findAnswer(text){
+    const q=norm(text);if(!q)return null;
+    const scored=tasks.map(t=>{
+      let n=0;
+      for(const word of t.words){
+        const w=norm(word);
+        if(q===w)n+=12;
+        else if(q.includes(w))n+=w.includes(' ')?9:5;
+      }
+      if(/\b(alumno|alumna|alumnos|alumnas|estudiante|estudiantes)\b/.test(q) && /\b(avance|progreso|resultado|historial|grafica)\b/.test(q) && t.id==='alumnos')n+=16;
+      if(/\b(grupo|grupos)\b/.test(q) && /\b(avance|progreso|resultado|comparar)\b/.test(q) && t.id==='grupos')n+=14;
+      if(/\b(mensaje|retroalimentacion)\b/.test(q) && t.id==='mensaje')n+=14;
+      if(q.includes('profesor')||q.includes('docente'))n+=t.role==='teacher'?3:-3;
+      if(q.includes('mi ')&&t.role==='student')n++;
+      if(t.role===TA.state.role)n++;
+      return {t,n};
+    }).sort((a,b)=>b.n-a.n);
+    return scored[0]?.n>1?scored[0].t:null;
+  }
+  function here(){return TA.route().title||names[TA.route().path]||'Esta página'}
+  const clickNav=(from,to,label)=>({from,to,kind:'nav',label:`Abre «${label}»`,where:'Menú principal (abajo en móvil; al lado en web)',detail:`Pulsa «${label}» para entrar a esa sección.`,selector:`.nav__link[href="#${to}"]`});
+  const clickDirect=(from,to,label)=>({from,to,kind:'link',label:`Pulsa «${label}»`,where:`En «${names[from]||from}»`,detail:`Busca y selecciona «${label}».`,selector:`#contenido a[href="#${to}"]`});
+  function edges(from,role,goal){
+    const tabs=nav[role].filter(([p])=>p!==from);
+    // Para actividades de aprendizaje, usar «Aprender» antes que «Inicio»
+    // cuando ambas rutas requieren la misma cantidad de acciones.
+    if(role==='student'&&['/visual','/diagnostico','/comprobar'].includes(goal))
+      tabs.sort((a,b)=>(a[0]==='/aprender'?-1:b[0]==='/aprender'?1:0));
+    const result=tabs.map(([p,label])=>clickNav(from,p,label));
+    for(const [to,label] of (direct[from]||[]))if(to!==from)result.push(clickDirect(from,to,label));
+    return result;
+  }
+  function routeSteps(start,goal,role){
+    if(start===goal)return [];
+    const seen=new Set([start]), queue=[{p:start,steps:[]}];
+    while(queue.length){
+      const item=queue.shift();
+      for(const e of edges(item.p,role,goal)){
+        if(seen.has(e.to))continue;
+        const chain=[...item.steps,e];
+        if(e.to===goal)return chain;
+        seen.add(e.to);queue.push({p:e.to,steps:chain});
+      }
+    }
+    return [clickNav(start,home[role],nav[role][0][1])];
+  }
+  function terminalSteps(t,route){
+    if(t.id==='inicio')return [{kind:'end',from:t.path,label:'Llegaste a Inicio',detail:t.explain,where:'En Inicio',selector:'#page-title'}];
+    if(t.id==='mensaje'&&!route.params.id)return [
+      {kind:'target',from:t.path,label:'Selecciona a quién quieres escribir',where:'En la lista de estudiantes',detail:'Pulsa el nombre de un estudiante para ver su ficha antes de escribir.',selector:'.roster__item'},
+      {kind:'target',from:t.path,label:'Pulsa «Enviar un mensaje»',where:'En la ficha del estudiante',detail:t.explain,selector:'[data-action="feedback"]'}
+    ];
+    return [{kind:'target',from:t.path,label:`Busca «${t.tap}»`,detail:t.explain,where:`En «${names[t.path]||t.path}»`,selector:t.selector}];
+  }
+  function fullPlan(t){
+    const route=TA.route();let start=route.path;
+    const steps=[];
+    if(TA.state.role!==t.role){
+      const label=t.role==='teacher'?'Docente':'Estudiante';
+      steps.push({kind:'role',from:start,to:home[t.role],label:`Cambia a «${label}»`,where:'Barra de perfil del prototipo',detail:`Selecciona el perfil «${label}». Si estás dentro del móvil simulado, usa «Cambiar perfil» en la guía.`,selector:'[data-action="guia-change-role"]'});
+      start=home[t.role];
+    }
+    steps.push(...routeSteps(start,t.path,t.role));
+    steps.push(...terminalSteps(t,route));
+    return steps;
+  }
+  function planSummary(t){
+    const steps=fullPlan(t);
+    return html`<div class="guia-guide-current"><p><strong>Desde:</strong> ${here()}</p><p><strong>Hasta:</strong> ${t.label}</p>
+      <p class="muted small">${steps.length} ${steps.length===1?'paso':'pasos'} para llegar y saber qué hacer. Puedes recorrerlos a mano o pedir que te señale cada botón.</p></div>
+      <ol class="guia-plan">${steps.map((s,i)=>html`<li><span class="guia-where">${s.where}</span><strong>${s.label}</strong><p>${s.detail}</p></li>`)}</ol>`;
+  }
+  function panel(){
+    const options=tasks.filter(t=>t.role===TA.state.role),t=taskBy(selection);
+    return html`<section id="guia-panel" class="stack">
+      <p><strong>Estás en:</strong> ${here()}. Dime a dónde quieres llegar; te indicaré el camino y dónde hacer clic.</p>
+      <form data-submit="guia-search" class="form">
+        <div class="field"><label for="guia-pregunta">¿Qué quieres hacer?</label>
+          <input id="guia-pregunta" name="question" type="search" maxlength="180" placeholder="Ejemplo: quiero ver el avance de un alumno" value="${query}" autocomplete="off" aria-describedby="guia-pregunta-ayuda">
+          <p class="field__hint" id="guia-pregunta-ayuda">Puedes escribir una pregunta o elegir una tarea frecuente.</p></div>
+        <button type="submit" class="btn btn--primary">${icon('compass',18)}Mostrar el camino</button>
+      </form>
+      ${t?html`<section class="guia-answer" aria-labelledby="guia-resultado">
+        <h3 id="guia-resultado" tabindex="-1">Vamos a: ${t.label}</h3>
+        ${planSummary(t)}
+        <div class="guia-actions">
+          <button type="button" class="btn btn--primary" data-action="guia-walk" data-id="${t.id}">${icon('route',18)}Guíame botón por botón</button>
+          <button type="button" class="btn btn--secondary" data-action="guia-show" data-id="${t.id}">${icon('target',18)}Llévame directamente</button>
+          <button type="button" class="btn btn--ghost" data-dialog-close>Seguir por mi cuenta</button>
+        </div>
+      </section>`:query?html`<p class="guia-status" role="status">No encontré esa tarea. Prueba con las opciones frecuentes.</p>`:''}
+      <div><h3 class="h-sm">Tareas frecuentes de ${TA.state.role==='teacher'?'profesores':'estudiantes'}</h3>
+        <div class="guia-choices">${options.map(t=>html`<button type="button" data-action="guia-pick" data-id="${t.id}">${t.label}</button>`)}</div></div>
+      ${previousPath&&previousPath!==TA.route().path?html`<button type="button" class="btn btn--ghost" data-action="guia-back">${icon('left',18)}Volver a la pantalla anterior</button>`:''}
+      <p class="guia-status">La guía de navegación funciona con reglas locales, también sin Wi-Fi. La IA generativa todavía está simulada.</p>
+    </section>`;
+  }
+  function updateAndFocus(){TA.dialog.update(panel());document.getElementById('guia-resultado')?.focus();}
+  function focusedStep(){const t=taskBy(walking);return t?fullPlan(t)[0]:null}
+  const guide=TA.navHelp={
+    launcher:()=>html`<button type="button" class="guia-fab" data-action="guia-open" data-fk="guia-floating" aria-haspopup="dialog" aria-label="Abrir asistente de navegación de EstudiandoAndo">${icon('help',20)}<span>¿Te perdiste? Te guío</span></button>`,
+    breadcrumb:()=>html`<div class="guia-current"><span><strong>Estás en:</strong> ${here()}</span><button type="button" data-action="guia-open">¿Buscabas otra cosa?</button></div>`,
+    banner:()=>{
+      const t=taskBy(walking);if(!t)return '';
+      const steps=fullPlan(t),s=steps[0];
+      return html`<aside class="guia-tip" role="region" aria-label="Guía paso a paso">
+        <div><p class="guia-banner-step">Guía activa · ${steps.length} ${steps.length===1?'paso pendiente':'pasos pendientes'}</p>
+        <strong>Destino: ${t.label}</strong><p>Estás en «${here()}».</p>
+        ${offRoute?html`<p role="status" class="guia-guide-note">Cambiaste de sección. Actualicé el camino desde donde estás ahora.</p>`:''}
+        <p class="guia-current-action">Ahora: ${s.label}.</p><p>${s.detail}</p>
+        ${s.kind==='role'?html`<button class="btn btn--primary btn--sm" type="button" data-action="guia-change-role">Cambiar perfil ahora</button>`:''}
+        </div>
+        <div class="guia-actions"><button type="button" class="btn btn--secondary btn--sm" data-action="guia-refresh">${icon('target',17)}Señalar botón</button>
+          <button type="button" class="btn btn--ghost btn--sm" data-action="guia-reopen">Ver todos los pasos</button>
+          <button type="button" class="btn btn--ghost btn--sm" data-action="guia-done">Terminar guía</button></div>
+      </aside>`;
+    },
+    trackRoute(){
+      const now=TA.route().path;
+      if(lastPath&&lastPath!==now){
+        previousPath=lastPath;
+        if(walking){offRoute=Boolean(expectedNext&&now!==expectedNext);focusNext=true;}
+      }
+      lastPath=now;
+    },
+    afterRender(){
+      const step=focusedStep();if(!step)return;
+      expectedNext=step.to||null;
+      requestAnimationFrame(()=>{
+        // Siempre buscamos en toda la aplicación: en móvil la barra está abajo,
+        // en escritorio la navegación está a la izquierda.
+        document.querySelectorAll('.guia-highlight').forEach(el=>el.classList.remove('guia-highlight'));
+        let target=null;
+        try{target=document.querySelector(step.selector);}catch(_){target=null;}
+        if(target&&target.disabled)target=null;
+        if(!target)target=document.querySelector('#contenido #page-title');
+        if(!target)return;
+        target.classList.add('guia-highlight');
+        if(focusNext){
+          target.scrollIntoView({behavior:TA.prefersReducedMotion()?'auto':'smooth',block:'nearest'});
+          // No crear controles ocultos: foco solo en botones, enlaces y campos reales.
+          if(target.matches('button,a,input,select,[tabindex]')) TA.focus.to(target,{scroll:false});
+          TA.announce(`Siguiente paso: ${step.label}. ${step.detail}`);
+          focusNext=false;
+        }
+      });
+    },
+    open(){selection=walking||null;query='';TA.dialog.open({title:'Cómo llegar a tu tarea',body:panel()});}
+  };
+  Object.assign(TA.actions,{
+    'guia-open':()=>guide.open(),
+    'guia-pick':el=>{selection=el.dataset.id;query='';updateAndFocus();},
+    'guia-walk':el=>{walking=el.dataset.id;selection=walking;focusNext=true;offRoute=false;expectedNext=null;TA.dialog.close();TA.render();},
+    'guia-refresh':()=>{focusNext=true;guide.afterRender();},
+    'guia-reopen':()=>guide.open(),
+    'guia-change-role':()=>{
+      const t=taskBy(walking);if(!t)return;
+      TA.state.role=t.role;TA.save();focusNext=true;TA.go(home[t.role]);
+    },
+    'guia-show':el=>{
+      const t=taskBy(el.dataset.id);if(!t)return;
+      walking=t.id;selection=t.id;focusNext=true;offRoute=false;expectedNext=t.path;TA.dialog.close();
+      if(TA.state.role!==t.role){TA.state.role=t.role;TA.save();}
+      TA.go(t.path);
+    },
+    'guia-done':()=>{walking=null;focusNext=false;offRoute=false;expectedNext=null;document.querySelectorAll('.guia-highlight').forEach(el=>el.classList.remove('guia-highlight'));TA.render();TA.announce('Guía finalizada.');},
+    'guia-back':()=>{const path=previousPath||home[TA.state.role];selection=null;walking=null;TA.dialog.close();TA.go(path);}
+  });
+  TA.submits['guia-search']=(form)=>{
+    query=form.elements.question.value.trim().slice(0,180);
+    const t=findAnswer(query);selection=t?.id||null;updateAndFocus();
+    if(!t){const p=document.querySelector('#guia-panel .guia-status[role="status"]');if(p){p.tabIndex=-1;p.focus();}}
+  };
+})(window.TA);
+
+
+
+
+
+
+  </script>
+  <script>
 /* =========================================================
    EstudiandoAndo · aplicación
    Estado, persistencia, conexión, enrutador por hash,
@@ -4234,7 +4540,7 @@ html[data-simple="on"] .story-grid,.dashboard-charts { align-items: start; }
 
   const notFound = () => html`
     ${ui.pageHeader({ title: 'No encontramos esta página' })}
-    ${ui.emptyState({ title: 'La dirección no existe o cambió', text: 'Puedes volver al inicio o usar el menú de navegación.', action: html`<a class="btn btn--primary" href="#${HOME[TA.state.role]}">${icon('home', 18)}Ir al inicio</a>` })}`;
+    ${ui.emptyState({ title: 'La dirección no existe o cambió', text: 'Quizá llegaste aquí por error. Puedes volver al inicio o pedir que te guiemos hasta tu tarea.', action: html`<div class="cluster"><a class="btn btn--primary" href="#${HOME[TA.state.role]}">${icon('home', 18)}Ir al inicio</a><button class="btn btn--secondary" type="button" data-action="guia-open">${icon('help',18)}Ayúdame a encontrar mi tarea</button></div>` })}`;
 
   /* =========================================================
      Estructura de la página
@@ -4351,11 +4657,13 @@ html[data-simple="on"] .story-grid,.dashboard-charts { align-items: start; }
       ${EMBEDDED ? '' : demoBar()}
       <div class="layout" data-role="${TA.state.role}">
         ${nav(route)}
-        <main id="contenido" class="main" tabindex="-1">${route.render()}</main>
+        <main id="contenido" class="main" tabindex="-1">${TA.navHelp.breadcrumb()}${TA.navHelp.banner()}${route.render()}</main>
       </div>
-      ${footer()}`);
+      ${footer()}
+      ${TA.navHelp.launcher()}`);
     document.title = `${route.title} · EstudiandoAndo`;
     if (key) TA.focus.restore(key, app);
+    TA.navHelp.afterRender();
   };
 
   /* ---------- Escenario con marco (vista móvil o de escritorio simulada) ---------- */
@@ -4437,6 +4745,7 @@ html[data-simple="on"] .story-grid,.dashboard-charts { align-items: start; }
   /** Al cambiar de pantalla: dibujar, mover el foco al título y anunciarlo. */
   function onRoute() {
     const route = TA.route();
+    TA.navHelp.trackRoute();
     if (route.role && route.role !== TA.state.role) {
       TA.state.role = route.role;
       TA.save();
