@@ -98,17 +98,17 @@ const PASOS_TOTALES = 8; // 4 ejercicios de diagnóstico + 4 actividades de la r
 const MAX_CHAT = 60;
 const VERSION_PROGRESO = 1;
 
-/** Iconos de respaldo (trazos 24×24) por si js/ui/iconos.js no tiene alguno. */
+/** Iconos de respaldo (trazos 24×24) por si js/ui/iconos.js no tiene alguno (p. ej. "dormido"). */
 const ICONOS_RESPALDO = {
   inicio: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
   aprender: '<path d="M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2z"/><path d="M22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z"/>',
   tecu: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/>',
   descargas: '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/>',
+  descargar: '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/>',
   ajustes:
     '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
   reloj: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
-  cerrar: '<path d="M6 6l12 12M18 6L6 18"/>',
   wifi: '<path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M8.8 16a5 5 0 0 1 6.4 0"/><path d="M12 19.5h.01"/>',
   'sin-wifi':
     '<path d="M3 3l18 18"/><path d="M8.8 16a5 5 0 0 1 6.4 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 5-2.4"/><path d="M2.5 9a14 14 0 0 1 4.6-2.9"/><path d="M12 19.5h.01"/>',
@@ -116,14 +116,13 @@ const ICONOS_RESPALDO = {
     '<path d="M20 11a8 8 0 0 0-14.3-4.7L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.7L20 16"/><path d="M20 20v-4h-4"/>',
   candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   estrella: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
-  flecha: '<path d="M5 12h14M13 6l6 6-6 6"/>',
-  atras: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  siguiente: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   enviar: '<path d="M4 12l16-8-6 16-2.5-5.5z"/><path d="M11.5 12.5L20 4"/>',
-  refrescar: '<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/>',
-  basura: '<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>',
+  borrar: '<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>',
   alerta: '<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5h.01"/>',
   dormido: '<path d="M4 7h6l-6 7h6"/><path d="M13 13h5l-5 6h5"/><path d="M15 3.5h4l-4 4h4"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
+  pista: '<path d="M9 17.5c0-1.6-.8-2.5-1.9-3.6a6 6 0 1 1 9.8 0c-1.1 1.1-1.9 2-1.9 3.6z"/><path d="M9.5 20.5h5"/>',
   signo: '<path d="M4 12h7M7.5 8.5v7"/><path d="M14 12h6"/>',
   inversa: '<path d="M5 12h14"/><path d="M12 6.5h.01M12 17.5h.01"/>',
   cuenta:
@@ -139,23 +138,27 @@ const ICONOS_RESPALDO = {
 /* Utilidades puras                                                    */
 /* ------------------------------------------------------------------ */
 
-/** Icono decorativo (lo acompaña siempre un texto). Usa iconos.js y, si no lo tiene, el respaldo. */
+/**
+ * Icono decorativo (siempre va junto a un texto). Usa js/ui/iconos.js y, si no
+ * tiene ese nombre, un trazo de respaldo. Devuelve el <svg> tal cual (class="icono")
+ * para que apliquen las reglas del kit (.boton .icono, .chip .icono, nav-inferior…).
+ */
 function ico(nombre, clase = '') {
   let svg = '';
   try {
-    const r = typeof Iconos.icono === 'function' ? Iconos.icono(nombre) : '';
-    const s = r === null || r === undefined ? '' : String(r);
-    if (s.includes('<svg')) svg = s;
+    const existe = typeof Iconos.hayIcono === 'function' ? Iconos.hayIcono(nombre) : typeof Iconos.icono === 'function';
+    if (existe) svg = String(Iconos.icono(nombre) ?? '');
   } catch {
     svg = '';
   }
-  if (!svg) {
+  if (!svg.includes('<svg')) {
     const trazos = ICONOS_RESPALDO[nombre] || ICONOS_RESPALDO.punto;
     svg =
-      '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" ' +
-      `stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">${trazos}</svg>`;
+      `<svg class="icono icono--${nombre}" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" ` +
+      `stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">${trazos}</svg>`;
   }
-  return crudo(`<span class="est-ico${clase ? ` ${clase}` : ''}" aria-hidden="true">${svg}</span>`);
+  if (clase) svg = svg.replace(/^<svg class="/, `<svg class="${clase} `);
+  return crudo(svg);
 }
 
 /** Tecu en SVG (si el módulo falla, no rompe la pantalla). */
@@ -181,6 +184,33 @@ function tecuDice(estado, contenido, { tamano = 64, clase = '' } = {}) {
 }
 
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+/** Ecuación con − tipográfico (igual que el cuaderno). */
+function formatear(texto) {
+  const base = String(texto ?? '')
+    .replace(/[−‐-―﹣]/g, '-')
+    .replace(/X/g, 'x');
+  return bonito(base).replace(/([=(+·/]) − /g, (_, op) => (op === '=' || op === '+' ? `${op} −` : `${op}−`));
+}
+
+/** Versión hablada para lectores de pantalla ("25/3" se leería "25 barra 3"). */
+function paraLector(texto) {
+  return formatear(texto)
+    .replace(/x/g, ' equis ')
+    .replace(/=/g, ' igual a ')
+    .replace(/\+/g, ' más ')
+    .replace(/−/g, ' menos ')
+    .replace(/[/÷]/g, ' entre ')
+    .replace(/[·×]/g, ' por ')
+    .replace(/\(/g, ' abre paréntesis ')
+    .replace(/\)/g, ' cierra paréntesis ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matematica(texto) {
+  return html`<span class="math cuaderno__texto" aria-hidden="true">${formatear(texto)}</span><span class="solo-lector">${paraLector(texto)}</span>`;
+}
 const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
 const idMensaje = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -493,10 +523,15 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     } catch (error) {
       console.error(error);
     }
+    datosCambiaron();
+    return evento;
+  }
+
+  /** Hay algo nuevo por subir: actualiza la insignia y, con red, sincroniza en silencio. */
+  function datosCambiaron() {
     if (sincronizando) nuevosDuranteSync = true;
     renderBarra();
     if (state.red.enLinea) programarSync(false);
-    return evento;
   }
 
   /* ---------------- Conexión y sincronización ---------------- */
@@ -556,8 +591,8 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     if (['tecu', 'descargas', 'inicio'].includes(state.pantalla)) render();
     if (!antes.enLinea && nuevo.enLinea) {
       fallosSync = 0;
-      sincronizar({ avisar: true });
       contestarDudasPendientes();
+      sincronizar({ avisar: true });
     } else if (antes.enLinea && !nuevo.enLinea) {
       aviso('Sin internet. Todo lo que hagas se guarda en tu cel.', { tipo: 'info' });
     }
@@ -598,6 +633,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       prog.chat.push({ id: idMensaje(), de: 'tecu', texto: respuesta, sobre: d.texto });
     }
     guardar();
+    datosCambiaron();
     aviso(n === 1 ? 'Tecu respondió tu duda' : `Tecu respondió tus ${n} dudas`, { tipo: 'exito' });
     if (state.pantalla === 'tecu') {
       render();
@@ -616,26 +652,32 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       contenido.querySelector('#est-chat-entrada')?.focus();
       return;
     }
-    const mensaje = { id: idMensaje(), de: 'alumno', texto: limpio };
-    prog.chat.push(mensaje);
-    if (red.enLinea()) {
+    // agregarDuda() ya registra el evento 'duda'; contestarDuda() le agrega la respuesta.
+    let duda = null;
+    try {
+      duda = store.agregarDuda(limpio);
+    } catch (error) {
+      console.error(error);
+    }
+    const dudaId = duda?.id || null;
+    const conRed = red.enLinea();
+    prog.chat.push({ id: idMensaje(), de: 'alumno', texto: limpio, dudaId, pendiente: !conRed });
+    if (conRed) {
       const respuesta = respuestaTecu(limpio, pack);
-      prog.chat.push({ id: idMensaje(), de: 'tecu', texto: respuesta });
-      registrar({ tipo: 'duda', datos: { texto: limpio, respondida: true } });
+      if (dudaId) {
+        try {
+          store.contestarDuda(dudaId, respuesta);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      prog.chat.push({ id: idMensaje(), de: 'tecu', texto: respuesta, dudaId });
       anunciar(`Tecu dice: ${respuesta}`);
     } else {
-      let duda = null;
-      try {
-        duda = store.agregarDuda(limpio);
-      } catch (error) {
-        console.error(error);
-      }
-      mensaje.dudaId = duda?.id || null;
-      mensaje.pendiente = true;
-      prog.chat.push({ id: idMensaje(), de: 'tecu', texto: pack.tecu.sinConexionDuda, reloj: true, dudaId: mensaje.dudaId });
-      registrar({ tipo: 'duda', datos: { texto: limpio, respondida: false, dudaId: mensaje.dudaId } });
+      prog.chat.push({ id: idMensaje(), de: 'tecu', texto: pack.tecu.sinConexionDuda, reloj: true, dudaId });
       anunciar(pack.tecu.sinConexionDuda);
     }
+    datosCambiaron();
     state.borradorChat = '';
     guardar();
     render();
@@ -853,19 +895,21 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     }
     return html`
       <div class="est-barra__fila">
-        <span class="est-barra__tecu">${tecu(estadoTecu, 36, { decorativo: true })}</span>
-        <p class="est-barra__titulo">
-          <span class="est-barra__app">Tecu Aprende</span>
-          <span class="est-barra__alumno">${nombreVisible}</span>
+        <p class="marca est-barra__marca">
+          ${tecu(estadoTecu, 36, { decorativo: true })}
+          <span class="est-barra__textos">
+            <span class="est-barra__app">Tecu Aprende</span>
+            <span class="est-barra__alumno"><span class="solo-lector">Estudiante: </span>${nombreVisible}</span>
+          </span>
         </p>
         ${insignia}
       </div>
       <div class="segmentado est-conexion" role="group" aria-label="Conexión a internet">
-        <button type="button" data-act="red" data-sin="no" data-foco="red-con" aria-pressed="${enLinea}"
+        <button type="button" data-act="conexion" data-sin="no" data-foco="red-con" aria-pressed="${enLinea}"
           ${attr('aria-disabled', !real, 'true')} ${attr('aria-describedby', !real, 'est-sin-senal')}
           ${attr('data-explica', !real, 'Tu cel no tiene señal en este momento. En cuanto vuelva, Tecu envía tu avance.')}>
           ${ico('wifi')}<span>Con internet</span></button>
-        <button type="button" data-act="red" data-sin="si" data-foco="red-sin" aria-pressed="${!enLinea}">
+        <button type="button" data-act="conexion" data-sin="si" data-foco="red-sin" aria-pressed="${!enLinea}">
           ${ico('sin-wifi')}<span>Sin internet</span></button>
       </div>
       ${!real
@@ -996,7 +1040,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
             <span id="est-progreso-texto" class="texto-sec">Tu avance: ${hechos} de ${PASOS_TOTALES} pasos</span>
           </div>
           <button type="button" class="boton boton--primario boton--bloque" data-act="aprender" data-foco="continuar">
-            <span>${etapa.boton}</span>${ico('flecha')}</button>
+            <span>${etapa.boton}</span>${ico('siguiente')}</button>
         </section>
         ${proximas.length
           ? html`<section class="pila est-otras" aria-labelledby="est-otras-titulo">
@@ -1020,7 +1064,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
 
   /* ---------------- Cuaderno montado ---------------- */
 
-  function montarCuadernoEn(host, { clave, ejercicio, modo, alRevisar }) {
+  function montarCuadernoEn(host, { clave, ejercicio, modo, alRevisar, nivelTitulo = 2 }) {
     const conAyudas = modo === 'practica';
     const m = { tipo: 'cuaderno', clave, host, ejercicio, modo, instancia: null, recibidas: 0, alRevisar, destruido: false };
     try {
@@ -1030,6 +1074,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         pack,
         ayudas: conAyudas,
         validarEnVivo: conAyudas,
+        nivelTitulo,
         onRevisar: (resultado) => {
           m.recibidas += 1;
           setTimeout(() => {
@@ -1085,7 +1130,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       console.error(error);
     }
     await pausa(0);
-    if (m.recibidas === antes && !m.destruido) m.alRevisar(resultado || { renglones: renglonesDe(null, m) }, m);
+    if (resultado && m.recibidas === antes && !m.destruido) m.alRevisar(resultado, m);
     await pausa(30);
     return resultado;
   }
@@ -1157,53 +1202,77 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   }
 
   function cajaRetro(retro, { titular = true } = {}) {
-    return html`<section class="diagnostico diagnostico--${retro.estado} est-retro" data-estado="${retro.estado}"
-      aria-labelledby="est-retro-titulo">
-      ${tecuDice(
-        retro.tecu,
-        html`<h2 class="titulo-3 est-retro__titulo" id="est-retro-titulo" ${attr('data-titulo', titular)}>
+    return html`<section class="diagnostico diagnostico--${retro.estado} est-retro" aria-labelledby="est-retro-titulo">
+      <div class="est-retro__cuerpo">
+        <span class="est-retro__tecu">${tecu(retro.tecu, 64, { decorativo: true })}</span>
+        <div class="est-retro__texto">
+          <h2 class="titulo-3 est-retro__titulo" id="est-retro-titulo" ${attr('data-titulo', titular)}>
             ${ico(retro.icono)}<span>${retro.titulo}</span></h2>
-          <p>${retro.texto}</p>`,
-        { tamano: 64 },
-      )}
+          <p><span class="solo-lector">Tecu dice: </span>${retro.texto}</p>
+        </div>
+      </div>
     </section>`;
   }
 
-  /** Procedimiento ya revisado, de solo lectura, con el renglón del error señalado. */
-  function vistaProcedimiento(analisis, titulo = 'Tu procedimiento') {
-    const filas = analisis.renglones || [];
-    const nError = analisis.estado === 'error' ? analisis.error.renglon : analisis.estado === 'sin_entender' ? analisis.renglon : null;
-    return html`<figure class="est-proc">
-      <figcaption class="est-proc__titulo">${titulo}</figcaption>
-      <ol class="est-proc__lista">
-        ${filas.map((r, k) => {
-          const n = k + 1;
-          if (k === 0) {
-            return html`<li class="est-proc__renglon" data-estado="enunciado">
-              <span class="est-proc__n"><span class="solo-lector">Renglón </span>${n}</span>
-              <span class="math est-proc__texto">${bonito(r.texto)}</span>
-              <span class="est-proc__marca">Ejercicio</span></li>`;
-          }
-          let estado = 'neutro';
-          let marca = '';
-          if (n === nError) {
-            estado = 'error';
-            marca = html`${ico('alerta')}<span>${analisis.estado === 'sin_entender' ? 'No lo entendí' : 'Aquí cambió'}</span>`;
-          } else if (r.despuesDelError) {
-            estado = 'despues';
-            marca = html`<span class="solo-lector">Después del error</span>`;
-          } else if (r.valido) {
-            estado = 'ok';
-            marca = html`${ico('check')}<span class="solo-lector">Bien</span>`;
-          }
-          return html`<li class="est-proc__renglon" data-estado="${estado}">
-            <span class="est-proc__n"><span class="solo-lector">Renglón </span>${n}</span>
-            <span class="math est-proc__texto">${bonito(r.texto)}</span>
-            <span class="est-proc__marca">${marca}</span></li>`;
-        })}
-      </ol>
-    </figure>`;
+
+  /** Marca de cada renglón revisado (mismos textos que el cuaderno). */
+  function marcaRenglon(r, analisis) {
+    const errorEn = analisis.estado === 'error' ? analisis.error.renglon : null;
+    if (r.ok === false) return { estado: 'error', texto: `Tecu no entiende este renglón: ${r.error?.mensaje || ''}`, icono: 'pregunta' };
+    if (r.despuesDelError) return { estado: 'despues', texto: `Revisa antes el renglón ${errorEn}`, icono: null };
+    if (r.valido === false) {
+      return { estado: 'error', texto: r.tipo === 'numerica' ? 'Los dos lados no valen lo mismo' : 'Aquí cambió la solución', icono: 'alerta' };
+    }
+    if (r.valido === true) {
+      const texto = { calculo: 'Cuenta correcta', aproximado: 'Conserva la solución (redondeada)' }[r.nota] || 'Conserva la solución';
+      return { estado: 'ok', texto, icono: 'check' };
+    }
+    return { estado: 'neutro', texto: '', icono: null };
   }
+
+  /**
+   * Procedimiento ya revisado, de solo lectura, con el renglón del error señalado.
+   * Usa el mismo marcado que el cuaderno para que se vea igual, pero sin poder editarlo.
+   */
+  function vistaProcedimiento(analisis, nivel = 2) {
+    const filas = analisis.renglones || [];
+    const titulo =
+      nivel === 2
+        ? html`<h2 class="cuaderno__titulo titulo-3" id="est-proc-titulo">Tu procedimiento</h2>`
+        : html`<h3 class="cuaderno__titulo titulo-3" id="est-proc-titulo">Tu procedimiento</h3>`;
+    return html`<section class="cuaderno est-proc" data-modo="lectura" aria-labelledby="est-proc-titulo">
+      ${titulo}
+      <div class="cuaderno__hoja">
+        <div class="cuaderno__enunciado">
+          <p class="cuaderno__enunciado-texto">
+            <span class="cuaderno__etiqueta">Ecuación<span class="solo-lector"> (renglón 1):</span></span>
+            <span class="cuaderno__fila">
+              <span class="cuaderno__num" aria-hidden="true">1</span>
+              <span class="cuaderno__contenido">${matematica(filas[0]?.texto || '')}</span>
+            </span>
+          </p>
+        </div>
+        <ol class="cuaderno__renglones" role="list">
+          ${filas.slice(1).map((r, k) => {
+            const n = k + 2;
+            const marca = marcaRenglon(r, analisis);
+            return html`<li class="cuaderno__renglon" data-estado="${marca.estado}">
+              <div class="cuaderno__fila">
+                <span class="cuaderno__num" aria-hidden="true">${n}</span>
+                <div class="cuaderno__contenido">
+                  <span class="solo-lector">Renglón ${n}: </span>${matematica(r.texto)}
+                  ${marca.texto
+                    ? html`<span class="cuaderno__estado">${marca.icono ? ico(marca.icono) : ''}<span>${marca.texto}</span></span>`
+                    : ''}
+                </div>
+              </div>
+            </li>`;
+          })}
+        </ol>
+      </div>
+    </section>`;
+  }
+
 
   /* ---------------- Pantalla: diagnóstico ---------------- */
 
@@ -1229,11 +1298,11 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         clave: `revisado:${i}`,
         html: html`<div class="pantalla pila est-diag">
           ${encabezado}
-          ${vistaProcedimiento(analisis)}
+          ${vistaProcedimiento(analisis, 2)}
           ${cajaRetro(retroRevision(analisis, 'diagnostico'))}
           <p class="texto-sec est-guardado">${ico('check')}<span>Guardado en tu cel.</span></p>
           <button type="button" class="boton boton--primario boton--bloque" data-act="siguienteDiag" data-foco="siguiente">
-            <span>${ultimo ? 'Ver mi resultado' : 'Siguiente ejercicio'}</span>${ico('flecha')}</button>
+            <span>${ultimo ? 'Ver mi resultado' : 'Siguiente ejercicio'}</span>${ico('siguiente')}</button>
         </div>`,
       };
     }
@@ -1420,7 +1489,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
                 <li>${ico(ACTIVIDAD.comprobacion.icono)}<span>${ACTIVIDAD.comprobacion.nombre}</span></li>
               </ol>`}
           <button type="button" class="boton boton--primario boton--bloque" data-act="empezarRuta" data-foco="empezar-ruta">
-            <span>${r.empezada ? 'Continuar mi ruta' : sinErrores ? 'Ir a la comprobación' : 'Empezar mi ruta'}</span>${ico('flecha')}</button>
+            <span>${r.empezada ? 'Continuar mi ruta' : sinErrores ? 'Ir a la comprobación' : 'Empezar mi ruta'}</span>${ico('siguiente')}</button>
         </section>
         <details class="est-detalles est-resumen">
           <summary>Ver mis ${resumen.total} ejercicios</summary>
@@ -1440,18 +1509,17 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         const estado = k < actual ? 'hecho' : k === actual ? 'actual' : 'pendiente';
         const repasable = estado === 'hecho' && (a === 'pregunta' || a === 'visual') && !enComprobacion;
         const textoEstado = estado === 'hecho' ? 'hecho' : estado === 'actual' ? 'paso actual' : 'pendiente';
-        const cuerpo = html`<span class="est-pasos__marca" aria-hidden="true">${estado === 'hecho' ? ico('check') : k + 1}</span>
-          <span class="est-pasos__nombre">${ACTIVIDAD[a].corto}</span>
-          <span class="solo-lector">: ${textoEstado}</span>`;
+        const nombre = ACTIVIDAD[a].corto;
         return html`<li data-estado="${estado}" ${attr('aria-current', estado === 'actual', 'step')} ${attr('data-viendo', viendo === a)}>
           ${repasable
             ? html`<button type="button" class="est-pasos__boton" data-act="repasar" data-actividad="${a}" data-foco="paso-${a}"
-                aria-label="${ACTIVIDAD[a].nombre}: hecho. Repasar">${cuerpo}</button>`
-            : cuerpo}
+                aria-label="${nombre}: hecho. Toca para repasar">${nombre}</button>`
+            : html`<span class="est-pasos__nombre">${nombre}<span class="solo-lector">: ${textoEstado}</span></span>`}
         </li>`;
       })}
     </ol>`;
   }
+
 
   function vistaRuta() {
     const r = prog.ruta;
@@ -1511,9 +1579,8 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
           ${q.opciones.map((o) => {
             const elegida = p.elegidas.includes(o.id);
             const clase = elegida ? (o.correcta ? 'opcion--correcta' : 'opcion--incorrecta') : '';
-            return html`<button type="button" class="opcion ${clase}" data-act="opcion" data-id="${o.id}" data-foco="opcion-${o.id}"
+            return html`<button type="button" class="opcion ${clase}" data-act="elegirOpcion" data-id="${o.id}" data-foco="opcion-${o.id}"
               ${attr('aria-disabled', elegida || p.resuelta, 'true')}>
-              <span class="est-opcion__marca" aria-hidden="true">${elegida ? ico(o.correcta ? 'check' : 'cerrar') : ''}</span>
               <span class="est-opcion__texto">${o.texto}</span>
               ${elegida ? html`<span class="est-opcion__estado">${o.correcta ? 'Correcta' : 'No es esta'}</span>` : ''}
             </button>`;
@@ -1525,7 +1592,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
           : ''}
         ${p.resuelta && !repaso
           ? html`<button type="button" class="boton boton--primario boton--bloque" data-act="siguienteActividad" data-foco="siguiente">
-              <span>Siguiente: la balanza</span>${ico('flecha')}</button>`
+              <span>Siguiente: la balanza</span>${ico('siguiente')}</button>`
           : ''}`,
     };
   }
@@ -1577,9 +1644,9 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
           ? html`${cajaRetro({ estado: 'ok', tecu: 'feliz', icono: 'check', titulo: '¡Lo lograste!', texto: cierre })}
               ${repaso
                 ? html`<button type="button" class="boton boton--primario boton--bloque" data-act="salirRepaso" data-foco="siguiente">
-                    <span>Volver a mi paso</span>${ico('flecha')}</button>`
+                    <span>Volver a mi paso</span>${ico('siguiente')}</button>`
                 : html`<button type="button" class="boton boton--primario boton--bloque" data-act="siguienteActividad" data-foco="siguiente">
-                    <span>Siguiente: práctica</span>${ico('flecha')}</button>`}`
+                    <span>Siguiente: práctica</span>${ico('siguiente')}</button>`}`
           : ''}`,
       montaje: { clave, crear: (host) => montarBalanzaEn(host, clave, v) },
     };
@@ -1606,6 +1673,13 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         <p>No pude mostrar la balanza en este cel.</p>
         <button type="button" class="boton boton--secundario" data-act="saltarVisual">Seguir sin la balanza</button>
       </div>`);
+    }
+    if (!m.fallo && host.querySelector('.balanza--aviso')) {
+      m.fallo = true;
+      host.insertAdjacentHTML(
+        'beforeend',
+        String(html`<button type="button" class="boton boton--secundario boton--bloque" data-act="saltarVisual">Seguir sin la balanza</button>`),
+      );
     }
     // Si la balanza ya muestra la instrucción, no la repetimos arriba.
     const muestra = Boolean(v.instruccion) && host.textContent.includes(v.instruccion.slice(0, 40));
@@ -1662,15 +1736,25 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
           : ''}
         ${mensajeEscritura(claveMontaje)}
         <div class="est-montaje est-montaje--cuaderno" data-montaje="${claveMontaje}"></div>
-        ${analisis ? cajaRetro(retroRevision(analisis, 'practica', ej.ecuacion), { titular: false }) : ''}
         ${correcto
-          ? html`<button type="button" class="boton boton--primario boton--bloque" data-act="siguientePractica" data-foco="siguiente">
-              <span>${ultima ? 'Ir a la comprobación' : 'Siguiente práctica'}</span>${ico('flecha')}</button>`
+          ? html`${tecuDice(
+                'feliz',
+                html`<p>${ultima ? '¡Bien hecho! Ahora va la comprobación: esa la resuelves sin ayuda.' : '¡Bien hecho! Vamos con la siguiente.'}</p>`,
+                { tamano: 56, clase: 'est-tecu-dice--compacto' },
+              )}
+              <button type="button" class="boton boton--primario boton--bloque" data-act="siguientePractica" data-foco="siguiente">
+                <span>${ultima ? 'Ir a la comprobación' : 'Siguiente práctica'}</span>${ico('siguiente')}</button>`
           : ''}`,
       montaje: {
         clave: claveMontaje,
         crear: (host) =>
-          montarCuadernoEn(host, { clave: claveMontaje, ejercicio: ej.ecuacion, modo: 'practica', alRevisar: procesarPractica }),
+          montarCuadernoEn(host, {
+            clave: claveMontaje,
+            ejercicio: ej.ecuacion,
+            modo: 'practica',
+            alRevisar: procesarPractica,
+            nivelTitulo: 3,
+          }),
       },
     };
   }
@@ -1760,7 +1844,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         html: html`
           ${sobretitulo(r, 'comprobacion')}
           <h2 class="titulo-2" id="est-act-titulo">${ACTIVIDAD.comprobacion.nombre}</h2>
-          ${vistaProcedimiento(analisis)}
+          ${vistaProcedimiento(analisis, 3)}
           ${cajaRetro(retroRevision(analisis, 'comprobacion'))}
           <div class="pila est-dos-opciones" role="group" aria-label="¿Qué quieres hacer?">
             <button type="button" class="boton boton--primario boton--bloque" data-act="practicarOtro" data-foco="practicar-otro">
@@ -1782,7 +1866,13 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       montaje: {
         clave: claveMontaje,
         crear: (host) =>
-          montarCuadernoEn(host, { clave: claveMontaje, ejercicio: c.ecuacion, modo: 'comprobacion', alRevisar: procesarComprobacion }),
+          montarCuadernoEn(host, {
+            clave: claveMontaje,
+            ejercicio: c.ecuacion,
+            modo: 'comprobacion',
+            alRevisar: procesarComprobacion,
+            nivelTitulo: 3,
+          }),
       },
     };
   }
@@ -1904,7 +1994,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
           <p class="est-nota">${ico('candado')}<span>Durante la comprobación no hay chat ni pistas. Cuando la termines, Tecu despierta
             y puedes preguntarle lo que quieras.</span></p>
           <button type="button" class="boton boton--primario boton--bloque" data-act="aprender" data-foco="volver-comprobacion">
-            <span>Volver a la comprobación</span>${ico('flecha')}</button>
+            <span>Volver a la comprobación</span>${ico('siguiente')}</button>
         </div>`,
       };
     }
@@ -1989,7 +2079,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
           <button type="button" class="boton boton--secundario boton--bloque" data-act="actualizarPaquete" data-foco="actualizar"
             ${attr('aria-disabled', !enLinea || state.actualizando, 'true')}
             ${attr('data-explica', !enLinea, 'Necesitas internet para actualizar. Tu paquete guardado sigue funcionando.')}>
-            ${ico(state.actualizando ? 'sincronizar' : 'refrescar', state.actualizando ? 'est-girando' : '')}
+            ${ico(state.actualizando ? 'sincronizar' : 'descargar', state.actualizando ? 'est-girando' : '')}
             <span>${state.actualizando ? 'Buscando actualización…' : 'Actualizar paquete'}</span></button>
           ${!enLinea ? html`<p class="texto-sec">Para actualizar necesitas internet. Mientras, todo funciona con lo guardado.</p>` : ''}
         </article>
@@ -2019,11 +2109,13 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     state.actualizando = true;
     render();
     try {
-      const nuevo = await Paquete.cargarPaquete();
+      const nuevo = await Paquete.cargarPaquete(`packs/ecuaciones-1.json?actualizar=${Date.now()}`);
       const antes = state.paquete.version;
       state.paquete = { bytes: nuevo.bytes, kb: nuevo.kb, version: nuevo.pack?.version || antes };
       aviso(
-        antes === state.paquete.version ? `Ya tienes la versión más reciente (${pesoPaquete()}).` : 'Paquete actualizado.',
+        antes === state.paquete.version
+          ? `Ya tienes la versión más reciente (${pesoPaquete()}).`
+          : 'Paquete actualizado. Se usa la próxima vez que abras Tecu.',
         { tipo: 'exito' },
       );
     } catch (error) {
@@ -2050,9 +2142,9 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
           <h2 class="titulo-3" id="est-aj-texto">Tamaño de texto</h2>
           <div class="segmentado est-segmentado-texto" role="group" aria-labelledby="est-aj-texto">
             ${TAMANOS_TEXTO.map(
-              (t) => html`<button type="button" data-act="texto" data-valor="${t.valor}" data-foco="texto-${t.valor}"
+              (t) => html`<button type="button" data-act="tamanoTexto" data-valor="${t.valor}" data-foco="texto-${t.valor}"
                 aria-pressed="${(p.texto || 'normal') === t.valor}"><span class="est-muestra-texto" data-tam="${t.valor}"
-                aria-hidden="true">Aa</span><span>${t.texto}</span></button>`,
+                aria-hidden="true">Aa</span><span class="est-nombre-texto">${t.texto}</span></button>`,
             )}
           </div>
           <p class="texto-sec">Así se ve una ecuación: <span class="math">3x + 5 = 20</span></p>
@@ -2060,31 +2152,23 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         <section class="tarjeta pila" aria-labelledby="est-aj-ver">
           <h2 class="titulo-3" id="est-aj-ver">Para ver mejor</h2>
           <div class="est-ajuste">
-            <div class="est-ajuste__texto">
-              <label class="est-ajuste__nombre" for="est-sw-contraste">Alto contraste</label>
-              <p class="texto-sec" id="est-sw-contraste-desc">Colores más fuertes para leer con sol o con poca luz.</p>
-            </div>
-            <span class="est-ajuste__estado" aria-hidden="true">${contraste ? 'Sí' : 'No'}</span>
-            <button type="button" class="interruptor" role="switch" id="est-sw-contraste" aria-checked="${contraste}"
-              aria-describedby="est-sw-contraste-desc" data-act="contraste" data-foco="contraste"></button>
+            <button type="button" class="interruptor est-ajuste__boton" role="switch" aria-checked="${contraste}"
+              aria-describedby="est-sw-contraste-desc" data-act="contraste" data-foco="contraste">Alto contraste</button>
+            <p class="texto-sec est-ajuste__ayuda" id="est-sw-contraste-desc">Colores más fuertes para leer con sol o con poca luz.</p>
           </div>
           <div class="est-ajuste">
-            <div class="est-ajuste__texto">
-              <label class="est-ajuste__nombre" for="est-sw-movimiento">Reducir movimiento</label>
-              <p class="texto-sec" id="est-sw-movimiento-desc">${sistemaReduce && !reducido
-                ? 'Tu cel ya pide menos movimiento; aquí lo puedes dejar fijo.'
-                : 'Quita animaciones, como la celebración de Tecu.'}</p>
-            </div>
-            <span class="est-ajuste__estado" aria-hidden="true">${reducido ? 'Sí' : 'No'}</span>
-            <button type="button" class="interruptor" role="switch" id="est-sw-movimiento" aria-checked="${reducido}"
-              aria-describedby="est-sw-movimiento-desc" data-act="movimiento" data-foco="movimiento"></button>
+            <button type="button" class="interruptor est-ajuste__boton" role="switch" aria-checked="${reducido}"
+              aria-describedby="est-sw-movimiento-desc" data-act="movimiento" data-foco="movimiento">Reducir movimiento</button>
+            <p class="texto-sec est-ajuste__ayuda" id="est-sw-movimiento-desc">${sistemaReduce && !reducido
+              ? 'Tu cel ya pide menos movimiento; aquí lo puedes dejar fijo.'
+              : 'Quita animaciones, como la celebración de Tecu.'}</p>
           </div>
         </section>
         <section class="tarjeta pila est-zona-peligro" aria-labelledby="est-aj-progreso">
           <h2 class="titulo-3" id="est-aj-progreso">Tu progreso</h2>
           <p class="texto-sec">Tu avance se guarda en este cel${nombreVisible !== 'Invitado' ? `, a nombre de ${nombreVisible}` : ''}.</p>
           <button type="button" class="boton boton--peligro boton--bloque" data-act="borrarProgreso" data-foco="borrar">
-            ${ico('basura')}<span>Borrar mi progreso</span></button>
+            ${ico('borrar')}<span>Borrar mi progreso</span></button>
         </section>
       </div>`,
     };
@@ -2151,7 +2235,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   const acciones = {
     ir: (el) => ir(el.dataset.pantalla),
     aprender: () => ir('aprender'),
-    red: (el) => cambiarRed(el.dataset.sin === 'si'),
+    conexion: (el) => cambiarRed(el.dataset.sin === 'si'),
     verPendientes: () => {
       const n = contarPendientes();
       if (!n) {
@@ -2179,7 +2263,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       guardar();
       ir('ruta');
     },
-    opcion: (el) => elegirOpcion(el.dataset.id),
+    elegirOpcion: (el) => elegirOpcion(el.dataset.id),
     siguienteActividad: () => siguienteActividad(),
     siguientePractica: () => siguientePractica(),
     saltarVisual: () => completarVisual(montado?.tipo === 'balanza' ? montado : null, null),
@@ -2198,7 +2282,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     },
     sugerencia: (el) => enviarDuda(el.dataset.texto),
     actualizarPaquete: () => actualizarPaquete(),
-    texto: (el) => {
+    tamanoTexto: (el) => {
       const t = TAMANOS_TEXTO.find((x) => x.valor === el.dataset.valor) || TAMANOS_TEXTO[0];
       aplicarPrefs({ texto: t.valor }, `Tamaño de texto: ${t.texto}.`);
     },

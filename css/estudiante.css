@@ -1,0 +1,1016 @@
+/*
+ * Vista del estudiante (js/views/estudiante.js).
+ *
+ * styles.css pone el kit (botones, tarjetas, chips, segmentado, interruptor,
+ * pasos, burbujas, opciones, cuaderno, diagnóstico…). Aquí solo va el acomodo
+ * propio de esta vista, con clases est-* y tokens del kit (con respaldo).
+ * Nada depende solo del color: cada estado lleva icono y texto.
+ */
+
+/* ------------------------------------------------------------------ */
+/* Estructura                                                          */
+/* ------------------------------------------------------------------ */
+
+/* La barra y la navegación son fijas: lo enfocado no queda tapado (WCAG 2.4.11).
+   El JS ajusta estos valores a la altura real; esto es el respaldo. */
+html:has(.app--estudiante) {
+  scroll-padding-top: 8rem;
+  scroll-padding-bottom: 5.5rem;
+}
+
+.app--estudiante .contenido {
+  padding-bottom: var(--espacio-6, 2rem);
+}
+
+.app--estudiante .pantalla {
+  gap: var(--espacio-4, 1rem);
+}
+
+/* ------------------------------------------------------------------ */
+/* Barra superior: marca + pendientes, y la conexión                   */
+/* ------------------------------------------------------------------ */
+
+.est-barra {
+  gap: var(--espacio-2, 0.5rem);
+  padding-block: calc(var(--espacio-1, 0.25rem) + env(safe-area-inset-top, 0px)) var(--espacio-2, 0.5rem);
+  padding-inline: var(--espacio-3, 0.75rem);
+}
+
+.est-barra > * {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.est-barra__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.est-barra__marca {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.est-barra__marca .tecu {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.est-barra__textos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.est-barra__app {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.est-barra__alumno {
+  color: var(--color-texto-sec, #4b5b63);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 800;
+}
+
+/* Insignia "N pendientes" (botón: lleva a ver cuáles) */
+.est-pendientes {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: var(--objetivo, 2.75rem);
+  padding: 0.25rem 0.75rem;
+  border: var(--borde-control, 2px) solid currentColor;
+  border-radius: var(--radio-pildora, 999px);
+  background: var(--color-superficie, #fff);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 900;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.est-pendientes .icono {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.est-pendientes[data-estado='pendientes'] {
+  background: var(--color-acento-suave, #fff3d4);
+  color: var(--color-acento-fuerte, #8a5400);
+}
+
+.est-pendientes[data-estado='al-dia'] {
+  background: var(--color-exito-suave, #e0f3e7);
+  color: var(--color-exito, #196c3f);
+}
+
+.est-pendientes[data-estado='sincronizando'] {
+  background: var(--color-info-suave, #e3edfa);
+  color: var(--color-info, #1f5ea8);
+}
+
+@media (hover: hover) {
+  button.est-pendientes:hover {
+    box-shadow: 0 0 0 2px currentColor;
+  }
+}
+
+/* Con internet | Sin internet */
+.est-conexion {
+  gap: 0.125rem;
+  padding: 0.125rem;
+}
+
+.est-conexion button {
+  padding-inline: 0.5rem;
+  font-size: var(--texto-chico, 0.875rem);
+}
+
+.est-conexion .icono {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.est-barra__nota {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--color-alerta, #9c4a05);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 800;
+}
+
+.est-barra__nota .icono {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* Girar (sincronizando, buscando actualización). El kit lo apaga con movimiento reducido. */
+.est-girando {
+  animation: ui-girar 1s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Navegación inferior                                                 */
+/* ------------------------------------------------------------------ */
+
+.est-nav__item[aria-disabled='true'] {
+  color: var(--color-texto-deshabilitado, #56656d);
+  cursor: not-allowed;
+}
+
+.est-nav__item[aria-disabled='true'] svg {
+  outline: 2px dashed var(--color-borde, #6e7f87);
+  outline-offset: -2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Piezas comunes                                                      */
+/* ------------------------------------------------------------------ */
+
+.est-sobretitulo {
+  margin: 0;
+  color: var(--color-texto-sec, #4b5b63);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.est-encabezado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+/* Tecu con su burbuja */
+.est-tecu-dice {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.est-tecu-dice__tecu {
+  flex: none;
+  line-height: 0;
+}
+
+.est-tecu-dice__burbuja {
+  flex: 1 1 auto;
+  max-width: none;
+  margin-bottom: var(--espacio-2, 0.5rem);
+}
+
+.est-tecu-dice__burbuja > p {
+  margin: 0;
+}
+
+.est-tecu-dice--compacto .est-tecu-dice__burbuja {
+  padding: var(--espacio-2, 0.5rem) var(--espacio-3, 0.75rem);
+  font-size: 0.9375rem;
+}
+
+/* Tecu dormido: burbuja punteada, más apagada */
+.est-tecu-dice--dormido .est-tecu-dice__burbuja {
+  border-style: dashed;
+  background: var(--color-superficie-2, #eaf3f3);
+}
+
+/* Notas y avisos dentro de la pantalla */
+.est-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: var(--espacio-3, 0.75rem) var(--espacio-4, 1rem);
+  border: var(--borde-fino, 1px) solid var(--color-info, #1f5ea8);
+  border-radius: var(--radio, 0.75rem);
+  background: var(--color-info-suave, #e3edfa);
+  color: var(--color-texto, #15252d);
+  font-weight: 700;
+}
+
+.est-nota[data-estado='alerta'] {
+  border-color: var(--color-alerta, #9c4a05);
+  background: var(--color-alerta-suave, #fdecdc);
+}
+
+.est-nota .icono {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex: none;
+}
+
+.est-nota .boton {
+  margin-inline-start: auto;
+}
+
+/* Renglón que no se entendió (junto al cuaderno) */
+.est-mensaje {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: var(--espacio-3, 0.75rem);
+  border-inline-start: 0.375rem solid var(--color-alerta, #9c4a05);
+  border-radius: var(--radio, 0.75rem);
+  background: var(--color-alerta-suave, #fdecdc);
+  font-weight: 700;
+}
+
+.est-mensaje .icono {
+  flex: none;
+  color: var(--color-alerta, #9c4a05);
+}
+
+.est-guardado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--color-exito, #196c3f);
+  font-weight: 800;
+}
+
+.est-guardado .icono {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.est-ayuda {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+}
+
+.est-ayuda .icono {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* <details> con su resumen como objetivo táctil */
+.est-detalles > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--objetivo, 2.75rem);
+  color: var(--color-primario, #0b5d7a);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.est-progreso progress {
+  height: 0.875rem;
+}
+
+.est-progreso .texto-sec {
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ */
+/* Inicio                                                              */
+/* ------------------------------------------------------------------ */
+
+.est-materia-actual {
+  gap: var(--espacio-3, 0.75rem);
+}
+
+.est-etapa {
+  margin: 0;
+  font-weight: 700;
+}
+
+.est-aviso-pendientes {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3, 0.75rem);
+  padding: var(--espacio-3, 0.75rem) var(--espacio-4, 1rem);
+  border: var(--borde-control, 2px) dashed var(--color-acento-fuerte, #8a5400);
+  border-radius: var(--radio-grande, 1.25rem);
+  background: var(--color-acento-suave, #fff3d4);
+}
+
+.est-aviso-pendientes:focus {
+  outline: 3px solid var(--color-foco, #3b2fc0);
+  outline-offset: 2px;
+}
+
+.est-aviso-pendientes__icono {
+  flex: none;
+  color: var(--color-acento-fuerte, #8a5400);
+}
+
+.est-aviso-pendientes__icono .icono {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.est-aviso-pendientes__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1, 0.25rem);
+  min-width: 0;
+}
+
+.est-aviso-pendientes__cuerpo > * {
+  margin: 0;
+}
+
+.est-lista-pendientes {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.est-lista-pendientes li + li {
+  margin-top: 0.125rem;
+}
+
+/* Materias que todavía no están (no se pueden abrir) */
+.est-materias {
+  display: grid;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.est-materia {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2, 0.5rem);
+  width: 100%;
+  min-height: var(--objetivo, 2.75rem);
+  padding: var(--espacio-2, 0.5rem) var(--espacio-3, 0.75rem);
+  border: var(--borde-control, 2px) dashed var(--color-borde, #6e7f87);
+  border-radius: var(--radio, 0.75rem);
+  background: var(--color-superficie, #fff);
+  color: var(--color-texto-deshabilitado, #56656d);
+  font-weight: 800;
+  text-align: start;
+  cursor: not-allowed;
+}
+
+.est-materia .chip {
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Diagnóstico                                                         */
+/* ------------------------------------------------------------------ */
+
+.est-no-se {
+  font-weight: 700;
+}
+
+/* Procedimiento revisado (solo lectura): el cuaderno sin entrada ni botones */
+.est-proc .cuaderno__fila {
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+}
+
+/* Caja de lo que dice Tecu después de revisar */
+.est-retro__cuerpo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3, 0.75rem);
+}
+
+.est-retro__tecu {
+  flex: none;
+  line-height: 0;
+}
+
+.est-retro__texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1, 0.25rem);
+  min-width: 0;
+}
+
+.est-retro__texto > * {
+  margin: 0;
+}
+
+.est-retro__titulo .icono {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Resultado                                                           */
+/* ------------------------------------------------------------------ */
+
+.est-hallazgos {
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.est-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.est-chip-error {
+  min-height: 2.5rem;
+  padding-inline: 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.est-chip__n {
+  padding-inline-start: 0.375rem;
+  border-inline-start: 2px solid currentColor;
+  font-weight: 900;
+}
+
+.est-ruta-tarjeta {
+  gap: var(--espacio-3, 0.75rem);
+}
+
+.est-ruta-tarjeta > p {
+  margin: 0;
+}
+
+.est-ruta-tarjeta__etiqueta,
+.est-ruta__etiqueta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--tono, #0b5d7a);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.est-ruta-tarjeta__etiqueta .icono,
+.est-ruta__etiqueta .icono {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.est-actividades {
+  display: grid;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: actividad;
+}
+
+.est-actividades > li {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2, 0.5rem);
+  padding: var(--espacio-2, 0.5rem) var(--espacio-3, 0.75rem);
+  border-radius: var(--radio, 0.75rem);
+  background: var(--color-superficie, #fff);
+  font-weight: 700;
+  counter-increment: actividad;
+}
+
+.est-actividades > li::before {
+  content: counter(actividad);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--tono, #0b5d7a);
+  color: var(--sobre-tono, #fff);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 900;
+}
+
+.est-actividades .icono {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--tono, #0b5d7a);
+}
+
+.est-resumen__lista {
+  display: grid;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.est-resumen__lista > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  padding-block: var(--espacio-2, 0.5rem);
+  border-bottom: var(--borde-fino, 1px) solid var(--color-borde-suave, #d4dde0);
+}
+
+.est-resumen__n {
+  font-weight: 900;
+}
+
+.est-resumen__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline-start: auto;
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 800;
+}
+
+.est-resumen__estado .icono {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.est-resumen__lista > li[data-estado='correcto'] .est-resumen__estado {
+  color: var(--color-exito, #196c3f);
+}
+
+.est-resumen__lista > li[data-estado='error'] .est-resumen__estado {
+  color: var(--color-error, #b3261e);
+}
+
+/* ------------------------------------------------------------------ */
+/* Ruta                                                                */
+/* ------------------------------------------------------------------ */
+
+.est-ruta__cabeza {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1, 0.25rem);
+}
+
+.est-ruta__titulo {
+  margin: 0;
+}
+
+.est-ruta__diag {
+  align-self: flex-start;
+  margin-inline-start: calc(-1 * var(--espacio-3, 0.75rem));
+  color: var(--tono, #0b5d7a);
+}
+
+/* Pasos: los ya hechos de pregunta y balanza se pueden repasar */
+.est-pasos__boton {
+  min-width: var(--objetivo, 2.75rem);
+  min-height: var(--objetivo, 2.75rem);
+  margin-top: -0.375rem;
+  padding: 0 0.25rem;
+  border: 0;
+  border-radius: var(--radio-chico, 0.5rem);
+  background: none;
+  color: var(--tono, #0b5d7a);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.est-pasos > li[data-viendo] .est-pasos__boton {
+  background: var(--tono-suave, #d8eef1);
+  text-decoration: none;
+}
+
+.est-repaso {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.est-actividad {
+  gap: var(--espacio-4, 1rem);
+}
+
+.est-actividad > h2 {
+  margin: 0;
+}
+
+/* Pregunta de Tecu */
+.est-opcion__texto {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.est-opcion__estado {
+  flex: none;
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 900;
+}
+
+.opcion--correcta .est-opcion__estado {
+  color: var(--color-exito, #196c3f);
+}
+
+.opcion--incorrecta .est-opcion__estado {
+  color: var(--color-error, #b3261e);
+}
+
+.est-retro-opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: var(--espacio-3, 0.75rem) var(--espacio-4, 1rem);
+  border-inline-start: 0.375rem solid var(--color-info, #1f5ea8);
+  border-radius: var(--radio, 0.75rem);
+  background: var(--color-info-suave, #e3edfa);
+  font-weight: 700;
+}
+
+.est-retro-opcion[data-estado='ok'] {
+  border-color: var(--color-exito, #196c3f);
+  background: var(--color-exito-suave, #e0f3e7);
+}
+
+.est-retro-opcion .icono {
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.est-retro-opcion[data-estado='ok'] .icono {
+  color: var(--color-exito, #196c3f);
+}
+
+/* Balanza: marco con el tono de la ruta (Ana coral, Luis morado…) */
+.est-balanza {
+  padding: var(--espacio-3, 0.75rem);
+  border: var(--borde-control, 2px) solid var(--tono, #0b5d7a);
+  border-top-width: 0.5rem;
+  border-radius: var(--radio-grande, 1.25rem);
+  background: var(--color-superficie, #fff);
+}
+
+.est-instruccion > p {
+  margin: 0;
+}
+
+/* Comprobación sin ayuda */
+.est-dos-opciones {
+  gap: var(--espacio-3, 0.75rem);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tema dominado                                                       */
+/* ------------------------------------------------------------------ */
+
+.est-dominado {
+  align-items: center;
+  text-align: center;
+}
+
+.est-dominado .est-tecu-dice {
+  width: 100%;
+  text-align: start;
+}
+
+.est-dominado .boton {
+  width: 100%;
+}
+
+.est-celebra {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 12rem;
+  height: 12rem;
+  margin-inline: auto;
+}
+
+.est-celebra > .tecu {
+  position: relative;
+  z-index: 1;
+  width: 9.5rem;
+  height: 9.5rem;
+}
+
+.est-celebra__luz {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-acento-suave, #fff3d4) 0%, var(--color-acento-suave, #fff3d4) 55%, transparent 70%);
+}
+
+.est-confeti {
+  position: absolute;
+  inset: 0;
+}
+
+.est-confeti i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.625rem;
+  height: 0.875rem;
+  border-radius: 0.125rem;
+  background: var(--color-acento, #f5a524);
+  transform: translate(var(--x, 0), var(--y, 0)) rotate(var(--g, 0deg));
+  animation: est-confeti 0.9s var(--curva, ease-out) both;
+}
+
+.est-confeti i:nth-child(1) { --x: -5.5rem; --y: -4rem; --g: 20deg; }
+.est-confeti i:nth-child(2) { --x: 4.5rem; --y: -4.75rem; --g: -30deg; background: var(--tono-coral, #a83a24); }
+.est-confeti i:nth-child(3) { --x: -6rem; --y: 1.5rem; --g: 60deg; background: var(--tono-azul, #1c5ead); }
+.est-confeti i:nth-child(4) { --x: 5.5rem; --y: 0.5rem; --g: -50deg; background: var(--tono-verde, #366c12); }
+.est-confeti i:nth-child(5) { --x: -3rem; --y: -5.75rem; --g: 80deg; background: var(--tono-morado, #6a3fb4); }
+.est-confeti i:nth-child(6) { --x: 2rem; --y: -6rem; --g: 15deg; }
+.est-confeti i:nth-child(7) { --x: -4.5rem; --y: 4.5rem; --g: -15deg; background: var(--tono-rosa, #ab2a67); }
+.est-confeti i:nth-child(8) { --x: 4rem; --y: 4.75rem; --g: 40deg; background: var(--tono-ambar, #855600); }
+
+@keyframes est-confeti {
+  from {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg) scale(0.4);
+  }
+}
+
+/* Movimiento reducido: el kit ya acorta las animaciones; aquí se quedan quietas del todo. */
+html.reducir-movimiento .est-confeti i,
+html.reducir-movimiento .est-girando {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .est-confeti i,
+  .est-girando {
+    animation: none;
+  }
+}
+
+.est-insignia-dominado {
+  height: auto;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0.375rem 1rem;
+  font-size: 1.125rem;
+}
+
+.est-insignia-dominado .icono {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Datos (descargas y logro)                                           */
+/* ------------------------------------------------------------------ */
+
+.est-datos {
+  display: grid;
+  width: 100%;
+  margin: 0;
+  text-align: start;
+}
+
+.est-datos > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem var(--espacio-4, 1rem);
+  padding-block: var(--espacio-2, 0.5rem);
+  border-bottom: var(--borde-fino, 1px) solid var(--color-borde-suave, #d4dde0);
+}
+
+.est-datos dt {
+  color: var(--color-texto-sec, #4b5b63);
+  font-weight: 700;
+}
+
+.est-datos dd {
+  margin: 0;
+  font-weight: 800;
+  text-align: end;
+}
+
+.est-peso {
+  font-size: var(--texto-grande, 1.125rem);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Chat con Tecu                                                       */
+/* ------------------------------------------------------------------ */
+
+.est-chat__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3, 0.75rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.est-chat__msg {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.est-chat__msg > .burbuja {
+  margin-block: 0;
+}
+
+.est-chat__msg--alumno {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+}
+
+.est-chat__avatar {
+  flex: none;
+  line-height: 0;
+}
+
+.est-chat__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-texto-sec, #4b5b63);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 700;
+}
+
+.est-chat__estado .icono {
+  width: 1rem;
+  height: 1rem;
+}
+
+.est-burbuja--guardada {
+  border-style: dashed;
+  background: var(--color-superficie-2, #eaf3f3);
+}
+
+.est-burbuja--guardada .icono {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-inline-end: 0.25rem;
+  vertical-align: -0.2em;
+}
+
+.est-chat__sobre {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--color-texto-sec, #4b5b63);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 700;
+}
+
+.est-sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.est-sugerencia {
+  height: auto;
+  padding-block: 0.375rem;
+  white-space: normal;
+  text-align: start;
+}
+
+.est-chat__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1, 0.25rem);
+  padding: var(--espacio-3, 0.75rem);
+  border: var(--borde-fino, 1px) solid var(--color-borde-suave, #d4dde0);
+  border-radius: var(--radio-grande, 1.25rem);
+  background: var(--color-superficie, #fff);
+}
+
+.est-chat__etiqueta {
+  font-weight: 800;
+}
+
+.est-chat__fila {
+  display: flex;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.est-chat__entrada {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.est-chat__enviar {
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Ajustes                                                             */
+/* ------------------------------------------------------------------ */
+
+/* Muestra "Aa" arriba y el nombre abajo; la palomita del kit queda junto a la muestra */
+.est-segmentado-texto button {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    'marca muestra'
+    'nombre nombre';
+  align-items: center;
+  justify-content: center;
+  gap: 0 0.25rem;
+  padding-block: 0.25rem;
+  line-height: 1.1;
+}
+
+.est-segmentado-texto button::before {
+  grid-area: marca;
+}
+
+.est-segmentado-texto .est-nombre-texto {
+  grid-area: nombre;
+}
+
+.est-muestra-texto {
+  grid-area: muestra;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.est-muestra-texto[data-tam='normal'] { font-size: 1rem; }
+.est-muestra-texto[data-tam='grande'] { font-size: 1.25rem; }
+.est-muestra-texto[data-tam='muy-grande'] { font-size: 1.5rem; }
+
+.est-ajuste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.est-ajuste + .est-ajuste {
+  padding-top: var(--espacio-3, 0.75rem);
+  border-top: var(--borde-fino, 1px) solid var(--color-borde-suave, #d4dde0);
+}
+
+.est-ajuste__boton {
+  width: 100%;
+  font-size: var(--texto-grande, 1.125rem);
+}
+
+.est-ajuste__ayuda {
+  margin: 0;
+}
+
+.est-zona-peligro {
+  border-color: var(--color-error, #b3261e);
+}
+
+/* ------------------------------------------------------------------ */
+/* Pantalla de error de carga                                          */
+/* ------------------------------------------------------------------ */
+
+.est-error-carga {
+  max-width: 30rem;
+  margin-inline: auto;
+}

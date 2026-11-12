@@ -22,7 +22,7 @@
       .math { font-variant-numeric: tabular-nums; }
     }
 
-    .demo { max-width: 60rem; margin: 0 auto; padding: 1rem; display: grid; gap: 1.5rem; }
+    .demo { max-width: 60rem; margin: 0 auto; padding: 1rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
     .demo h1 { margin: 0; font-size: 1.5rem; }
     .demo h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
     .demo-nota { margin: 0; color: #4f5d68; }
@@ -37,7 +37,7 @@
     .demo-caso { display: grid; gap: 0.75rem; align-content: start; padding: 1rem; border-radius: 1rem; background: #fff;
       box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
     .demo-caso h3 { margin: 0; font-size: 1.05rem; }
-    .demo-registro { margin: 0; font-size: 0.875rem; color: #4f5d68; }
+    .demo-registro { margin: 0; font-size: 0.875rem; color: #4f5d68; overflow-wrap: anywhere; }
     .demo-fila { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   </style>
 </head>

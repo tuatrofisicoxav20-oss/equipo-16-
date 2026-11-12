@@ -15,13 +15,14 @@
  * para corregirlo ahí mismo, sin volver a escribirlo. Aplica en todos los modos:
  * es validar lo que se escribe, no una ayuda.
  *
- * Cada cuaderno guarda su propio estado: puede haber varios en la misma página.
+ * Estructura: .cuaderno-panel (raíz) > título, instrucción, .cuaderno (la hoja
+ * rayada del kit: enunciado, renglones y entrada), botones, diagnóstico, pistas
+ * y solución. Cada cuaderno guarda su propio estado: puede haber varios por página.
  */
 import { analizarProcedimiento, bonito, parsearRenglon, TIPOS } from '../core/engine.js';
 import { explicarError, pistasPara } from '../core/textos.js';
 import { html, crudo, anunciar, confirmar, delegar, renderConFoco, movimientoReducido } from './dom.js';
-// Cuando exista js/ui/iconos.js: descomenta esta línea y la primera de ico().
-// import { icono } from './iconos.js';
+import { icono } from './iconos.js';
 
 const MAX_PISTAS = 3;
 const MAX_LARGO = 120;
@@ -29,26 +30,9 @@ const MAX_LARGO = 120;
 /** Solo para que los id no choquen si hay varios cuadernos en la página. */
 let contador = 0;
 
-/* ------------------------------------------------------------------ */
-/* Iconos (punto único para cambiar al kit visual)                     */
-/* ------------------------------------------------------------------ */
-
-const SIMBOLOS = {
-  check: '✓',
-  alerta: '!',
-  error: '✕',
-  pista: '?',
-  pregunta: '?',
-  ojo: '◉',
-  lapiz: '✎',
-  borrar: '✕',
-  enviar: '↵',
-};
-
-/** Icono decorativo (el texto de al lado siempre dice lo mismo). */
-function ico(nombre) {
-  // return crudo(icono(nombre));
-  return html`<span class="cuaderno__simbolo" data-icono="${nombre}" aria-hidden="true">${SIMBOLOS[nombre] ?? ''}</span>`;
+/** Icono decorativo del kit (el texto de al lado siempre dice lo mismo). Punto único para cambiarlos. */
+function ico(nombre, tamano) {
+  return crudo(icono(nombre, tamano ? { tamano } : undefined));
 }
 
 /* ------------------------------------------------------------------ */
@@ -68,14 +52,15 @@ const TECLAS = [
 ];
 
 /**
- * Formato de pantalla: bonito() del motor más dos arreglos (el − tipográfico
- * que escribe la tecla rápida y el menos que va pegado al número: "x = −4").
+ * Formato de pantalla: bonito() del motor. Antes se pasa a guion el − tipográfico
+ * (el que llega del paquete o de un teclado) para que también quede espaciado.
  */
 function formatear(texto) {
-  const base = String(texto ?? '')
-    .replace(/[−‐-―﹣]/g, '-')
-    .replace(/X/g, 'x');
-  return bonito(base).replace(/([=(+·/]) − /g, (_, op) => (op === '=' || op === '+' ? `${op} −` : `${op}−`));
+  return bonito(
+    String(texto ?? '')
+      .replace(/[−‐-―﹣]/g, '-')
+      .replace(/X/g, 'x'),
+  );
 }
 
 /** Versión hablada para lectores de pantalla ("25/3" se leería "25 barra 3"). */
@@ -93,8 +78,16 @@ function paraLector(texto) {
     .trim();
 }
 
+/**
+ * Ecuación para la vista: si no cabe en una línea se parte antes de un "=",
+ * nunca a media expresión ("5x + 2" / "= 2x + 14"). Al lector va la versión hablada.
+ */
 function htmlMath(texto) {
-  return html`<span class="math cuaderno__texto" aria-hidden="true">${formatear(texto)}</span><span class="solo-lector">${paraLector(texto)}</span>`;
+  const visible = formatear(texto)
+    .split(' = ')
+    .map((lado) => lado.replace(/ /g, ' '))
+    .join(' = ');
+  return html`<span class="math cuaderno__texto" aria-hidden="true">${visible}</span><span class="solo-lector">${paraLector(texto)}</span>`;
 }
 
 const minuscula = (s) => (s ? s[0].toLowerCase() + s.slice(1) : s);
@@ -103,11 +96,13 @@ const minuscula = (s) => (s ? s[0].toLowerCase() + s.slice(1) : s);
 /* Marcas por renglón y textos del diagnóstico                         */
 /* ------------------------------------------------------------------ */
 
-const NEUTRA = Object.freeze({ estado: 'neutro', texto: '', icono: null });
+const NEUTRA = Object.freeze({ estado: 'neutro', texto: '' });
 
 /**
  * Estado visible de cada renglón del estudiante según el análisis del motor.
- * @returns {Array<{estado: 'ok'|'error'|'despues'|'neutro', texto: string, icono: string|null}>}
+ * El icono (✓, ✗ o círculo punteado) lo pinta el kit en el margen según data-estado;
+ * aquí va el texto, para que nada dependa solo del color.
+ * @returns {Array<{estado: 'ok'|'error'|'despues'|'neutro', texto: string}>}
  */
 function marcasDe(analisis, cuantos) {
   const filas = analisis?.renglones || [];
@@ -115,15 +110,14 @@ function marcasDe(analisis, cuantos) {
   if (filas.length !== cuantos + 1) return Array.from({ length: cuantos }, () => NEUTRA);
   const errorEn = analisis.estado === 'error' ? analisis.error.renglon : null;
   return filas.slice(1).map((r) => {
-    if (r.ok === false) return { estado: 'error', texto: `Tecu no entiende este renglón: ${r.error.mensaje}`, icono: 'pregunta' };
-    if (r.despuesDelError) return { estado: 'despues', texto: `Revisa antes el renglón ${errorEn}`, icono: null };
+    if (r.ok === false) return { estado: 'error', texto: `Tecu no entiende este renglón: ${r.error.mensaje}` };
+    if (r.despuesDelError) return { estado: 'despues', texto: `Revisa antes el renglón ${errorEn}` };
     if (r.valido === false) {
-      const texto = r.tipo === 'numerica' ? 'Los dos lados no valen lo mismo' : 'Aquí cambió la solución';
-      return { estado: 'error', texto, icono: 'alerta' };
+      return { estado: 'error', texto: r.tipo === 'numerica' ? 'Los dos lados no valen lo mismo' : 'Aquí cambió la solución' };
     }
     if (r.valido === true) {
       const texto = { calculo: 'Cuenta correcta', aproximado: 'Conserva la solución (redondeada)' }[r.nota] || 'Conserva la solución';
-      return { estado: 'ok', texto, icono: 'check' };
+      return { estado: 'ok', texto };
     }
     return NEUTRA;
   });
@@ -141,7 +135,7 @@ const FALTA = {
 
 function valorEncontrado(analisis) {
   const r = analisis.respuesta;
-  if (!r) return '';
+  if (!r) return 'la respuesta';
   const ultima = [...analisis.renglones].reverse().find((f) => f.valido && f.tipo === 'ecuacion');
   if (ultima?.nota === 'aproximado') return `x ≈ ${String(r.toNumber()).replace('-', '−')}`;
   return `x = ${r.toDisplay()}`;
@@ -228,13 +222,13 @@ export function montarCuaderno(contenedor, opciones = {}) {
   /* ---------------- Esqueleto (se pinta una sola vez) ---------------- */
 
   const raiz = document.createElement('section');
-  raiz.className = 'cuaderno';
+  raiz.className = 'cuaderno-panel';
   raiz.dataset.modo = modo;
   raiz.setAttribute('aria-labelledby', ids.titulo);
   raiz.innerHTML = String(html`
     <h${nivel} class="cuaderno__titulo titulo-3" id="${ids.titulo}">Tu procedimiento</h${nivel}>
     <p class="cuaderno__instruccion texto-sec" id="${ids.instruccion}">Escribe un paso por renglón, como en tu cuaderno.<span class="cuaderno__atajos"> Enter agrega el renglón; ${teclaMod} + Enter revisa.</span></p>
-    <div class="cuaderno__hoja">
+    <div class="cuaderno">
       <div class="cuaderno__enunciado">
         <p class="cuaderno__enunciado-texto">
           <span class="cuaderno__etiqueta">Ecuación<span class="solo-lector"> (renglón 1):</span></span>
@@ -248,10 +242,10 @@ export function montarCuaderno(contenedor, opciones = {}) {
       <form class="cuaderno__escritura" data-region="escritura" novalidate autocomplete="off">
         <div class="cuaderno__escritura-cabeza">
           <label class="cuaderno__etiqueta-entrada" for="${ids.entrada}" data-ref="etiqueta">Renglón 2</label>
-          <button type="button" class="boton boton--fantasma boton--chico cuaderno__cancelar" data-act="cancelar" hidden>Cancelar</button>
+          <button type="button" class="boton boton--fantasma cuaderno__cancelar" data-act="cancelar" hidden>Cancelar</button>
         </div>
-        <div class="cuaderno__escritura-fila">
-          <input id="${ids.entrada}" class="cuaderno__entrada math" type="text" inputmode="decimal"
+        <div class="cuaderno__entrada">
+          <input id="${ids.entrada}" class="cuaderno__campo math" type="text" inputmode="decimal"
             autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next"
             maxlength="${MAX_LARGO}" aria-describedby="${ids.instruccion}">
           <button type="submit" class="boton boton--secundario cuaderno__enviar" data-ref="enviar" data-mantener-foco></button>
@@ -304,9 +298,9 @@ export function montarCuaderno(contenedor, opciones = {}) {
     const editando = state.editando === i;
     const idEstado = `${id}-estado-${i}`;
     const estado = editando
-      ? html`<span class="cuaderno__estado" id="${idEstado}">${ico('lapiz')}<span>Lo estás editando</span></span>`
+      ? html`<span class="cuaderno__estado" id="${idEstado}">${ico('lapiz', 18)}<span>Lo estás editando</span></span>`
       : marca.texto
-        ? html`<span class="cuaderno__estado" id="${idEstado}">${marca.icono ? ico(marca.icono) : ''}<span>${marca.texto}</span></span>`
+        ? html`<span class="cuaderno__estado" id="${idEstado}">${marca.texto}</span>`
         : '';
     const describe = estado ? crudo(` aria-describedby="${idEstado}"`) : '';
     const clases = ['cuaderno__renglon', editando && 'cuaderno__renglon--editando', state.nuevo === i && 'cuaderno__renglon--nuevo']
@@ -316,10 +310,8 @@ export function montarCuaderno(contenedor, opciones = {}) {
       <li class="${clases}" data-estado="${marca.estado}" data-i="${i}">
         <div class="cuaderno__fila">
           <span class="cuaderno__num" aria-hidden="true">${n}</span>
-          <div class="cuaderno__contenido">
-            <span class="solo-lector">Renglón ${n}: </span>${htmlMath(texto)}
-            ${estado}
-          </div>
+          <div class="cuaderno__contenido"><span class="solo-lector">Renglón ${n}: </span>${htmlMath(texto)}</div>
+          ${estado}
           <div class="cuaderno__acciones-renglon">
             <button type="button" class="boton boton--fantasma boton--icono cuaderno__accion" data-act="editar" data-i="${i}" data-foco="editar-${i}"${describe}>
               ${ico('lapiz')}<span class="cuaderno__accion-texto">Editar<span class="solo-lector"> renglón ${n}</span></span>
@@ -377,7 +369,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
           <h${sub} class="diagnostico__titulo titulo-3">${ico(info.icono)}<span>${info.titulo}</span></h${sub}>
           ${info.parrafos.map((p) => html`<p class="diagnostico__texto">${p}</p>`)}
           ${d.desactualizado
-            ? html`<p class="diagnostico__nota">${ico('lapiz')}<span>Cambiaste tu procedimiento. Toca «Revisar» para ver cómo va ahora.</span></p>`
+            ? html`<p class="diagnostico__nota">${ico('lapiz', 20)}<span>Cambiaste tu procedimiento. Toca «Revisar» para ver cómo va ahora.</span></p>`
             : ''}
         </div>`,
     );
@@ -391,10 +383,10 @@ export function montarCuaderno(contenedor, opciones = {}) {
     renderConFoco(
       pistasEl,
       html`
-        <h${sub} class="cuaderno__subtitulo titulo-3" id="${ids.pistas}">${ico('pista')}<span>Pistas de Tecu</span></h${sub}>
+        <h${sub} class="cuaderno__subtitulo titulo-3" id="${ids.pistas}">Pistas de Tecu</h${sub}>
         <ol class="pistas" role="list" aria-labelledby="${ids.pistas}">
           ${state.pistas.map(
-            (p, i) => html`<li class="pista"><strong class="pista__nivel">Pista ${i + 1}</strong> <span class="pista__texto">${p}</span></li>`,
+            (p, i) => html`<li class="pista"><strong class="pista__nivel">Pista ${i + 1} de ${MAX_PISTAS}</strong> <span class="pista__texto">${p}</span></li>`,
           )}
         </ol>`,
     );
@@ -412,7 +404,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
           <h${sub} class="cuaderno__subtitulo titulo-3" id="${ids.solucion}" tabindex="-1" data-foco="solucion">${ico('ojo')}<span>Solución paso a paso</span></h${sub}>
           <ol class="cuaderno__pasos" role="list" aria-labelledby="${ids.solucion}">
             ${state.solucion.map(
-              (paso, i) => html`<li class="cuaderno__paso"><span class="cuaderno__num" aria-hidden="true">${i + 1}</span><span class="solo-lector">Paso ${i + 1}: </span>${htmlMath(paso)}</li>`,
+              (paso, i) => html`<li class="cuaderno__paso"><span class="cuaderno__num" aria-hidden="true">${i + 1}</span><span class="cuaderno__contenido"><span class="solo-lector">Paso ${i + 1}: </span>${htmlMath(paso)}</span></li>`,
             )}
           </ol>
           <p class="texto-sec">Compárala con tu procedimiento, renglón por renglón.</p>
@@ -424,7 +416,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
 
   function mostrarErrorEntrada(mensaje, { avisar = true } = {}) {
     state.errorEntrada = mensaje;
-    errorEl.innerHTML = String(html`${ico('alerta')}<span>${mensaje}</span>`);
+    errorEl.innerHTML = String(html`${ico('alerta', 20)}<span>${mensaje}</span>`);
     errorEl.hidden = false;
     entrada.setAttribute('aria-invalid', 'true');
     entrada.setAttribute('aria-describedby', `${ids.error} ${ids.instruccion}`);
@@ -598,7 +590,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
       return {
         estado,
         variante: 'ok',
-        icono: 'check',
+        icono: 'exito',
         titulo: '¡Lo lograste!',
         parrafos: [`Llegaste a ${valorEncontrado(analisis)} y cada renglón conserva la solución.`],
       };
@@ -617,10 +609,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
       if (ayudas) parrafos.push('Corrige ese renglón con «Editar» o pide una pista.');
       return { estado, tipo: e.tipo, variante: 'error', icono: 'alerta', titulo: `Revisa el renglón ${e.renglon}`, parrafos };
     }
-    if (estado === 'sin_entender') {
-      if (analisis.renglon === 1) {
-        return { estado, variante: 'revisar', icono: 'pregunta', titulo: 'Tecu no puede leer esta ecuación', parrafos: [analisis.mensaje] };
-      }
+    if (estado === 'sin_entender' && analisis.renglon > 1) {
       return {
         estado,
         variante: 'revisar',
@@ -633,8 +622,8 @@ export function montarCuaderno(contenedor, opciones = {}) {
       estado,
       variante: 'revisar',
       icono: 'pregunta',
-      titulo: 'Esta ecuación es especial',
-      parrafos: [analisis.mensaje || 'Tecu no puede revisar este procedimiento.'],
+      titulo: 'Tecu no pudo revisar esto',
+      parrafos: [analisis.mensaje || 'Revisa la ecuación del ejercicio.'],
     };
   }
 
@@ -712,7 +701,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
   function pedirPista() {
     if (!ayudas || state.pistasUsadas >= MAX_PISTAS) return;
     const ayuda = calcularAyuda();
-    if (!ayuda) {
+    if (!ayuda?.pistas?.length) {
       anunciar('Tecu no tiene pistas para esta ecuación.');
       return;
     }
@@ -740,7 +729,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
     state.confirmando = false;
     if (!ok || destruido) return;
     const ayuda = calcularAyuda();
-    if (!ayuda) {
+    if (!ayuda?.solucion?.length) {
       anunciar('Tecu no puede mostrar la solución de esta ecuación.');
       return;
     }
@@ -768,7 +757,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
     if (animado && msPorLetra > 0 && !movimientoReducido()) {
       state.escribiendo = true;
       entrada.readOnly = true;
-      raiz.classList.add('cuaderno--escribiendo');
+      raiz.classList.add('cuaderno-panel--escribiendo');
       try {
         for (const letra of Array.from(texto)) {
           if (destruido) return false;
@@ -778,7 +767,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
       } finally {
         state.escribiendo = false;
         entrada.readOnly = false;
-        raiz.classList.remove('cuaderno--escribiendo');
+        raiz.classList.remove('cuaderno-panel--escribiendo');
       }
       if (destruido) return false;
     } else {

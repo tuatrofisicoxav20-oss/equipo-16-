@@ -1521,8 +1521,9 @@ html.alto-contraste .burbuja--tecu {
 }
 
 .cuaderno__entrada:not(input, textarea) :is(input, textarea) {
-  flex: 1 1 10rem;
+  flex: 1 1 8rem;
   width: auto;
+  min-width: 0;
 }
 
 .cuaderno .cuaderno__entrada {
@@ -1788,6 +1789,7 @@ html.alto-contraste .dialogo::backdrop {
       [type='button'], [type='reset'], [type='image'], [type='hidden']),
     select,
     textarea) {
+  min-width: 0; /* que se encoja dentro de filas flex angostas */
   max-width: 100%;
   min-height: var(--objetivo);
   padding: var(--espacio-2) var(--espacio-3);

@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Guía visual · Tecu Aprende</title>
+  <meta name="description" content="Muestrario del sistema visual de Tecu Aprende para revisión de QA.">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="../styles.css">
+  <script>
+    // Atajos para capturas de QA: ?contraste=1 &texto=grande|muy-grande &movimiento=reducido
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var h = document.documentElement;
+      if (p.get('contraste') === '1') h.classList.add('alto-contraste');
+      var t = p.get('texto');
+      if (t === 'grande' || t === 'muy-grande') h.setAttribute('data-texto', t);
+      if (p.get('movimiento') === 'reducido') h.classList.add('reducir-movimiento');
+    })();
+  </script>
+  <style>
+    /* Solo para esta guía: no forma parte del kit */
+    .guia .contenido { max-width: 72rem; margin-inline: auto; }
+    .guia-intro { padding-bottom: var(--espacio-5); }
+    .guia-indice { display: flex; flex-wrap: wrap; gap: var(--espacio-2); margin: 0; padding: 0; list-style: none; }
+    .guia-indice a { display: inline-flex; align-items: center; min-height: var(--objetivo); padding-inline: var(--espacio-3); border-radius: var(--radio-pildora); background: var(--color-superficie); border: var(--borde-fino) solid var(--color-borde-suave); font-weight: 700; font-size: var(--texto-chico); text-decoration: none; }
+    .guia-seccion { display: flex; flex-direction: column; gap: var(--espacio-4); padding-block: var(--espacio-6); border-top: var(--borde-control) solid var(--color-borde-suave); scroll-margin-top: calc(var(--alto-barra) + var(--espacio-2)); }
+    .guia-seccion > * { margin: 0; }
+    .guia-sub { margin: 0; font-size: var(--texto-base); font-weight: 900; color: var(--color-texto-sec); text-transform: uppercase; letter-spacing: .04em; }
+    .guia-nota { margin: 0; color: var(--color-texto-sec); font-size: var(--texto-chico); max-width: 60rem; }
+    .guia-muestra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--espacio-3); padding: var(--espacio-4); border: var(--borde-fino) dashed var(--color-borde-suave); border-radius: var(--radio); background: var(--color-superficie); }
+    .guia-muestra--pila { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+    .guia-muestra--fondo { background: var(--color-fondo); }
+    .guia-columna { max-width: 26rem; }
+    .guia-colores { display: grid; gap: var(--espacio-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr)); }
+    .guia-color { overflow: hidden; border: var(--borde-fino) solid var(--color-borde-suave); border-radius: var(--radio); background: var(--color-superficie); }
+    .guia-color__muestra { display: grid; place-items: center; height: 3.5rem; font-weight: 900; }
+    .guia-color__datos { padding: var(--espacio-2) var(--espacio-3); font-size: .8125rem; line-height: 1.35; }
+    .guia-color__datos code { font-size: .75rem; }
+    .guia-iconos { display: grid; gap: var(--espacio-2); grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+    .guia-iconos li { display: flex; flex-direction: column; align-items: center; gap: var(--espacio-1); padding: var(--espacio-3) var(--espacio-1); border: var(--borde-fino) solid var(--color-borde-suave); border-radius: var(--radio); background: var(--color-superficie); color: var(--color-texto-sec); font-size: .75rem; text-align: center; overflow-wrap: anywhere; }
+    .guia-iconos .icono { width: 2rem; height: 2rem; color: var(--color-texto); }
+    .guia-avisos { position: static; padding: 0; align-items: stretch; pointer-events: auto; }
+    .guia-dialogo { position: static; display: block; margin: 0; max-width: 100%; }
+    .guia-marcos { display: flex; flex-wrap: wrap; gap: var(--espacio-5); align-items: flex-start; }
+    .guia-marco { display: block; width: 100%; border: var(--borde-control) solid var(--color-borde); border-radius: var(--radio-grande); background: var(--color-superficie); }
+    .guia-marco--telefono { width: 360px; max-width: 100%; height: 680px; border: 8px solid #15252d; border-radius: 2rem; }
+    .guia-marco--ancho { height: 560px; }
+    .guia-tabla { overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <div class="app guia">
+    <header class="barra-superior">
+      <span class="marca"><span data-icono="tecu" data-tamano="28"></span> Guía visual</span>
+      <span class="chip chip--info">QA · no se enlaza desde la app</span>
+    </header>
+
+    <main id="contenido" class="contenido" tabindex="-1">
+      <div class="pila guia-intro">
+        <h1 class="titulo-1" data-titulo>Sistema visual de Tecu Aprende</h1>
+        <p class="texto-sec">Paleta “a la jarocha”: mar del Golfo, arena y mango. Todos los componentes del kit (<code>styles.css</code>) con sus estados. Las clases están en <code>docs/ARQUITECTURA.md</code>.</p>
+        <nav aria-label="Secciones de la guía">
+          <ul class="guia-indice">
+            <li><a href="#preferencias">Preferencias</a></li>
+            <li><a href="#paleta">Paleta</a></li>
+            <li><a href="#tipografia">Tipografía</a></li>
+            <li><a href="#iconos">Iconos</a></li>
+            <li><a href="#botones">Botones</a></li>
+            <li><a href="#tarjetas">Tarjetas</a></li>
+            <li><a href="#chips">Chips</a></li>
+            <li><a href="#controles">Controles</a></li>
+            <li><a href="#progreso">Progreso</a></li>
+            <li><a href="#chat">Chat</a></li>
+            <li><a href="#opciones">Opciones</a></li>
+            <li><a href="#cuaderno">Cuaderno</a></li>
+            <li><a href="#diagnostico">Diagnóstico</a></li>
+            <li><a href="#dialogo">Diálogo</a></li>
+            <li><a href="#seccion-avisos">Avisos</a></li>
+            <li><a href="#formularios">Formularios</a></li>
+            <li><a href="#layouts">Layouts</a></li>
+            <li><a href="#impresion">Impresión</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <!-- Preferencias ------------------------------------------------------ -->
+      <section class="guia-seccion" id="preferencias" aria-labelledby="t-preferencias">
+        <h2 class="titulo-2" id="t-preferencias">Preferencias de accesibilidad</h2>
+        <p class="guia-nota">Cambian <code>html</code> igual que la app: <code>data-texto</code>, <code>.alto-contraste</code> y <code>.reducir-movimiento</code>. Aquí no se guardan.</p>
+        <div class="guia-muestra guia-muestra--pila guia-columna">
+          <div class="pila pila--chica">
+            <span class="campo__etiqueta" id="et-texto">Tamaño de letra</span>
+            <div class="segmentado" role="group" aria-labelledby="et-texto" data-pref="texto">
+              <button type="button" data-valor="normal" aria-pressed="true">Normal</button>
+              <button type="button" data-valor="grande" aria-pressed="false">Grande</button>
+              <button type="button" data-valor="muy-grande" aria-pressed="false">Muy grande</button>
+            </div>
+          </div>
+          <button type="button" class="interruptor" role="switch" aria-checked="false" data-pref="contraste">Alto contraste</button>
+          <button type="button" class="interruptor" role="switch" aria-checked="false" data-pref="movimiento">Reducir movimiento</button>
+        </div>
+      </section>
+
+      <!-- Paleta ------------------------------------------------------------ -->
+      <section class="guia-seccion" id="paleta" aria-labelledby="t-paleta">
+        <h2 class="titulo-2" id="t-paleta">Paleta y contraste</h2>
+        <p class="guia-nota">Cada muestra calcula su contraste en vivo (WCAG 2.x) contra blanco y contra el texto principal. Texto ≥ 4.5:1, bordes de controles ≥ 3:1; en alto contraste el texto llega a ≥ 7:1.</p>
+        <div class="guia-colores" id="guia-colores"></div>
+        <h3 class="guia-sub">Tonos de ruta (<code>data-tono</code>)</h3>
+        <div class="rejilla" style="--rejilla-min: 14rem">
+          <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="coral">
+            <h4 class="titulo-3"><span data-icono="signo"></span> Signos</h4>
+            <p>Pasa un término al otro lado del = sin cambiarle el signo.</p>
+            <progress max="4" value="1">1 de 4</progress>
+            <span class="chip chip--tono">coral</span>
+          </article>
+          <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="morado">
+            <h4 class="titulo-3"><span data-icono="inversa"></span> Inversa</h4>
+            <p>Usa la operación equivocada para deshacer.</p>
+            <progress max="4" value="2">2 de 4</progress>
+            <span class="chip chip--tono">morado</span>
+          </article>
+          <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="ambar">
+            <h4 class="titulo-3"><span data-icono="cuenta"></span> Cuentas</h4>
+            <p>Se equivoca en una operación con números.</p>
+            <progress max="4" value="3">3 de 4</progress>
+            <span class="chip chip--tono">ambar</span>
+          </article>
+          <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="verde">
+            <h4 class="titulo-3"><span data-icono="terminos"></span> Términos</h4>
+            <p>Junta términos que no son semejantes.</p>
+            <progress max="4" value="4">4 de 4</progress>
+            <span class="chip chip--tono">verde</span>
+          </article>
+          <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="azul">
+            <h4 class="titulo-3"><span data-icono="equilibrio"></span> Un lado</h4>
+            <p>Opera en un solo lado de la ecuación.</p>
+            <progress max="4" value="2">2 de 4</progress>
+            <span class="chip chip--tono">azul</span>
+          </article>
+          <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="rosa">
+            <h4 class="titulo-3"><span data-icono="negativo"></span> Negativos</h4>
+            <p>Se confunde con los números negativos.</p>
+            <progress max="4" value="1">1 de 4</progress>
+            <span class="chip chip--tono">rosa</span>
+          </article>
+          <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="gris">
+            <h4 class="titulo-3"><span data-icono="pregunta"></span> Revisar</h4>
+            <p>Tecu no reconoce el error: lo revisa la maestra.</p>
+            <progress max="4" value="0">0 de 4</progress>
+            <span class="chip chip--tono">gris</span>
+          </article>
+        </div>
+      </section>
+
+      <!-- Tipografía -------------------------------------------------------- -->
+      <section class="guia-seccion" id="tipografia" aria-labelledby="t-tipografia">
+        <h2 class="titulo-2" id="t-tipografia">Tipografía</h2>
+        <p class="guia-nota">Nunito variable (latín, local, <code>font-display: swap</code>) con respaldo del sistema. Sus dígitos, +, − y = miden lo mismo: las ecuaciones quedan alineadas. No trae flechas (→), palomitas (✓) ni ≤ ≥ ≠: usa iconos.</p>
+        <div class="guia-muestra guia-muestra--pila">
+          <p class="titulo-1">.titulo-1 · Aprende a la jarocha</p>
+          <p class="titulo-2">.titulo-2 · Tu ruta de hoy</p>
+          <p class="titulo-3">.titulo-3 · Lo que suma, pasa restando</p>
+          <p>Texto base: cuando un término cambia de lado del =, su operación se invierte. ¿Lo intentamos con otro ejemplo? <a href="#tipografia">Esto es un enlace</a>.</p>
+          <p class="texto-sec">.texto-sec · Ejercicio 2 de 4 · guardado en tu celular</p>
+          <p class="texto-chico texto-sec">.texto-chico · Actualizado hace 2 minutos</p>
+          <div class="pila pila--chica">
+            <p class="math" style="font-size: var(--texto-math)">.math · 3x + 5 = 20</p>
+            <p class="math" style="font-size: var(--texto-math)">5x − 2x = 14 − 2</p>
+            <p class="math" style="font-size: var(--texto-math)">x/4 − 1 = 2 · −2x + 3 = 11</p>
+          </div>
+          <p>Atajo de teclado: <kbd>x</kbd> <kbd>=</kbd> <kbd>Enter</kbd></p>
+        </div>
+      </section>
+
+      <!-- Iconos ------------------------------------------------------------ -->
+      <section class="guia-seccion" id="iconos" aria-labelledby="t-iconos">
+        <h2 class="titulo-2" id="t-iconos">Iconos (<code>js/ui/iconos.js</code>)</h2>
+        <p class="guia-nota"><code>icono(nombre, { etiqueta, tamano = 24 })</code> devuelve un SVG de trazo con <code>currentColor</code>. Sin etiqueta es decorativo (<code>aria-hidden</code>); con etiqueta lleva <code>role="img"</code> y <code>aria-label</code>. 24 = 1.5em: crece con la letra.</p>
+        <ul class="guia-iconos" id="guia-iconos"></ul>
+      </section>
+
+      <!-- Botones ----------------------------------------------------------- -->
+      <section class="guia-seccion" id="botones" aria-labelledby="t-botones">
+        <h2 class="titulo-2" id="t-botones">Botones</h2>
+        <h3 class="guia-sub">Variantes</h3>
+        <div class="guia-muestra">
+          <button type="button" class="boton boton--primario">Primario</button>
+          <button type="button" class="boton boton--secundario">Secundario</button>
+          <button type="button" class="boton boton--fantasma">Fantasma</button>
+          <button type="button" class="boton boton--peligro">Peligro</button>
+          <a class="boton" href="#botones">Enlace con .boton</a>
+        </div>
+        <h3 class="guia-sub">Con icono, solo icono y chicos</h3>
+        <div class="guia-muestra">
+          <button type="button" class="boton boton--primario"><span data-icono="check"></span> Revisar</button>
+          <button type="button" class="boton boton--secundario"><span data-icono="pista"></span> Pedir pista</button>
+          <button type="button" class="boton boton--fantasma"><span data-icono="atras"></span> Atrás</button>
+          <button type="button" class="boton boton--icono" aria-label="Borrar renglón"><span data-icono="borrar"></span></button>
+          <button type="button" class="boton boton--icono boton--fantasma" aria-label="Cerrar"><span data-icono="cerrar"></span></button>
+          <button type="button" class="boton boton--primario boton--chico"><span data-icono="sincronizar"></span> Sincronizar</button>
+          <button type="button" class="boton boton--chico">Chico</button>
+          <button type="button" class="boton boton--icono boton--chico" aria-label="Deshacer"><span data-icono="deshacer"></span></button>
+        </div>
+        <h3 class="guia-sub">Estados</h3>
+        <div class="guia-muestra">
+          <button type="button" class="boton boton--primario" disabled>:disabled</button>
+          <button type="button" class="boton boton--secundario" aria-disabled="true">aria-disabled</button>
+          <button type="button" class="boton" aria-pressed="false" data-alternar>aria-pressed="false"</button>
+          <button type="button" class="boton" aria-pressed="true" data-alternar><span data-icono="voz"></span> aria-pressed="true"</button>
+          <button type="button" class="boton boton--secundario" aria-busy="true">Sincronizando…</button>
+          <button type="button" class="boton boton--secundario">Pendientes <span class="insignia">3<span class="solo-lector"> por enviar</span></span></button>
+        </div>
+        <p class="guia-nota">Pasa el puntero, presiona y navega con Tab para ver hover, activo y foco (anillo índigo de 3 px con respiro blanco).</p>
+        <div class="guia-muestra guia-columna">
+          <button type="button" class="boton boton--primario boton--bloque">Empezar diagnóstico <span data-icono="siguiente"></span></button>
+        </div>
+      </section>
+
+      <!-- Tarjetas ---------------------------------------------------------- -->
+      <section class="guia-seccion" id="tarjetas" aria-labelledby="t-tarjetas">
+        <h2 class="titulo-2" id="t-tarjetas">Tarjetas y rejilla</h2>
+        <div class="rejilla guia-muestra--fondo">
+          <article class="tarjeta pila">
+            <h3 class="titulo-3">.tarjeta</h3>
+            <p class="texto-sec">Superficie blanca, borde suave y sombra corta.</p>
+            <div class="fila"><button type="button" class="boton boton--secundario boton--chico">Ver más</button></div>
+          </article>
+          <article class="tarjeta tarjeta--destacada pila">
+            <h3 class="titulo-3">.tarjeta--destacada</h3>
+            <p>Tu siguiente paso: <span class="math">2x + 3 = 11</span></p>
+            <div class="fila"><button type="button" class="boton boton--primario">Seguir</button></div>
+          </article>
+          <article class="tarjeta tarjeta--tono pila" data-tono="morado">
+            <h3 class="titulo-3">.tarjeta--tono</h3>
+            <p>Toma el color de <code>data-tono</code> (aquí, morado).</p>
+          </article>
+          <a class="tarjeta pila pila--chica" href="#tarjetas">
+            <span class="titulo-3">a.tarjeta (toda es enlace)</span>
+            <span class="texto-sec">Hover: borde de marca y sombra mayor.</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- Chips ------------------------------------------------------------- -->
+      <section class="guia-seccion" id="chips" aria-labelledby="t-chips">
+        <h2 class="titulo-2" id="t-chips">Chips e insignias</h2>
+        <div class="guia-muestra">
+          <span class="chip chip--exito"><span data-icono="nube"></span> Sincronizado</span>
+          <span class="chip chip--alerta"><span data-icono="sin-wifi"></span> Sin internet</span>
+          <span class="chip chip--error"><span data-icono="error"></span> Con error</span>
+          <span class="chip chip--info"><span data-icono="info"></span> Nuevo</span>
+          <span class="chip chip--neutro">2 de 4</span>
+          <span class="chip" data-tono="rosa">Negativos</span>
+        </div>
+        <h3 class="guia-sub">Chips de filtro (botones)</h3>
+        <div class="guia-muestra" role="group" aria-label="Filtrar por error">
+          <button type="button" class="chip" aria-pressed="true" data-alternar>Todos</button>
+          <button type="button" class="chip" aria-pressed="false" data-alternar>Signos</button>
+          <button type="button" class="chip" aria-pressed="false" data-alternar>Inversa</button>
+        </div>
+        <h3 class="guia-sub">Insignias</h3>
+        <div class="guia-muestra">
+          <span class="insignia">3</span>
+          <span class="insignia">12</span>
+          <span class="insignia"><span data-icono="estrella" data-tamano="16"></span> Dominado</span>
+        </div>
+      </section>
+
+      <!-- Controles --------------------------------------------------------- -->
+      <section class="guia-seccion" id="controles" aria-labelledby="t-controles">
+        <h2 class="titulo-2" id="t-controles">Segmentado e interruptor</h2>
+        <div class="guia-muestra guia-muestra--pila guia-columna">
+          <span class="campo__etiqueta" id="et-red">Conexión para proyectar</span>
+          <div class="segmentado" role="group" aria-labelledby="et-red" data-grupo>
+            <button type="button" aria-pressed="true"><span data-icono="wifi"></span> Con internet</button>
+            <button type="button" aria-pressed="false"><span data-icono="sin-wifi"></span> Sin internet</button>
+          </div>
+          <span class="campo__etiqueta" id="et-vista">Vista (con una opción deshabilitada)</span>
+          <div class="segmentado" role="group" aria-labelledby="et-vista" data-grupo>
+            <button type="button" aria-pressed="false">Día</button>
+            <button type="button" aria-pressed="true">Semana</button>
+            <button type="button" aria-pressed="false" disabled>Mes</button>
+          </div>
+        </div>
+        <div class="guia-muestra guia-muestra--pila guia-columna">
+          <button type="button" class="interruptor" role="switch" aria-checked="true" data-alternar-switch>Leer en voz alta</button>
+          <button type="button" class="interruptor" role="switch" aria-checked="false" data-alternar-switch>Sin internet (simulado)</button>
+          <button type="button" class="interruptor" role="switch" aria-checked="false" disabled>Deshabilitado</button>
+          <button type="button" class="interruptor" role="switch" aria-checked="true" aria-disabled="true">Encendido y bloqueado</button>
+        </div>
+      </section>
+
+      <!-- Progreso ---------------------------------------------------------- -->
+      <section class="guia-seccion" id="progreso" aria-labelledby="t-progreso">
+        <h2 class="titulo-2" id="t-progreso">Barra de progreso y pasos</h2>
+        <div class="guia-muestra guia-muestra--pila guia-columna">
+          <div class="barra-progreso">
+            <span id="et-prog-1">Ejercicio 2 de 4</span>
+            <progress max="4" value="2" aria-labelledby="et-prog-1">2 de 4</progress>
+          </div>
+          <div class="barra-progreso" data-tono="coral">
+            <span id="et-prog-2">Ruta “Signos”: 3 de 4</span>
+            <progress max="4" value="3" aria-labelledby="et-prog-2">3 de 4</progress>
+          </div>
+          <div class="barra-progreso">
+            <span id="et-prog-3">Paquete descargado</span>
+            <progress max="100" value="100" aria-labelledby="et-prog-3">100 %</progress>
+          </div>
+        </div>
+        <div class="guia-muestra guia-muestra--pila guia-columna">
+          <ol class="pasos" aria-label="Actividades de la ruta">
+            <li data-estado="hecho">Pregunta<span class="solo-lector"> (hecha)</span></li>
+            <li data-estado="hecho">Visual<span class="solo-lector"> (hecha)</span></li>
+            <li data-estado="actual" aria-current="step">Práctica</li>
+            <li data-estado="pendiente">Comprobación</li>
+          </ol>
+          <ol class="pasos" aria-label="Actividades (tono morado)" data-tono="morado">
+            <li data-estado="hecho">Pregunta<span class="solo-lector"> (hecha)</span></li>
+            <li data-estado="actual" aria-current="step">Visual</li>
+            <li data-estado="pendiente">Práctica</li>
+            <li data-estado="pendiente">Comprobación</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Chat -------------------------------------------------------------- -->
+      <section class="guia-seccion" id="chat" aria-labelledby="t-chat">
+        <h2 class="titulo-2" id="t-chat">Burbujas de chat</h2>
+        <div class="guia-muestra guia-muestra--pila guia-columna guia-muestra--fondo">
+          <div class="burbuja burbuja--tecu"><p><strong>Tecu:</strong> ¡Hola! Revisé tu procedimiento. ¿Quieres ver por qué el 5 pasa restando?</p></div>
+          <div class="burbuja burbuja--alumno"><p>Sí, no entiendo por qué cambia de signo.</p></div>
+          <div class="burbuja burbuja--tecu"><p>Imagina una balanza: si quitas 5 de un platillo, quitas 5 del otro. Por eso <span class="math">3x = 20 − 5</span>.</p></div>
+        </div>
+      </section>
+
+      <!-- Opciones ---------------------------------------------------------- -->
+      <section class="guia-seccion" id="opciones" aria-labelledby="t-opciones">
+        <h2 class="titulo-2" id="t-opciones">Opciones de pregunta</h2>
+        <p class="guia-nota">Elegida = borde grueso y letra rellena; correcta / incorrecta = color + palomita o tache + borde grueso. Las vistas deben decir “Correcta” o “Incorrecta” con texto o <code>anunciar()</code>.</p>
+        <div class="guia-muestra guia-muestra--pila guia-columna">
+          <p class="titulo-3" id="t-preg">Si <span class="math">x + 4 = 9</span>, ¿qué le pasa al 4 al cambiar de lado?</p>
+          <ul class="opciones" aria-labelledby="t-preg">
+            <li><button type="button" class="opcion">Se queda igual: <span class="math">x = 9 + 4</span></button></li>
+            <li><button type="button" class="opcion" aria-pressed="true">Pasa restando (elegida)</button></li>
+            <li><button type="button" class="opcion opcion--correcta" aria-disabled="true">Pasa restando: <span class="math">x = 9 − 4</span><span class="solo-lector"> (correcta)</span></button></li>
+            <li><button type="button" class="opcion opcion--incorrecta" aria-disabled="true">Pasa dividiendo: <span class="math">x = 9 / 4</span><span class="solo-lector"> (incorrecta)</span></button></li>
+            <li><button type="button" class="opcion" disabled>Opción deshabilitada</button></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Cuaderno ---------------------------------------------------------- -->
+      <section class="guia-seccion" id="cuaderno" aria-labelledby="t-cuaderno">
+        <h2 class="titulo-2" id="t-cuaderno">Cuaderno y teclas rápidas</h2>
+        <p class="guia-nota">Hoja rayada ligera con margen. <code>data-estado</code>: ok (palomita), error (tache, fondo y subrayado ondulado en la <code>.math</code>), despues (no se revisó: círculo punteado), neutro (sin marca).</p>
+        <div class="guia-muestra guia-muestra--pila guia-columna guia-muestra--fondo">
+          <div class="cuaderno">
+            <p class="cuaderno__enunciado"><span class="math">3x + 5 = 20</span></p>
+            <ol aria-label="Tu procedimiento">
+              <li class="cuaderno__renglon" data-estado="ok"><span class="math">3x = 20 − 5</span><span class="solo-lector"> (bien)</span></li>
+              <li class="cuaderno__renglon" data-estado="ok"><span class="math">3x = 15</span><span class="solo-lector"> (bien)</span></li>
+              <li class="cuaderno__renglon" data-estado="error"><span class="math">x = 15 − 3</span><span class="solo-lector"> (aquí hay un error)</span>
+                <button type="button" class="boton boton--icono boton--fantasma boton--chico" aria-label="Corregir renglón 3"><span data-icono="lapiz"></span></button></li>
+              <li class="cuaderno__renglon" data-estado="despues"><span class="math">x = 12</span><span class="solo-lector"> (sin revisar)</span></li>
+              <li class="cuaderno__renglon" data-estado="neutro"><span class="math">x = 5</span></li>
+            </ol>
+            <div class="cuaderno__entrada">
+              <label class="solo-lector" for="guia-renglon">Siguiente renglón</label>
+              <input id="guia-renglon" type="text" inputmode="text" autocomplete="off" placeholder="Escribe el siguiente renglón">
+              <button type="button" class="boton boton--primario boton--icono" aria-label="Agregar renglón"><span data-icono="mas"></span></button>
+            </div>
+          </div>
+          <div class="teclas-rapidas" role="group" aria-label="Teclas rápidas">
+            <button type="button" class="tecla">x</button>
+            <button type="button" class="tecla">+</button>
+            <button type="button" class="tecla" aria-label="menos">−</button>
+            <button type="button" class="tecla">=</button>
+            <button type="button" class="tecla" aria-label="entre">/</button>
+            <button type="button" class="tecla">(</button>
+            <button type="button" class="tecla">)</button>
+            <button type="button" class="tecla" aria-label="Borrar"><span data-icono="deshacer"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Diagnóstico y pistas ---------------------------------------------- -->
+      <section class="guia-seccion" id="diagnostico" aria-labelledby="t-diagnostico">
+        <h2 class="titulo-2" id="t-diagnostico">Diagnóstico, pistas y vacío</h2>
+        <div class="rejilla" style="--rejilla-min: 18rem">
+          <section class="diagnostico diagnostico--error" aria-labelledby="d1">
+            <h3 class="titulo-3" id="d1"><span data-icono="alerta"></span> Encontré algo en el renglón 3</h3>
+            <p>Para quitar el 3 que multiplica a la x, lo restaste. Una multiplicación se deshace dividiendo.</p>
+          </section>
+          <section class="diagnostico diagnostico--ok" aria-labelledby="d2">
+            <h3 class="titulo-3" id="d2"><span data-icono="exito"></span> ¡Todo bien!</h3>
+            <p>Cada renglón conserva el equilibrio. <span class="math">x = 5</span></p>
+          </section>
+          <section class="diagnostico diagnostico--revisar" aria-labelledby="d3">
+            <h3 class="titulo-3" id="d3"><span data-icono="pregunta"></span> Hay que revisarlo</h3>
+            <p>No reconozco este paso. Tu maestra lo va a ver.</p>
+          </section>
+          <section class="diagnostico" aria-labelledby="d4">
+            <h3 class="titulo-3" id="d4"><span data-icono="info"></span> .diagnostico (info)</h3>
+            <p>Escribe un renglón por paso, con el signo =.</p>
+          </section>
+        </div>
+        <ol class="pistas guia-columna">
+          <li class="pista"><strong>Pista 1.</strong> ¿Qué número acompaña a la x?</li>
+          <li class="pista"><strong>Pista 2.</strong> El 3 está multiplicando: ¿con qué operación se deshace?</li>
+          <li class="pista"><strong>Pista 3.</strong> Divide los dos lados entre 3: <span class="math">x = 15 / 3</span></li>
+        </ol>
+        <div class="vacio guia-columna">
+          <span data-icono="descargas" data-tamano="48"></span>
+          <p class="titulo-3">Aún no hay dudas</p>
+          <p>Cuando le escribas a Tecu, tus preguntas aparecen aquí.</p>
+          <button type="button" class="boton boton--secundario"><span data-icono="chat"></span> Escribir duda</button>
+        </div>
+      </section>
+
+      <!-- Diálogo ----------------------------------------------------------- -->
+      <section class="guia-seccion" id="dialogo" aria-labelledby="t-dialogo">
+        <h2 class="titulo-2" id="t-dialogo">Diálogo</h2>
+        <p class="guia-nota"><code>confirmar()</code> de <code>js/ui/dom.js</code> abre un <code>&lt;dialog class="dialogo"&gt;</code> modal con fondo oscuro; Escape cancela.</p>
+        <div class="fila">
+          <button type="button" class="boton boton--secundario" data-abrir-dialogo>Abrir diálogo</button>
+          <button type="button" class="boton boton--peligro" data-abrir-dialogo="peligro"><span data-icono="reiniciar"></span> Reiniciar demo</button>
+        </div>
+        <div class="guia-muestra guia-muestra--fondo">
+          <div class="dialogo guia-dialogo" role="presentation">
+            <div class="pila">
+              <h3 class="titulo-2">¿Ver la solución?</h3>
+              <p>Si la ves ahora, este ejercicio no cuenta para tu ruta. Puedes pedir otra pista.</p>
+              <div class="fila fila--fin">
+                <button type="button" class="boton boton--secundario">Cancelar</button>
+                <button type="button" class="boton boton--primario">Sí, ver solución</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Avisos ------------------------------------------------------------ -->
+      <section class="guia-seccion" id="seccion-avisos" aria-labelledby="t-avisos">
+        <h2 class="titulo-2" id="t-avisos">Avisos (toasts)</h2>
+        <p class="guia-nota"><code>aviso(mensaje, { tipo })</code> los muestra abajo (sobre la barra inferior si existe) y los anuncia al lector de pantalla.</p>
+        <div class="fila">
+          <button type="button" class="boton boton--secundario boton--chico" data-aviso="info">info</button>
+          <button type="button" class="boton boton--secundario boton--chico" data-aviso="exito">éxito</button>
+          <button type="button" class="boton boton--secundario boton--chico" data-aviso="alerta">alerta</button>
+          <button type="button" class="boton boton--secundario boton--chico" data-aviso="error">error</button>
+        </div>
+        <div class="avisos guia-avisos guia-columna" aria-hidden="true">
+          <div class="aviso aviso--info">Tecu guardó tu avance en este celular.</div>
+          <div class="aviso aviso--exito">Se enviaron 3 actividades a tu maestra.</div>
+          <div class="aviso aviso--alerta">Sin internet: tu avance se enviará después.</div>
+          <div class="aviso aviso--error">Falta el signo = en el renglón 2.</div>
+        </div>
+      </section>
+
+      <!-- Formularios y tabla ----------------------------------------------- -->
+      <section class="guia-seccion" id="formularios" aria-labelledby="t-formularios">
+        <h2 class="titulo-2" id="t-formularios">Formularios y tabla</h2>
+        <div class="guia-muestra guia-muestra--pila guia-columna">
+          <div class="campo">
+            <label for="f-nombre">¿Cómo te llamas?</label>
+            <input id="f-nombre" type="text" placeholder="Tu nombre" aria-describedby="f-nombre-ayuda">
+            <span class="campo__ayuda" id="f-nombre-ayuda">Solo lo ve tu maestra.</span>
+          </div>
+          <div class="campo">
+            <label for="f-duda">Escribe tu duda a Tecu</label>
+            <textarea id="f-duda" placeholder="¿Por qué el 5 pasa restando?"></textarea>
+          </div>
+          <div class="campo">
+            <label for="f-ec">Ecuación</label>
+            <input id="f-ec" class="math" type="text" value="3x + 5 20" aria-invalid="true" aria-describedby="f-ec-error">
+            <span class="campo__error" id="f-ec-error">Falta el signo =</span>
+          </div>
+          <div class="campo">
+            <label for="f-grupo">Grupo</label>
+            <select id="f-grupo"><option>1.º A</option><option selected>1.º B</option></select>
+          </div>
+          <div class="campo">
+            <label for="f-off">Escuela (deshabilitado)</label>
+            <input id="f-off" type="text" value="Secundaria Técnica 1" disabled>
+          </div>
+          <label class="fila"><input type="checkbox" checked> Recordarme en este celular</label>
+        </div>
+        <div class="guia-tabla">
+          <table>
+            <caption>Grupo de ejemplo</caption>
+            <thead><tr><th scope="col">Alumno</th><th scope="col">Error principal</th><th scope="col">Ruta</th><th scope="col">Estado</th></tr></thead>
+            <tbody>
+              <tr><td>Ana</td><td><span class="chip" data-tono="coral">Signos</span></td><td>3 de 4</td><td><span class="chip chip--exito"><span data-icono="nube"></span> Al día</span></td></tr>
+              <tr><td>Luis</td><td><span class="chip" data-tono="morado">Inversa</span></td><td>1 de 4</td><td><span class="chip chip--alerta"><span data-icono="sin-wifi"></span> Pendiente</span></td></tr>
+              <tr><td>Itzel</td><td><span class="chip" data-tono="gris">Revisar</span></td><td>0 de 4</td><td><span class="chip chip--error"><span data-icono="llamar"></span> Llamar</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Layouts ----------------------------------------------------------- -->
+      <section class="guia-seccion" id="layouts" aria-labelledby="t-layouts">
+        <h2 class="titulo-2" id="t-layouts">Layouts</h2>
+        <p class="guia-nota"><code>.app--estudiante</code>: barra superior y <code>.nav-inferior</code> fijas (sticky, la barra inferior siempre al final aunque venga antes en el HTML); en escritorio, columna de 30rem centrada sobre mar y arena. <code>.app--docente</code>: escritorio, rejilla amplia. <code>.app--pitch</code>: proyector, la letra crece con el ancho.</p>
+        <div class="guia-marcos">
+          <iframe class="guia-marco guia-marco--telefono" title="Vista previa: estudiante (360 px)" data-layout="estudiante"></iframe>
+          <iframe class="guia-marco guia-marco--ancho" title="Vista previa: docente" data-layout="docente"></iframe>
+          <iframe class="guia-marco guia-marco--ancho" title="Vista previa: pitch" data-layout="pitch"></iframe>
+        </div>
+      </section>
+
+      <!-- Impresión --------------------------------------------------------- -->
+      <section class="guia-seccion" id="impresion" aria-labelledby="t-impresion">
+        <h2 class="titulo-2" id="t-impresion">Impresión</h2>
+        <p class="guia-nota">Al imprimir se ocultan barras, avisos, botones y teclas; tarjetas y renglones no se parten entre páginas; los colores se conservan.</p>
+        <div class="guia-muestra">
+          <p class="oculto-impresion">.oculto-impresion: se ve en pantalla, no en papel.</p>
+          <p class="solo-impresion">.solo-impresion: solo aparece al imprimir.</p>
+          <button type="button" class="boton boton--secundario" data-imprimir><span data-icono="imprimir"></span> Imprimir esta guía</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="anuncios" class="solo-lector" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="alertas" class="solo-lector" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="avisos" class="avisos" aria-hidden="true"></div>
+
+  <script type="module">
+    import { icono, NOMBRES_ICONOS } from '../js/ui/iconos.js';
+    import { aviso, confirmar } from '../js/ui/dom.js';
+
+    const raiz = document.documentElement;
+
+    // 1. Iconos de marcador
+    function pintarIconos(contenedor = document) {
+      for (const el of contenedor.querySelectorAll('[data-icono]')) {
+        const tamano = Number(el.dataset.tamano) || undefined;
+        el.outerHTML = icono(el.dataset.icono, { tamano, etiqueta: el.dataset.etiqueta });
+      }
+    }
+    pintarIconos();
+
+    document.getElementById('guia-iconos').innerHTML = NOMBRES_ICONOS
+      .map((n) => `<li>${icono(n)}<code>${n}</code></li>`)
+      .join('');
+
+    // 2. Paleta con contraste en vivo
+    const COLORES = [
+      ['--color-fondo', 'texto'], ['--color-superficie', 'texto'], ['--color-superficie-2', 'texto'],
+      ['--color-texto', 'claro'], ['--color-texto-sec', 'claro'], ['--color-primario', 'claro'],
+      ['--color-primario-hover', 'claro'], ['--color-primario-suave', 'texto'], ['--color-acento', 'acento'],
+      ['--color-acento-suave', 'texto'], ['--color-exito', 'claro'], ['--color-alerta', 'claro'],
+      ['--color-error', 'claro'], ['--color-info', 'claro'], ['--color-borde', 'grafico'],
+      ['--color-borde-suave', 'texto'], ['--color-foco', 'claro'], ['--color-deshabilitado', 'deshabilitado'],
+      ['--color-papel', 'texto'], ['--color-aviso-fondo', 'claro'],
+    ];
+
+    function aRgb(color) {
+      const m = color.match(/rgba?\(([^)]+)\)/);
+      return m ? m[1].split(/[ ,/]+/).slice(0, 3).map(Number) : [0, 0, 0];
+    }
+    function lum([r, g, b]) {
+      const f = (c) => { const s = c / 255; return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    }
+    const contraste = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+    const hex = (c) => '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
+    function resolverColor(variable) {
+      const sonda = document.createElement('span');
+      sonda.style.color = `var(${variable})`;
+      document.body.appendChild(sonda);
+      const c = aRgb(getComputedStyle(sonda).color);
+      sonda.remove();
+      return c;
+    }
+
+    function pintarPaleta() {
+      const blanco = [255, 255, 255];
+      const texto = resolverColor('--color-texto');
+      const sobreAcento = resolverColor('--color-sobre-acento');
+      const textoDes = resolverColor('--color-texto-deshabilitado');
+      document.getElementById('guia-colores').innerHTML = COLORES.map(([v, uso]) => {
+        const c = resolverColor(v);
+        let muestra = 'Aa', frente = texto, par = 'texto';
+        if (uso === 'claro') { frente = blanco; par = 'blanco'; }
+        if (uso === 'acento') { frente = sobreAcento; par = 'sobre-acento'; }
+        if (uso === 'deshabilitado') { frente = textoDes; par = 'texto-desh.'; }
+        if (uso === 'grafico') { muestra = '▭'; frente = blanco; par = 'borde/blanco'; }
+        const r = uso === 'grafico' ? contraste(c, blanco) : contraste(frente, c);
+        const min = uso === 'grafico' ? 3 : raiz.classList.contains('alto-contraste') ? 7 : 4.5;
+        return `<div class="guia-color">
+          <div class="guia-color__muestra" style="background:${hex(c)};color:${hex(frente)}">${muestra}</div>
+          <div class="guia-color__datos"><code>${v}</code><br>${hex(c)} · ${par} ${r.toFixed(2)}:1
+          <span class="chip ${r >= min ? 'chip--exito' : 'chip--error'}" style="font-size:.6875rem;min-height:0">${r >= min ? 'pasa' : 'no pasa'}</span></div>
+        </div>`;
+      }).join('');
+    }
+
+    // 3. Preferencias (como la app, pero sin guardar)
+    const prefs = {
+      texto: raiz.getAttribute('data-texto') || 'normal',
+      contraste: raiz.classList.contains('alto-contraste'),
+      movimiento: raiz.classList.contains('reducir-movimiento') ? 'reducido' : 'auto',
+    };
+
+    function aplicarPrefs() {
+      if (prefs.texto === 'normal') raiz.removeAttribute('data-texto');
+      else raiz.setAttribute('data-texto', prefs.texto);
+      raiz.classList.toggle('alto-contraste', prefs.contraste);
+      raiz.classList.toggle('reducir-movimiento', prefs.movimiento === 'reducido');
+      for (const b of document.querySelectorAll('[data-pref="texto"] button')) b.setAttribute('aria-pressed', String(b.dataset.valor === prefs.texto));
+      document.querySelector('[data-pref="contraste"]').setAttribute('aria-checked', String(prefs.contraste));
+      document.querySelector('[data-pref="movimiento"]').setAttribute('aria-checked', String(prefs.movimiento === 'reducido'));
+      pintarPaleta();
+      pintarLayouts();
+    }
+
+    document.addEventListener('click', async (e) => {
+      const el = e.target.closest('button, a');
+      if (!el || el.matches(':disabled, [aria-disabled="true"]')) return;
+      const grupoPref = el.closest('[data-pref="texto"]');
+      if (grupoPref && el.dataset.valor) { prefs.texto = el.dataset.valor; aplicarPrefs(); return; }
+      if (el.dataset.pref === 'contraste') { prefs.contraste = !prefs.contraste; aplicarPrefs(); return; }
+      if (el.dataset.pref === 'movimiento') { prefs.movimiento = prefs.movimiento === 'reducido' ? 'auto' : 'reducido'; aplicarPrefs(); return; }
+      if (el.hasAttribute('data-alternar')) el.setAttribute('aria-pressed', String(el.getAttribute('aria-pressed') !== 'true'));
+      if (el.hasAttribute('data-alternar-switch')) el.setAttribute('aria-checked', String(el.getAttribute('aria-checked') !== 'true'));
+      const grupo = el.closest('[data-grupo]');
+      if (grupo) for (const b of grupo.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b === el));
+      if (el.matches('.opcion:not(.opcion--correcta, .opcion--incorrecta)')) {
+        for (const b of el.closest('.opciones').querySelectorAll('.opcion:not(.opcion--correcta, .opcion--incorrecta)')) b.removeAttribute('aria-pressed');
+        el.setAttribute('aria-pressed', 'true');
+      }
+      if (el.dataset.aviso) {
+        const textos = { info: 'Tecu guardó tu avance.', exito: '¡Listo! Se envió tu avance.', alerta: 'Sin internet: se enviará después.', error: 'Falta el signo = en el renglón 2.' };
+        aviso(textos[el.dataset.aviso], { tipo: el.dataset.aviso });
+      }
+      if (el.hasAttribute('data-abrir-dialogo')) {
+        const peligro = el.dataset.abrirDialogo === 'peligro';
+        const ok = await confirmar(peligro
+          ? { titulo: '¿Reiniciar la demo?', mensaje: 'Se borra el avance guardado en este navegador.', aceptar: 'Sí, reiniciar', peligro: true }
+          : { titulo: '¿Ver la solución?', mensaje: 'Si la ves ahora, este ejercicio no cuenta para tu ruta.', aceptar: 'Sí, ver solución' });
+        aviso(ok ? 'Elegiste aceptar.' : 'Cancelado.', { tipo: ok ? 'exito' : 'info' });
+      }
+      if (el.hasAttribute('data-imprimir')) window.print();
+    });
+
+    // 4. Vistas previas de los layouts (iframes con srcdoc; heredan las preferencias actuales)
+    const i = (n, o) => icono(n, o);
+    const CUERPOS = {
+      estudiante: `
+<a class="saltar" href="#contenido">Saltar al contenido</a>
+<div class="app app--estudiante">
+  <header class="barra-superior">
+    <span class="marca">${i('tecu', { tamano: 28 })} Tecu Aprende</span>
+    <span class="chip chip--alerta">${i('sin-wifi')} Sin internet</span>
+  </header>
+  <main id="contenido" class="contenido" tabindex="-1">
+    <div class="pantalla">
+      <div class="pila pila--chica">
+        <p class="texto-sec">Hola, Ana</p>
+        <h1 class="titulo-1">Tu ruta de hoy</h1>
+      </div>
+      <div class="barra-progreso" data-tono="coral"><span id="p1">Actividad 3 de 4</span><progress max="4" value="2" aria-labelledby="p1">2 de 4</progress></div>
+      <ol class="pasos" data-tono="coral" aria-label="Actividades">
+        <li data-estado="hecho">Pregunta</li><li data-estado="hecho">Visual</li>
+        <li data-estado="actual" aria-current="step">Práctica</li><li data-estado="pendiente">Comprobación</li>
+      </ol>
+      <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="coral">
+        <h2 class="titulo-3">${i('signo')} Lo que suma, pasa restando</h2>
+        <p>Saber qué le pasa a un término cuando cambia de lado del =.</p>
+      </article>
+      <div class="burbuja burbuja--tecu"><p>Resuelve <span class="math">2x + 3 = 11</span> paso por paso. Yo reviso cada renglón.</p></div>
+      <div class="cuaderno">
+        <p class="cuaderno__enunciado"><span class="math">2x + 3 = 11</span></p>
+        <ol><li class="cuaderno__renglon" data-estado="ok"><span class="math">2x = 11 − 3</span></li>
+        <li class="cuaderno__renglon" data-estado="neutro"><span class="math">2x = 8</span></li></ol>
+        <input class="cuaderno__entrada" aria-label="Siguiente renglón" placeholder="Escribe el siguiente renglón">
+      </div>
+      <div class="teclas-rapidas" role="group" aria-label="Teclas rápidas">
+        <button class="tecla">x</button><button class="tecla">+</button><button class="tecla" aria-label="menos">−</button><button class="tecla">=</button><button class="tecla" aria-label="entre">/</button>
+      </div>
+      <div class="fila"><button class="boton boton--secundario">${i('pista')} Pista</button><button class="boton boton--primario">${i('check')} Revisar</button></div>
+    </div>
+  </main>
+  <nav class="nav-inferior" aria-label="Secciones">
+    <a class="nav-inferior__item" href="#contenido" aria-current="page">${i('inicio')}<span>Inicio</span></a>
+    <a class="nav-inferior__item" href="#contenido">${i('aprender')}<span>Aprender</span></a>
+    <a class="nav-inferior__item" href="#contenido">${i('tecu')}<span>Tecu</span><span class="insignia">2<span class="solo-lector"> respuestas nuevas</span></span></a>
+    <a class="nav-inferior__item" href="#contenido">${i('descargas')}<span>Descargas</span></a>
+    <a class="nav-inferior__item" href="#contenido">${i('ajustes')}<span>Ajustes</span></a>
+  </nav>
+</div>
+<div id="avisos" class="avisos" aria-hidden="true"><div class="aviso aviso--alerta">Sin internet: tu avance se enviará después.</div></div>`,
+      docente: `
+<div class="app app--docente">
+  <header class="barra-superior">
+    <span class="marca">${i('tecu', { tamano: 28 })} Tecu Aprende · Docente</span>
+    <span class="chip chip--exito">${i('nube')} Sincronizado</span>
+    <button class="boton boton--secundario boton--chico">${i('imprimir')} Imprimir</button>
+  </header>
+  <main class="contenido">
+    <div class="pantalla">
+      <div class="fila fila--entre"><h1 class="titulo-1">Grupo 1.º B · Ecuaciones</h1><span class="chip chip--neutro">${i('grupo')} Grupo de ejemplo</span></div>
+      <div class="rejilla">
+        <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="coral"><h2 class="titulo-3">${i('signo')} Signos</h2><p>5 alumnos con este error.</p><div class="fila"><button class="boton boton--secundario boton--chico">${i('balanza')} Actividad grupal</button></div></article>
+        <article class="tarjeta tarjeta--tono pila pila--chica" data-tono="morado"><h2 class="titulo-3">${i('inversa')} Inversa</h2><p>3 alumnos con este error.</p></article>
+        <article class="tarjeta tarjeta--destacada pila pila--chica"><h2 class="titulo-3">${i('llamar')} Para hablar hoy</h2><p>Itzel: Tecu no reconoció su error.</p></article>
+      </div>
+      <table><caption>Alumnos</caption><thead><tr><th scope="col">Alumno</th><th scope="col">Error</th><th scope="col">Ruta</th></tr></thead>
+      <tbody><tr><td>Ana</td><td><span class="chip" data-tono="coral">Signos</span></td><td><progress max="4" value="3">3 de 4</progress></td></tr>
+      <tr><td>Luis</td><td><span class="chip" data-tono="morado">Inversa</span></td><td><progress max="4" value="1">1 de 4</progress></td></tr></tbody></table>
+    </div>
+  </main>
+</div>`,
+      pitch: `
+<div class="app app--pitch">
+  <main class="contenido">
+    <div class="pantalla">
+      <div class="fila fila--entre"><span class="marca">${i('tecu', { tamano: 40 })} Tecu Aprende</span><span class="chip chip--info">${i('proyector')} Modo presentación</span></div>
+      <h1 class="titulo-1">Aprende ecuaciones aunque no haya internet</h1>
+      <div class="rejilla">
+        <article class="tarjeta pila pila--chica"><h2 class="titulo-3">${i('avion')} Sin conexión</h2><p class="texto-sec">El diagnóstico corre en el celular.</p></article>
+        <article class="tarjeta pila pila--chica"><h2 class="titulo-3">${i('sincronizar')} Se sincroniza</h2><p class="texto-sec">Cuando vuelve la señal, la maestra lo ve.</p></article>
+      </div>
+      <div class="fila"><button class="boton boton--primario">${i('reproducir')} Reproducir</button><button class="boton boton--secundario">${i('pausa')} Pausa</button><button class="boton boton--fantasma">${i('reiniciar')} Reiniciar</button></div>
+    </div>
+  </main>
+</div>`,
+    };
+
+    function pintarLayouts() {
+      const clases = [...raiz.classList].join(' ');
+      const texto = raiz.getAttribute('data-texto');
+      for (const marco of document.querySelectorAll('iframe[data-layout]')) {
+        marco.srcdoc = `<!doctype html><html lang="es-MX" class="${clases}"${texto ? ` data-texto="${texto}"` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="../styles.css"></head><body>${CUERPOS[marco.dataset.layout]}</body></html>`;
+      }
+    }
+
+    aplicarPrefs();
+    document.documentElement.dataset.listo = '1';
+  </script>
+</body>
+</html>

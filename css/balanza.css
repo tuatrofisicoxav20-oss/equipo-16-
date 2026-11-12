@@ -127,41 +127,47 @@
 }
 
 .balanza__pieza--caja rect {
-  fill: var(--color-superficie, #ffffff);
-  stroke: var(--color-acento, #b85c00);
-  stroke-width: 2.5;
+  fill: var(--color-acento, #f5a524);
+  stroke: var(--color-acento-fuerte, #8a5400);
+  stroke-width: 2;
 }
 
 .balanza__pieza--caja path {
   fill: none;
-  stroke: var(--color-acento, #b85c00);
+  stroke: var(--color-acento-fuerte, #8a5400);
   stroke-width: 1.5;
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 .balanza__pieza--caja text {
-  fill: var(--color-texto, #1d2a33);
-  font-size: 15px;
+  fill: var(--color-sobre-acento, #3a2400);
+  font-size: 16px;
   font-style: italic;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .balanza__pieza--pesa circle {
   fill: var(--color-primario, #0b5d7a);
-  stroke: var(--color-primario-hover, #08465c);
+  stroke: var(--color-primario-hover, #084a62);
   stroke-width: 1.5;
 }
 
 .balanza__pieza--pesa text {
   fill: var(--color-sobre-primario, #ffffff);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 /* Negativas: borde punteado y fondo claro; el signo − va escrito en la pieza. */
 .balanza__pieza--caja.balanza__pieza--negativa rect {
-  fill: var(--color-superficie-2, #e8eef2);
+  fill: var(--color-acento-suave, #fff3d4);
+  stroke-width: 2.2;
   stroke-dasharray: 4 2.5;
+}
+
+.balanza__pieza--caja.balanza__pieza--negativa text {
+  fill: var(--color-texto, #15252d);
+  font-size: 14px;
 }
 
 .balanza__pieza--pesa.balanza__pieza--negativa circle {
@@ -305,9 +311,9 @@
   place-items: center;
   min-width: 2.25rem;
   height: 2.25rem;
-  border: 2px dashed var(--color-acento, #b85c00);
+  border: 2px dashed var(--color-acento-fuerte, #8a5400);
   border-radius: 0.4rem;
-  background: var(--color-superficie-2, #e8eef2);
+  background: var(--color-acento-suave, #fff3d4);
   font-family: var(--fuente-math, var(--fuente, system-ui, sans-serif));
   font-style: italic;
   font-weight: 700;
@@ -328,8 +334,8 @@
 }
 
 .balanza__controles .boton {
-  min-height: 2.75rem;
-  min-width: 2.75rem;
+  min-height: var(--objetivo, 2.75rem);
+  min-width: var(--objetivo, 2.75rem);
 }
 
 .balanza__controles .boton--bloque {
@@ -346,11 +352,6 @@
   display: block;
   font-size: 0.8125rem;
   font-weight: 400;
-}
-
-.balanza__controles .boton[aria-disabled='true'] {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .balanza__ajuste {

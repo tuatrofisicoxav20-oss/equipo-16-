@@ -33,7 +33,7 @@ const G = Object.freeze({
   py: 178,
   brazo: 92, // distancia del pivote al centro de cada platillo
   borde: 142, // altura del borde de los platillos en reposo
-  celda: 22, // espacio por pieza (la pieza mide 20)
+  celda: 25, // espacio por pieza (la pieza mide 22)
   hueco: 8, // separación entre grupos
   anchoUtil: 128,
   altoUtil: 104,
@@ -226,7 +226,18 @@ function peso(grupos, x) {
 /* Dibujo                                                               */
 /* ------------------------------------------------------------------ */
 
-function esqueletoSVG(modo) {
+/**
+ * Recorta el espacio vacío de arriba según cuántas filas de piezas puede haber
+ * (más la inclinación y las etiquetas), para que la balanza no ocupe de más.
+ */
+function margenSuperior(modo, an) {
+  if (modo === 'repartir') return 0;
+  const filas = Math.max(...LADOS.map((l) => Math.ceil((an[l].cajas + an[l].pesas) / 5)));
+  const alto = Math.min(G.altoUtil, filas * G.celda) + 46;
+  return Math.max(0, Math.min(60, Math.floor(G.borde - alto)));
+}
+
+function esqueletoSVG(modo, arriba) {
   const plato = (lado) => {
     const cx = CX[lado];
     return (
@@ -249,7 +260,7 @@ function esqueletoSVG(modo) {
       ? `<g class="balanza__visor"><rect x="136" y="190" width="68" height="24" rx="7"/><text x="${G.px}" y="206.5">x = ?</text></g>`
       : '';
   return (
-    `<svg class="balanza__svg" viewBox="0 0 340 240" role="img" aria-label="Balanza" focusable="false" xmlns="${NS}">` +
+    `<svg class="balanza__svg" viewBox="0 ${arriba} 340 ${240 - arriba}" role="img" aria-label="Balanza" focusable="false" xmlns="${NS}">` +
     `<g class="balanza__soporte">` +
     `<path class="balanza__base" d="M124 236 H216 Q219 236 217 233.5 L205 222 H135 L123 233.5 Q121 236 124 236 Z"/>` +
     `<rect class="balanza__columna" x="164" y="${G.py}" width="12" height="46" rx="3"/>` +
@@ -274,22 +285,24 @@ function piezaSVG(p) {
   if (p.tipo === 'caja') {
     return (
       `<g class="balanza__pieza balanza__pieza--caja${neg ? ' balanza__pieza--negativa' : ''}">` +
-      `<rect x="-10" y="-10" width="20" height="20" rx="3.5"/>` +
-      `<path d="M-10 -4.5 H10"/>` +
-      `<text y="7">${neg ? `${MENOS}x` : 'x'}</text>` +
+      `<rect x="-11" y="-11" width="22" height="22" rx="4"/>` +
+      (neg ? `<text y="5">${MENOS}x</text>` : `<path d="M-11 -5 H11"/><text y="7.4">x</text>`) +
       `</g>`
     );
   }
   return (
     `<g class="balanza__pieza balanza__pieza--pesa${neg ? ' balanza__pieza--negativa' : ''}">` +
-    `<circle r="10"/>` +
-    `<text y="4.3">${neg ? `${MENOS}1` : '1'}</text>` +
+    `<circle r="11"/>` +
+    `<text y="4.7">${neg ? `${MENOS}1` : '1'}</text>` +
     `</g>`
   );
 }
 
+/** Ancho aproximado de una etiqueta (no se escala con las piezas). */
+const anchoEtiqueta = (texto) => Math.max(20, String(texto).length * 6.6 + 12);
+
 function etiquetaSVG(x, y, texto, clase = '') {
-  const w = Math.max(20, String(texto).length * 6.6 + 12);
+  const w = anchoEtiqueta(texto);
   return (
     `<g class="balanza__etiqueta${clase ? ` ${clase}` : ''}">` +
     `<rect x="${r1(x - w / 2)}" y="${r1(y - 9)}" width="${r1(w)}" height="18" rx="9"/>` +
@@ -298,10 +311,13 @@ function etiquetaSVG(x, y, texto, clase = '') {
   );
 }
 
+const ALTO_ETIQUETA = 21; // espacio fijo (sin escalar) para la etiqueta de un grupo
+
 /**
  * Acomoda bloques de piezas sobre un platillo, en repisas que crecen hacia arriba.
  * Usa una sola repisa (más legible) salvo que varias permitan piezas más grandes.
- * @returns {{colocadas: {p, x, y, s}[], contornos: object[]}}
+ * Las etiquetas no se encogen: su espacio se reserva aparte de la escala.
+ * @returns {{colocadas: {p, x, y, s}[], contornos: object[], s: number}}
  */
 function acomodar(bloquesEntrada, cx) {
   const C = G.celda;
@@ -312,35 +328,60 @@ function acomodar(bloquesEntrada, cx) {
       const cols = Math.max(1, Math.min(n, b.cols || 5));
       const filas = Math.ceil(n / cols);
       const pad = b.contorno ? 4 : 0;
-      const extra = b.etiqueta ? 16 : 0;
-      return { ...b, n, cols, filas, pad, extra, w: cols * C + pad * 2, h: filas * C + pad * 2 + extra };
+      return {
+        ...b,
+        n,
+        cols,
+        filas,
+        pad,
+        base: cols * C + pad * 2,
+        w: cols * C + pad * 2,
+        h: filas * C + pad * 2,
+        lbl: b.etiqueta ? ALTO_ETIQUETA : 0,
+        lw: b.etiqueta ? anchoEtiqueta(b.etiqueta) + 2 : 0,
+      };
     });
-  if (!bloques.length) return { colocadas: [], contornos: [] };
+  if (!bloques.length) return { colocadas: [], contornos: [], s: 1 };
 
   const anchoDe = (rep) => rep.reduce((s, b) => s + b.w, 0) + G.hueco * (rep.length - 1);
+  // Un bloque debe medir al menos lo que su etiqueta (que no se encoge) una vez escalado.
+  const ajustarAnchos = (s) => bloques.forEach((b) => (b.w = Math.max(b.base, b.lw / s)));
   const altoDe = (rep) => Math.max(...rep.map((b) => b.h));
-  const escala = (reps) =>
-    Math.min(
-      1,
-      G.anchoUtil / Math.max(...reps.map(anchoDe)),
-      G.altoUtil / (reps.reduce((s, r) => s + altoDe(r), 0) + G.hueco * (reps.length - 1)),
-    );
+  const etiquetaDe = (rep) => Math.max(...rep.map((b) => b.lbl));
+  const escala = (reps) => {
+    const fijo = reps.reduce((s, r) => s + etiquetaDe(r), 0);
+    const variable = reps.reduce((s, r) => s + altoDe(r), 0) + G.hueco * (reps.length - 1);
+    return Math.min(1, G.anchoUtil / Math.max(...reps.map(anchoDe)), Math.max(0.3, (G.altoUtil - fijo) / variable));
+  };
 
-  const una = [bloques];
-  const varias = [];
-  let actual = [];
-  for (const b of bloques) {
-    if (actual.length && anchoDe([...actual, b]) > G.anchoUtil) {
-      varias.push(actual);
-      actual = [];
+  const enRepisas = () => {
+    const reps = [];
+    let actual = [];
+    for (const b of bloques) {
+      if (actual.length && anchoDe([...actual, b]) > G.anchoUtil) {
+        reps.push(actual);
+        actual = [];
+      }
+      actual.push(b);
     }
-    actual.push(b);
-  }
-  varias.push(actual);
-  const sUna = escala(una);
-  const sVarias = escala(varias);
-  const repisas = varias.length > 1 && sVarias > sUna + 0.01 ? varias : una;
-  const s = repisas === una ? sUna : sVarias;
+    reps.push(actual);
+    return reps;
+  };
+  const probar = (reps) => {
+    let s = 1;
+    for (let i = 0; i < 3; i++) {
+      ajustarAnchos(s);
+      s = escala(reps);
+    }
+    return s;
+  };
+  ajustarAnchos(1);
+  const una = [bloques];
+  const varias = enRepisas();
+  const sUna = probar(una);
+  const sVarias = varias.length > 1 ? probar(varias) : 0;
+  const repisas = sVarias > sUna + 0.01 ? varias : una;
+  const s = probar(repisas);
 
   const colocadas = [];
   const contornos = [];
@@ -348,7 +389,7 @@ function acomodar(bloquesEntrada, cx) {
   for (const rep of repisas) {
     let x = cx - (anchoDe(rep) * s) / 2;
     for (const b of rep) {
-      const x0 = x + b.pad * s;
+      const x0 = x + ((b.w - b.base) * s) / 2 + b.pad * s;
       const y0 = base - b.pad * s;
       b.piezas.forEach((p, i) => {
         const fila = Math.floor(i / b.cols);
@@ -363,14 +404,15 @@ function acomodar(bloquesEntrada, cx) {
         });
       });
       if (b.contorno || b.etiqueta) {
-        const alto = (b.h - b.extra) * s;
-        contornos.push({ x, y: base - alto, w: b.w * s, h: alto, etiqueta: b.etiqueta, contorno: b.contorno, clase: b.clase });
+        const alto = b.h * s;
+        const xc = x + ((b.w - b.base) * s) / 2;
+        contornos.push({ x: xc, y: base - alto, w: b.base * s, h: alto, etiqueta: b.etiqueta, contorno: b.contorno, clase: b.clase });
       }
       x += (b.w + G.hueco) * s;
     }
-    base -= (altoDe(rep) + G.hueco) * s;
+    base -= altoDe(rep) * s + etiquetaDe(rep) + G.hueco * s;
   }
-  return { colocadas, contornos };
+  return { colocadas, contornos, s };
 }
 
 /* ------------------------------------------------------------------ */
@@ -468,7 +510,7 @@ export function montarBalanza(contenedor, opciones = {}) {
   contenedor.innerHTML = String(html`
     <div class="balanza balanza--${modo}" data-modo="${modo}" id="${uid}">
       <p class="balanza__instruccion">${t.instruccion}</p>
-      <div class="balanza__escena">${crudo(esqueletoSVG(modo))}</div>
+      <div class="balanza__escena">${crudo(esqueletoSVG(modo, margenSuperior(modo, an)))}</div>
       <p class="balanza__ecuacion"></p>
       <p class="balanza__detalle" hidden></p>
       ${cajasNegativas
@@ -603,26 +645,35 @@ export function montarBalanza(contenedor, opciones = {}) {
     if (modo === 'repartir' && lado === ladoN && st.reparto) {
       const piezas = grupos.flatMap((g) => g.piezas);
       const { n, porGrupo, sobran } = st.reparto;
-      const cols = Math.ceil(Math.sqrt(porGrupo));
-      const bloques = [];
-      for (let i = 0; i < n; i++) {
-        bloques.push({
-          piezas: piezas.slice(i * porGrupo, (i + 1) * porGrupo),
-          cols,
-          contorno: true,
-          etiqueta: String(porGrupo),
-          clase: st.reparto.ok ? 'balanza__etiqueta--exito' : '',
-        });
+      const armar = (cols) => {
+        const bloques = [];
+        for (let i = 0; i < n; i++) {
+          bloques.push({
+            piezas: piezas.slice(i * porGrupo, (i + 1) * porGrupo),
+            cols,
+            contorno: true,
+            etiqueta: String(porGrupo),
+            clase: st.reparto.ok ? 'balanza__etiqueta--exito' : '',
+          });
+        }
+        if (sobran) {
+          bloques.push({
+            piezas: piezas.slice(n * porGrupo),
+            cols: Math.min(sobran, cols),
+            etiqueta: `sobran ${sobran}`,
+            clase: 'balanza__etiqueta--alerta',
+          });
+        }
+        return bloques;
+      };
+      // Prueba varias formas de grupo (columnas) y se queda con la de piezas más grandes.
+      let mejor = null;
+      for (let cols = 1; cols <= Math.min(porGrupo, 5); cols++) {
+        const bloques = armar(cols);
+        const { s } = acomodar(bloques, CX[lado]);
+        if (!mejor || s > mejor.s + 0.001) mejor = { s, bloques };
       }
-      if (sobran) {
-        bloques.push({
-          piezas: piezas.slice(n * porGrupo),
-          cols: Math.min(sobran, 3),
-          etiqueta: `sobran ${sobran}`,
-          clase: 'balanza__etiqueta--alerta',
-        });
-      }
-      return bloques;
+      return mejor.bloques;
     }
     return grupos.map((g) => ({ piezas: g.piezas, cols: 5 }));
   }
@@ -637,7 +688,7 @@ export function montarBalanza(contenedor, opciones = {}) {
     }
     if (modo === 'repartir' && lado === ladoX && st.reparto?.ok) {
       for (const { p, x, y, s } of colocadas) {
-        if (p.tipo === 'caja') out += etiquetaSVG(x, y - 21 * s - 2, st.reparto.porGrupo, 'balanza__etiqueta--exito');
+        if (p.tipo === 'caja') out += etiquetaSVG(x, y - 11 * s - 12, st.reparto.porGrupo, 'balanza__etiqueta--exito');
       }
     }
     if (modo === 'comprobar' && st.probado !== null) {
