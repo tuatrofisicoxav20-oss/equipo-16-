@@ -1281,7 +1281,10 @@ function soloCambianNumeros(previa, vS) {
   const vP = vector(previa);
   const distintos = [0, 1, 2, 3].filter((i) => !vP[i].eq(vS[i]));
   if (distintos.length !== 1 || distintos[0] % 2 === 0) return false;
-  return !tieneX(previa[distintos[0] < 2 ? 'L' : 'R']);
+  const lado = previa[distintos[0] < 2 ? 'L' : 'R'];
+  // Con un solo número de ese lado no había cuenta pendiente: 3x + 5 = 20 → 3x + 5 = 0 sí es
+  // quitar el 20 de un lado.
+  return !tieneX(lado) && terminosDe(lado, false).length >= 2;
 }
 
 function clasificarExacto(previa, escrita) {
