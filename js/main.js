@@ -95,6 +95,8 @@ async function iniciar() {
     await montarEstudiante(raiz, { alumno, embebido: params.has('embebido') });
   }
   medirBarras();
+  // Guarda la app en el celular para que funcione en modo avión (no bloquea la carga).
+  import('./services/sw-registro.js').then((m) => m.registrarServiceWorker());
 }
 
 iniciar().catch((error) => {
