@@ -24,14 +24,6 @@ Nuestra solución une tres ideas: **aprendizaje adaptativo**, **acompañamiento 
 
 **Nuestra premisa:** *la tecnología debe ayudar a razonar al estudiante y ofrecer información útil al docente; no sustituir el esfuerzo de uno ni el criterio profesional del otro.*
 
-### Vistas de la demostración
-
-| Biblioteca de aprendizaje | Seguimiento docente |
-|---|---|
-| [![Catálogo de materias en EstudiandoAndo](docs/capturas/catalogo.png)](docs/capturas/catalogo.png) | [![Panel del docente en EstudiandoAndo](docs/capturas/docente.png)](docs/capturas/docente.png) |
-
-Las capturas corresponden a la **versión HTML del prototipo**, con información académica ficticia. Puedes cambiar los modos **claro, oscuro y alto contraste** desde «Accesibilidad».
-
 ### Contenido incluido en la demostración
 
 | Recurso | Cantidad / alcance |
