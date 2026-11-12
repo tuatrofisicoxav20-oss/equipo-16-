@@ -23,155 +23,87 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Barra superior: marca + pendientes, y la conexión                   */
+/* Barra superior: una sola línea (Tecu + nombre · conexión · pendientes) */
 /* ------------------------------------------------------------------ */
 
 .est-barra {
-  gap: var(--espacio-2, 0.5rem);
-  padding-block: calc(var(--espacio-1, 0.25rem) + env(safe-area-inset-top, 0px)) var(--espacio-2, 0.5rem);
-  padding-inline: var(--espacio-3, 0.75rem);
-}
-
-.est-barra > * {
-  flex: 1 1 100%;
-  min-width: 0;
-}
-
-.est-barra__fila {
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
   gap: var(--espacio-1, 0.25rem) var(--espacio-2, 0.5rem);
+  min-height: 0;
+  padding-block: calc(0.375rem + env(safe-area-inset-top, 0px)) 0.375rem;
+  padding-inline: var(--espacio-3, 0.75rem);
 }
 
 .est-barra__marca {
   flex: 1 1 auto;
+  gap: 0.375rem;
   min-width: 0;
   margin: 0;
+  font-size: var(--texto-base, 1rem);
 }
 
 .est-barra__marca .tecu {
-  width: 2.25rem;
-  height: 2.25rem;
-}
-
-.est-barra__textos {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.est-barra__app {
-  white-space: nowrap;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
 }
 
 .est-barra__alumno {
-  color: var(--color-texto-sec, #4b5b63);
-  font-size: var(--texto-chico, 0.875rem);
-  font-weight: 800;
-}
-
-/* Insignia "N pendientes" (botón: lleva a ver cuáles) */
-.est-pendientes {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 0.375rem;
-  min-height: var(--objetivo, 2.75rem);
-  padding: 0.25rem 0.75rem;
-  border: var(--borde-control, 2px) solid currentColor;
-  border-radius: var(--radio-pildora, 999px);
-  background: var(--color-superficie, #fff);
-  font-size: var(--texto-chico, 0.875rem);
-  font-weight: 900;
-  line-height: 1.1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.est-pendientes .icono {
-  width: 1.25rem;
-  height: 1.25rem;
+/* Si no cabe en una línea (texto grande, nombre largo), se esconde el nombre. */
+.est-barra--compacta .est-barra__alumno {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.est-pendientes[data-estado='pendientes'] {
-  background: var(--color-acento-suave, #fff3d4);
-  color: var(--color-acento-fuerte, #8a5400);
-}
-
-.est-pendientes[data-estado='al-dia'] {
-  background: var(--color-exito-suave, #e0f3e7);
-  color: var(--color-exito, #196c3f);
-}
-
-/* "Sincronizando 3 de 12…" en dos renglones cortos para no empujar la marca */
-.est-pendientes[data-estado='sincronizando'] {
-  max-width: 10rem;
-  padding-inline: 0.5rem 0.625rem;
-  background: var(--color-info-suave, #e3edfa);
-  color: var(--color-info, #1f5ea8);
-  font-size: 0.8125rem;
-  line-height: 1.15;
-  white-space: normal;
-}
-
-.est-pendientes[data-estado='sincronizando'] .icono {
-  width: 1rem;
-  height: 1rem;
-}
-
-@media (hover: hover) {
-  button.est-pendientes:hover {
-    box-shadow: 0 0 0 2px currentColor;
-  }
-}
-
-/* Con internet | Sin internet */
-.est-conexion {
-  gap: 0.125rem;
-  padding: 0.125rem;
-}
-
-.est-conexion button {
-  padding-inline: 0.5rem;
-  font-size: var(--texto-chico, 0.875rem);
-}
-
-.est-conexion .icono {
-  width: 1.125rem;
-  height: 1.125rem;
-}
-
-.est-barra__nota {
+.est-barra__estado {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 0.375rem;
-  margin: 0;
-  color: var(--color-alerta, #9c4a05);
-  font-size: var(--texto-chico, 0.875rem);
-  font-weight: 800;
+  margin-inline-start: auto;
 }
 
-.est-barra__nota .icono {
+/* Chips de la barra: compactos, pero con el objetivo táctil completo (44 px de alto). */
+.est-red,
+.est-pendientes {
+  gap: 0.25rem;
+  padding-inline: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.est-red .icono,
+.est-pendientes .icono {
   width: 1.125rem;
   height: 1.125rem;
 }
 
-/* Texto grande en pantalla angosta: la barra fija no debe comerse la pantalla.
-   Se queda Tecu con el nombre, la insignia y la conexión (sin iconos). */
-@media (max-width: 400px) {
-  html:is([data-texto='grande'], [data-texto='muy-grande']) .est-barra__app {
-    display: none;
-  }
+/* "Con internet": el kit ya pone la palomita del chip presionado; aquí basta el icono de wifi. */
+.est-red--con::before {
+  display: none;
+}
 
-  html:is([data-texto='grande'], [data-texto='muy-grande']) .est-barra__alumno {
-    color: var(--color-texto, #15252d);
-    font-size: var(--texto-base, 1rem);
-  }
+.est-red[aria-disabled='true'] {
+  border-style: dashed;
+  cursor: not-allowed;
+}
 
-  html[data-texto='muy-grande'] .est-conexion .icono {
-    display: none;
-  }
+/* "Sincronizando 3 de 12…" en dos renglones cortos para no empujar lo demás */
+.est-pendientes[data-estado='sincronizando'] {
+  max-width: 8.5rem;
+  min-height: var(--objetivo, 2.75rem);
+  line-height: 1.15;
+  white-space: normal;
 }
 
 /* Girar (sincronizando, buscando actualización). El kit lo apaga con movimiento reducido. */
@@ -409,16 +341,13 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--espacio-2, 0.5rem);
-  width: 100%;
   min-height: var(--objetivo, 2.75rem);
   padding: var(--espacio-2, 0.5rem) var(--espacio-3, 0.75rem);
-  border: var(--borde-control, 2px) dashed var(--color-borde, #6e7f87);
+  border: var(--borde-fino, 1px) dashed var(--color-borde, #6e7f87);
   border-radius: var(--radio, 0.75rem);
   background: var(--color-superficie, #fff);
-  color: var(--color-texto-deshabilitado, #56656d);
+  color: var(--color-texto-sec, #4b5b63);
   font-weight: 800;
-  text-align: start;
-  cursor: not-allowed;
 }
 
 .est-materia .chip {

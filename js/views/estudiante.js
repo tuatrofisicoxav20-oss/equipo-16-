@@ -208,6 +208,7 @@ function errorEvento(analisis) {
     texto: e.texto,
     anterior: e.anterior,
     confianza: e.confianza,
+    detalle: copiaPlana(e.detalle ?? null),
   };
 }
 
@@ -820,6 +821,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     if (nuevo !== htmlBarraPrevio) {
       htmlBarraPrevio = nuevo;
       renderConFoco(barra, nuevo);
+      ajustarBarra();
     }
     notificarPadre();
   }
@@ -864,41 +866,48 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     const n = contarPendientes();
     const { enLinea, real } = state.red;
     const estadoTecu = !enLinea ? 'sin-senal' : chatBloqueado() ? 'dormido' : 'normal';
-    let insignia;
+
+    // Conexión: un solo chip que alterna "Con internet" / "Sin internet" (para proyectar la demo).
+    const ayudaRed = !real
+      ? 'Tu cel no tiene señal de verdad. En cuanto vuelva, Tecu envía tu avance.'
+      : enLinea
+        ? 'Toca para simular que no hay internet.'
+        : 'Toca para volver a tener internet.';
+    const chipRed = html`<button type="button" class="chip ${enLinea ? 'est-red--con' : 'chip--alerta'} est-red" data-act="conexion"
+      data-foco="red" aria-pressed="${String(enLinea)}" title="${ayudaRed}"
+      ${attr('aria-disabled', !real, 'true')} ${attr('data-explica', !real, ayudaRed)}>
+      ${ico(enLinea ? 'wifi' : 'sin-wifi')}<span>${enLinea ? 'Con internet' : 'Sin internet'}</span>${!real
+        ? html`<span class="solo-lector">: tu cel no tiene señal de verdad</span>`
+        : ''}</button>`;
+
+    // Pendientes de sincronizar: siempre a la vista; al tocarlo se ve cuáles son.
+    let chipPendientes;
     if (state.sync) {
       const total = state.sync.total || n;
       const i = Math.min(Math.max(state.sync.i, 1), total);
-      insignia = html`<span class="est-pendientes" data-estado="sincronizando">
+      chipPendientes = html`<span class="chip chip--info est-pendientes" data-estado="sincronizando">
         ${ico('sincronizar', 'est-girando')}<span>Sincronizando ${i} de ${total}…</span></span>`;
     } else {
       const texto = `${n} ${n === 1 ? 'pendiente' : 'pendientes'}`;
-      const etiqueta = n ? `${texto} de sincronizar. Ver cuáles` : `${texto}: todo tu avance está sincronizado`;
-      insignia = html`<button type="button" class="est-pendientes" data-estado="${n ? 'pendientes' : 'al-dia'}"
-        data-act="verPendientes" data-foco="pendientes" aria-label="${etiqueta}">
-        ${ico(n ? 'reloj' : 'check')}<span>${texto}</span></button>`;
+      const ayuda = n ? 'Actividades guardadas en tu cel que faltan por sincronizar. Toca para ver cuáles.' : 'Todo tu avance ya está sincronizado.';
+      chipPendientes = html`<button type="button" class="chip ${n ? 'chip--alerta' : 'chip--exito'} est-pendientes"
+        data-estado="${n ? 'pendientes' : 'al-dia'}" data-act="verPendientes" data-foco="pendientes" title="${ayuda}">
+        ${ico(n ? 'reloj' : 'check')}<span>${texto}</span><span class="solo-lector">${n ? ' de sincronizar' : ''}</span></button>`;
     }
     return html`
-      <div class="est-barra__fila">
-        <p class="marca est-barra__marca">
-          ${tecu(estadoTecu, 36, { decorativo: true })}
-          <span class="est-barra__textos">
-            <span class="est-barra__app">Tecu Aprende</span>
-            <span class="est-barra__alumno"><span class="solo-lector">Estudiante: </span>${nombreVisible}</span>
-          </span>
-        </p>
-        ${insignia}
-      </div>
-      <div class="segmentado est-conexion" role="group" aria-label="Conexión a internet">
-        <button type="button" data-act="conexion" data-sin="no" data-foco="red-con" aria-pressed="${enLinea}"
-          ${attr('aria-disabled', !real, 'true')} ${attr('aria-describedby', !real, 'est-sin-senal')}
-          ${attr('data-explica', !real, 'Tu cel no tiene señal en este momento. En cuanto vuelva, Tecu envía tu avance.')}>
-          ${ico('wifi')}<span>Con internet</span></button>
-        <button type="button" data-act="conexion" data-sin="si" data-foco="red-sin" aria-pressed="${!enLinea}">
-          ${ico('sin-wifi')}<span>Sin internet</span></button>
-      </div>
-      ${!real
-        ? html`<p class="est-barra__nota" id="est-sin-senal">${ico('alerta')}<span>Tu cel no tiene señal ahora. Todo se guarda aquí.</span></p>`
-        : ''}`;
+      <p class="marca est-barra__marca">
+        ${tecu(estadoTecu, 32, { decorativo: true })}
+        <span class="est-barra__alumno"><span class="solo-lector">Tecu Aprende, cel de </span>${nombreVisible}</span>
+      </p>
+      <div class="est-barra__estado">${chipRed}${chipPendientes}</div>`;
+  }
+
+  /** Si la barra no cabe en una línea, se esconde el nombre (Tecu, la conexión y los pendientes se quedan). */
+  function ajustarBarra() {
+    barra.classList.remove('est-barra--compacta');
+    const marca = barra.querySelector('.est-barra__marca');
+    const estado = barra.querySelector('.est-barra__estado');
+    if (marca && estado && estado.offsetTop > marca.offsetTop + 8) barra.classList.add('est-barra--compacta');
   }
 
   function htmlNav() {
@@ -1031,10 +1040,9 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
               <h2 class="titulo-3" id="est-otras-titulo">Otras materias</h2>
               <ul class="est-materias">
                 ${proximas.map(
-                  (m) => html`<li><button type="button" class="est-materia" aria-disabled="true"
-                    data-explica="${m.nombre} llegará en un paquete nuevo. Por ahora puedes aprender ecuaciones.">
+                  (m) => html`<li class="est-materia">
                     <span class="est-materia__nombre">${m.nombre}</span>
-                    <span class="chip chip--neutro">${ico('reloj')}Próximamente</span></button></li>`,
+                    <span class="chip chip--neutro">${ico('reloj')}Próximamente</span></li>`,
                 )}
               </ul>
             </section>`
@@ -2081,10 +2089,9 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
               <h2 class="titulo-3" id="est-proximas-titulo">Otras materias</h2>
               <ul class="est-materias">
                 ${proximas.map(
-                  (m) => html`<li><button type="button" class="est-materia" aria-disabled="true"
-                    data-explica="${m.nombre} llegará en un paquete nuevo.">
+                  (m) => html`<li class="est-materia">
                     <span class="est-materia__nombre">${m.nombre}</span>
-                    <span class="chip chip--neutro">${ico('reloj')}Próximamente</span></button></li>`,
+                    <span class="chip chip--neutro">${ico('reloj')}Próximamente</span></li>`,
                 )}
               </ul>
             </section>`
@@ -2136,7 +2143,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
           <div class="segmentado est-segmentado-texto" role="group" aria-labelledby="est-aj-texto">
             ${TAMANOS_TEXTO.map(
               (t) => html`<button type="button" data-act="tamanoTexto" data-valor="${t.valor}" data-foco="texto-${t.valor}"
-                aria-pressed="${(p.texto || 'normal') === t.valor}"><span class="est-muestra-texto" data-tam="${t.valor}"
+                aria-pressed="${String((p.texto || 'normal') === t.valor)}"><span class="est-muestra-texto" data-tam="${t.valor}"
                 aria-hidden="true">Aa</span><span class="est-nombre-texto">${t.texto}</span></button>`,
             )}
           </div>
@@ -2145,12 +2152,12 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         <section class="tarjeta pila" aria-labelledby="est-aj-ver">
           <h2 class="titulo-3" id="est-aj-ver">Para ver mejor</h2>
           <div class="est-ajuste">
-            <button type="button" class="interruptor est-ajuste__boton" role="switch" aria-checked="${contraste}"
+            <button type="button" class="interruptor est-ajuste__boton" role="switch" aria-checked="${String(contraste)}"
               aria-describedby="est-sw-contraste-desc" data-act="contraste" data-foco="contraste">Alto contraste</button>
             <p class="texto-sec est-ajuste__ayuda" id="est-sw-contraste-desc">Colores más fuertes para leer con sol o con poca luz.</p>
           </div>
           <div class="est-ajuste">
-            <button type="button" class="interruptor est-ajuste__boton" role="switch" aria-checked="${reducido}"
+            <button type="button" class="interruptor est-ajuste__boton" role="switch" aria-checked="${String(reducido)}"
               aria-describedby="est-sw-movimiento-desc" data-act="movimiento" data-foco="movimiento">Reducir movimiento</button>
             <p class="texto-sec est-ajuste__ayuda" id="est-sw-movimiento-desc">${sistemaReduce && !reducido
               ? 'Tu cel ya pide menos movimiento; aquí lo puedes dejar fijo.'
@@ -2177,6 +2184,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     state.prefs = prefs && typeof prefs === 'object' ? prefs : leerPreferencias();
     render();
     renderBarra();
+    ajustarBarra();
     anunciar(mensaje);
   }
 
@@ -2228,7 +2236,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   const acciones = {
     ir: (el) => ir(el.dataset.pantalla),
     aprender: () => ir('aprender'),
-    conexion: (el) => cambiarRed(el.dataset.sin === 'si'),
+    conexion: () => cambiarRed(state.red.enLinea),
     verPendientes: () => {
       const n = contarPendientes();
       if (!n) {
@@ -2576,6 +2584,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     alCambiarPreferencias((prefs) => {
       state.prefs = prefs && typeof prefs === 'object' ? prefs : leerPreferencias();
       if (state.pantalla === 'ajustes') render();
+      ajustarBarra();
     });
   } catch (error) {
     console.error(error);
@@ -2603,6 +2612,8 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     observador.observe(barra);
     observador.observe(nav);
   }
+  window.addEventListener('resize', ajustarBarra);
+  document.fonts?.ready?.then(ajustarBarra).catch(() => {});
 
   /* ---------------- Arranque ---------------- */
 
