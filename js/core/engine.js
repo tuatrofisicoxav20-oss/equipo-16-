@@ -99,8 +99,8 @@ export function fmtEcuacion(eq) {
 export function bonito(texto) {
   return String(texto ?? '')
     .replace(/\s*([=+])\s*/g, ' $1 ')
-    .replace(/(\S)\s*-\s*/g, `$1 ${MENOS} `)
-    .replace(/^\s*-\s*/, MENOS)
+    .replace(/([\dxX)\]])\s*-\s*/g, `$1 ${MENOS} `) // resta: después de número, x o paréntesis
+    .replace(/-\s*/g, MENOS) // signo de un negativo: −3 (sin espacio)
     .replace(/\*/g, '·')
     .replace(/\s+/g, ' ')
     .trim();
@@ -113,7 +113,10 @@ export function bonito(texto) {
 const MENSAJES = {
   vacio: () => 'El renglón está vacío.',
   simbolo: (c) => `No reconozco «${c}». Usa números, x, +, −, ×, ÷, paréntesis y =.`,
-  letra: (c) => `Usa la letra x para la incógnita (escribiste «${c}»).`,
+  letra: (c) => `Escribiste «${c}». Usa solo la letra x, sin palabras ni unidades (por ejemplo: x = 5).`,
+  x_numero: (frag) =>
+    `En «${frag}» hay un número justo después de la x. Para multiplicar usa · o paréntesis, como 3·5 o 3(5); si es la incógnita, el número va antes: 2x.`,
+  largo: () => 'Ese renglón es muy largo. Escribe la ecuación con menos términos.',
   sin_igual: () => 'Falta el signo =. Cada renglón es una ecuación completa.',
   lado_vacio: () => 'Falta algo de un lado del signo =.',
   no_lineal: () => 'En este tema la x no va elevada ni multiplicada por otra x.',
@@ -136,18 +139,28 @@ export class ParseError extends Error {
 /** Unifica la escritura: signos menos tipográficos, ×, ÷, coma decimal, espacios. */
 export function normalizar(raw) {
   let s = String(raw ?? '');
-  if (/[²³⁴]|\^/.test(s)) throw new ParseError('no_lineal');
+  if (/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]|\^|\*\*/.test(s)) throw new ParseError('no_lineal');
+  s = s.replace(/(\d)\s*([¼½¾⅐-⅞])/g, '($1+$2)'); // número mixto: 2½ → (2+½)
   s = s.normalize('NFKC');
-  s = s.replace(/[−‐-―﹣]/g, '-');
-  s = s.replace(/[×✕✖⋅·•∙]/g, '*');
-  s = s.replace(/[÷⁄]/g, '/');
+  s = s.replace(/[\p{Cf}\p{Mn}\p{Me}]/gu, ''); // invisibles: ZWSP, LRM, U+00AD, selector de emoji, tecla 3️⃣
+  s = s.replace(/[−‐-―﹣˗➖]/g, '-');
+  s = s.replace(/[×✕✖⋅·•∙∗]/g, '*');
+  s = s.replace(/[÷⁄∕➗]/g, '/');
+  s = s.replace(/[[{]/g, '(').replace(/[\]}]/g, ')'); // corchetes y llaves como paréntesis
+  s = s.replace(/≈/g, '='); // x ≈ 8.33 (la aproximación ya se valida aparte)
   s = s.replace(/X/g, 'x');
+  // En México la coma separa miles: 1,000 = mil. "2,5" y "0,125" siguen siendo decimales.
+  s = s.replace(/(?<![\d.,])([1-9]\d{0,2})((?:,\d{3})+)(?![\d.,])/g, (_, a, b) => a + b.replace(/,/g, ''));
   s = s.replace(/(\d)\s*,\s*(?=\d)/g, '$1.');
   s = s.replace(/([\dx)])\s*:\s*(?=[\dx(+-])/g, '$1/');
   s = s.replace(/\s+/g, '');
+  s = s.replace(/\.+$/, ''); // punto final de oración: "15 = 3x."
   s = s.replace(/={2,}/g, '=');
   return s;
 }
+
+/** ≈ 30 términos: de sobra para 1.º de secundaria y evita que un renglón pegado congele el celular. */
+const MAX_TOKENS = 60;
 
 function tokenizar(s) {
   const out = [];
@@ -156,7 +169,14 @@ function tokenizar(s) {
     if ((c >= '0' && c <= '9') || c === '.') {
       let j = i;
       while (j < s.length && ((s[j] >= '0' && s[j] <= '9') || s[j] === '.')) j++;
-      const text = s.slice(i, j);
+      let text = s.slice(i, j);
+      // "2x3", "3 x 5", "x2": la x usada como "por" (o un x² sin superíndice).
+      if (out.length && out[out.length - 1].t === 'x') throw new ParseError('x_numero', bonito(s.slice(Math.max(0, i - 2), j)));
+      // 8.333333333333334 (calculadora): recorta los decimales que no caben; se valida como aproximación.
+      const partes = text.split('.');
+      if (partes.length === 2 && partes[0].length <= 9 && partes[0].length + partes[1].length > 15) {
+        text = `${partes[0]}.${partes[1].slice(0, 15 - partes[0].length)}`;
+      }
       let v;
       try {
         v = Fr.fromDecimalString(text);
@@ -164,19 +184,19 @@ function tokenizar(s) {
         throw new ParseError(e instanceof RangeError ? 'grande' : 'numero', text);
       }
       const dec = text.includes('.') ? text.split('.')[1].length : 0;
-      out.push({ t: 'num', v, i, dec });
+      out.push({ t: 'num', v, i, f: j, dec });
       i = j;
     } else if (c === 'x') {
-      out.push({ t: 'x', i });
+      out.push({ t: 'x', i, f: i + 1 });
       i++;
     } else if ('+-*/()='.includes(c)) {
-      out.push({ t: c, i });
+      out.push({ t: c, i, f: i + 1 });
       i++;
-    } else if (/\p{L}/u.test(c)) {
-      throw new ParseError('letra', c);
     } else {
-      throw new ParseError('simbolo', c);
+      const cp = String.fromCodePoint(s.codePointAt(i)); // emoji completo, no medio par sustituto
+      throw new ParseError(/\p{L}/u.test(cp) ? 'letra' : 'simbolo', cp);
     }
+    if (out.length > MAX_TOKENS) throw new ParseError('largo');
   }
   return out;
 }
@@ -218,8 +238,12 @@ class Parser {
   }
 
   fragmento(tok) {
-    if (!tok) return this.src.slice(-6);
-    return this.src.slice(Math.max(0, tok.i - 2), tok.i + 4);
+    const s = this.src;
+    let a = tok ? Math.max(0, tok.i - 2) : Math.max(0, s.length - 6);
+    let b = tok ? Math.min(s.length, tok.i + 4) : s.length;
+    while (a > 0 && /[\d.]/.test(s[a - 1])) a--; // no cortar números a la mitad
+    while (b < s.length && /[\d.]/.test(s[b])) b++;
+    return bonito(s.slice(a, b)); // con −, · y espacios, como lo ve el alumno
   }
 
   /** Lee signos unarios consecutivos ("+-", "--") y devuelve +1 o −1. */
@@ -365,7 +389,8 @@ export function parsearRenglon(raw) {
         terms: limpiar(terms),
         form: forma(terms),
         hasX: toks.some((t) => t.t === 'x'),
-        texto: src.slice(desde, ultimo.i + 1),
+        decimales: toks.reduce((m, t) => Math.max(m, t.dec || 0), 0),
+        texto: src.slice(desde, ultimo.f), // .f = fin del token (los números pueden tener varias cifras)
       };
     });
 
@@ -406,7 +431,10 @@ export function parsearRenglon(raw) {
       for (let i = 0; i + 1 < bloque.length; i++) {
         const izq = bloque[i];
         const der = bloque[i + 1];
-        if (!formasIguales(izq.form, der.form)) errores.push({ tipo, izq, der });
+        if (formasIguales(izq.form, der.form)) continue;
+        // "x = 3/7 = 0.43": una aproximación al final de la cadena no es un error de cuenta.
+        if (tipo === 'num' && aproxima(izq.form.b, der.form.b, der.decimales)) continue;
+        errores.push({ tipo, izq, der });
       }
     };
     revisar(xPrimero ? bloqueX : [...bloqueX].reverse(), 'x');
@@ -417,6 +445,11 @@ export function parsearRenglon(raw) {
     const nAdj = xPrimero ? bloqueN[0] : bloqueN[bloqueN.length - 1];
     const nLejos = xPrimero ? bloqueN[bloqueN.length - 1] : bloqueN[0];
     const orden = (xp, np) => (xPrimero ? { L: xp.terms, R: np.terms } : { L: np.terms, R: xp.terms });
+    // "3x = 15 = 15/3 = 5": siguió despejando en el mismo renglón; no es un error de cuenta.
+    const coef = xAdj.form.a;
+    if (!coef.isZero() && !coef.eq(1) && errores.some((e) => e.tipo === 'num' && e.der.form.b.mul(coef).eq(e.izq.form.b))) {
+      throw new ParseError('cadena');
+    }
 
     return {
       ok: true,
@@ -559,10 +592,29 @@ function malDeTransposicion(modo, w) {
 
 const MODOS_MAL = ['sin_cambio_signo', 'solo_un_lado', 'inversa_div', 'inversa_mul'];
 
+/** El mismo error en varios términos a la vez (todos sin cambiar signo, o todos quitados de un lado). */
+function malDeVarios(modo, T) {
+  const lista = T.map((w) => fmtTerminoSinSigno(w.t));
+  const terminos = lista.length === 2 ? `el ${lista[0]} y el ${lista[1]}` : `${lista.slice(0, -1).map((t) => `el ${t}`).join(', ')} y el ${lista[lista.length - 1]}`;
+  const base = { ...detalleTermino(T[0].t, T[0].lado), terminos, cantidad: T.length };
+  if (modo === 'sin_cambio_signo') {
+    return {
+      tipo: TIPOS.SIGNO_TRANSPOSICION,
+      detalle: {
+        variante: 'varios_sin_cambio_signo',
+        ...base,
+        quedo: T.map((w) => fmtTerminoConSigno(w.t)).join(', '),
+        debioQuedar: T.map((w) => fmtTerminoConSigno({ c: w.t.c.neg(), x: w.t.x })).join(', '),
+      },
+    };
+  }
+  return { tipo: TIPOS.UN_SOLO_LADO, detalle: { variante: 'varios_quita_de_un_lado', ...base } };
+}
+
 /** TERMINOS_NO_SEMEJANTES: junta x con números en un mismo lado. */
-function fusiones(eq) {
+function fusiones(eq, lados = ['L', 'R']) {
   const out = [];
-  for (const lado of ['L', 'R']) {
+  for (const lado of lados) {
     const terms = eq[lado];
     const xs = terms.map((t, i) => [t, i]).filter(([t]) => t.x && !t.c.isZero());
     const cs = terms.map((t, i) => [t, i]).filter(([t]) => !t.x && !t.c.isZero());
@@ -720,13 +772,21 @@ export function candidatos(eq) {
         if (!ini.mal) {
           T.forEach((w, k) => {
             for (const modo of MODOS_MAL) {
-              if (modo.startsWith('inversa') && w.t.x) continue;
+              // Dividir o multiplicar entre 1 no se distingue de quitarlo de un lado.
+              if (modo.startsWith('inversa') && (w.t.x || w.t.c.abs().eq(1))) continue;
               variantes.push({
                 ops: T.map((v, j) => ({ ...v, modo: j === k ? modo : 'correcto' })),
                 mal: malDeTransposicion(modo, w),
               });
             }
           });
+          // El mismo error en todos los términos que pasa (un error sistemático,
+          // como 5x + 2 = 2x + 14 → 5x + 2x = 14 + 2).
+          if (T.length >= 2) {
+            for (const modo of ['sin_cambio_signo', 'solo_un_lado']) {
+              variantes.push({ ops: T.map((v) => ({ ...v, modo })), mal: malDeVarios(modo, T) });
+            }
+          }
         }
         for (const v of variantes) {
           const Q = transponer(ini.eq, v.ops);
@@ -734,7 +794,8 @@ export function candidatos(eq) {
           const base = { eq: Q, mal: v.mal, ops: ini.ops + T.length };
           out.push(base, ...divisiones(base));
           if (!base.mal) {
-            for (const f of fusiones(Q)) {
+            // Después de pasar términos, solo tiene sentido juntar del lado de las x.
+            for (const f of fusiones(Q, [ladoX])) {
               const fb = { eq: f.eq, mal: f.mal, ops: base.ops + 1 };
               out.push(fb, ...divisiones(fb));
             }
@@ -763,23 +824,32 @@ function coinciden(v1, v2) {
   return v1.every((x, i) => x.eq(cruz[i]));
 }
 
-/** ¿El número escrito parece un desliz de cuenta del número correcto? */
+/**
+ * ¿El número escrito parece un desliz de cuenta del número correcto?
+ * Solo se aceptan deslices plausibles; si no, el motor prefiere decir
+ * "no reconozco este error" antes que inventar uno.
+ *   - Por uno: 15 → 14.
+ *   - Signo: 5 → −5.
+ *   - Con números de 2 cifras o más: diferencia de 2 (42 → 44), un solo
+ *     dígito distinto (42 → 48) o dígitos volteados (15 → 51).
+ * Solo entre enteros: con fracciones no hay "desliz" reconocible.
+ */
 export function cercano(r, w) {
-  if (r.eq(w)) return false;
-  const d = Math.abs(r.toNumber() - w.toNumber());
-  if (d <= 2 + 1e-9) return true;
-  if (r.isInt() && w.isInt()) {
-    if (r.n === -w.n) return true; // se le fue el signo en una suma o resta
-    const a = String(Math.abs(r.n));
-    const b = String(Math.abs(w.n));
-    if (Math.sign(r.n) === Math.sign(w.n) && a.length === b.length) {
-      let distintos = 0;
-      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) distintos++;
-      if (distintos === 1) return true; // un solo dígito distinto: 42 vs 48
-      if ([...a].sort().join('') === [...b].sort().join('')) return true; // dígitos volteados: 15 vs 51
-    }
+  if (r.eq(w) || !r.isInt() || !w.isInt()) return false;
+  const d = Math.abs(r.n - w.n);
+  if (d === 1) return true;
+  if (r.n !== 0 && r.n === -w.n) return true;
+  const a = String(Math.abs(r.n));
+  const b = String(Math.abs(w.n));
+  if (a.length < 2 && b.length < 2) return false;
+  if (d === 2) return true;
+  if (Math.sign(r.n) === Math.sign(w.n) && a.length === b.length) {
+    let distintos = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) distintos++;
+    if (distintos === 1) return true;
+    if ([...a].sort().join('') === [...b].sort().join('')) return true;
   }
-  return d <= 0.1 * Math.abs(r.toNumber());
+  return false;
 }
 
 const NOMBRE_COMPONENTE = ['xIzq', 'numIzq', 'xDer', 'numDer'];
@@ -813,6 +883,8 @@ function buscarAritmetica(vS, correctos) {
           cuenta,
           esperado: fmtNum(orden[i]),
           escrito: fmtNum(vS[i]),
+          esperadoValor: orden[i].toString(),
+          escritoValor: vS[i].toString(),
           esX: i % 2 === 0,
           componente: NOMBRE_COMPONENTE[i],
         },
@@ -842,7 +914,11 @@ export function clasificar(previa, escrita) {
   const todos = candidatos(previa).map((c) => ({ ...c, vector: vector(c.eq) }));
 
   const exactos = todos.filter((c) => c.mal && coinciden(vS, c.vector));
-  if (exactos.length) return { ...elegir(exactos), confianza: 'alta' };
+  if (exactos.length) {
+    const elegido = elegir(exactos);
+    // Una explicación que necesita 3 operaciones seguidas es posible, no segura.
+    return { ...elegido, confianza: elegido.ops >= 3 ? 'media' : 'alta' };
+  }
 
   const arit = buscarAritmetica(
     vS,
@@ -881,6 +957,8 @@ function aritmeticaDeCadena(errorCadena) {
       cuenta: bonito(izq.texto),
       esperado,
       escrito,
+      esperadoValor: (tipo === 'x' ? izq.form.a : izq.form.b).toString(),
+      escritoValor: (tipo === 'x' ? der.form.a : der.form.b).toString(),
       esX: tipo === 'x',
     },
     confianza: 'alta',
@@ -899,6 +977,8 @@ function aritmeticaNumerica(info) {
       cuenta: bonito(calculo.texto),
       esperado: fmtNum(calculo.form.b),
       escrito: fmtNum(resultado.form.b),
+      esperadoValor: calculo.form.b.toString(),
+      escritoValor: resultado.form.b.toString(),
       esX: false,
     },
     confianza: 'alta',
@@ -906,17 +986,37 @@ function aritmeticaNumerica(info) {
   };
 }
 
-function esAproximacion(sol0, info) {
-  if (sol0.tipo !== 'unica' || sol0.valor.isInt() || !info.decimales) return false;
-  const v = despeje(info.eq);
-  if (!v) return false;
-  // Se acepta si está bien redondeado o truncado a esos decimales (3/7 ≈ 0.43 o 0.42, no 0.5).
-  const paso = 10 ** -info.decimales;
-  const real = sol0.valor.toNumber();
-  const escrito = v.toNumber();
-  const redondeado = Math.abs(escrito - real) <= paso / 2 + 1e-12;
-  const truncado = Math.sign(escrito) === Math.sign(real) && Math.abs(escrito) <= Math.abs(real) && Math.abs(real) < Math.abs(escrito) + paso;
+/**
+ * ¿`escrito` (con `decimales` cifras decimales) es `real` bien redondeado o truncado?
+ * 3/7 ≈ 0.43 o 0.42 sí; 0.5 no.
+ */
+function aproxima(real, escrito, decimales) {
+  if (!decimales || real.isInt() || real.eq(escrito)) return false;
+  const paso = 10 ** -decimales;
+  const r = real.toNumber();
+  const e = escrito.toNumber();
+  const redondeado = Math.abs(e - r) <= paso / 2 + 1e-12;
+  const truncado = Math.sign(e) === Math.sign(r) && Math.abs(e) <= Math.abs(r) && Math.abs(r) < Math.abs(e) + paso;
   return redondeado || truncado;
+}
+
+/**
+ * Si el estudiante escribió decimales, mostramos su número en decimales
+ * ("0.5", no "1/2"): así se reconoce en la explicación.
+ */
+function mostrarComoDecimal(detalle, decimales) {
+  if (!detalle?.escritoValor) return;
+  const [n, d = '1'] = detalle.escritoValor.split('/');
+  const valor = Number(n) / Number(d);
+  if (!Number.isFinite(valor) || Number.isInteger(valor)) return;
+  const texto = String(Number(valor.toFixed(decimales)));
+  detalle.escrito = valor < 0 ? `\u2212${texto.slice(1)}` : texto;
+}
+
+function esAproximacion(sol0, info) {
+  if (sol0.tipo !== 'unica' || !info.decimales) return false;
+  const v = despeje(info.eq);
+  return v !== null && aproxima(sol0.valor, v, info.decimales);
 }
 
 /**
@@ -931,19 +1031,35 @@ function esAproximacion(sol0, info) {
  * }}
  */
 export function analizarProcedimiento(renglones) {
-  const textos = (renglones || []).map((r) => String(r ?? '').trim()).filter(Boolean);
+  try {
+    return analizarSinRed(renglones);
+  } catch (e) {
+    if (!(e instanceof RangeError)) throw e;
+    // Números enormes (p. ej. 99999999x = 99999999): mensaje claro en vez de una excepción en la interfaz.
+    return { estado: 'sin_entender', renglon: 1, mensaje: MENSAJES.grande(), renglones: [] };
+  }
+}
+
+/** clasificar() con red: si la aritmética exacta se desborda, lo dice tal cual (no inventa). */
+function clasificarSeguro(previa, escrita) {
+  try {
+    return clasificar(previa, escrita);
+  } catch (e) {
+    if (!(e instanceof RangeError)) throw e;
+    return { tipo: TIPOS.NO_CLASIFICADO, detalle: { variante: 'desconocido', posibles: [] }, confianza: 'baja', alternativas: [] };
+  }
+}
+
+function analizarSinRed(renglones) {
+  // Conserva el número de renglón original aunque haya renglones vacíos en medio.
+  const textos = (renglones || []).map((r, idx) => ({ n: idx + 1, texto: String(r ?? '').trim() })).filter((r) => r.texto);
   if (!textos.length) return { estado: 'vacio', renglones: [] };
 
-  const info = textos.map((texto, idx) => ({ n: idx + 1, texto, ...parsearRenglon(texto) }));
-  const malEscrito = info.find((r) => !r.ok);
-  if (malEscrito) {
-    return {
-      estado: 'sin_entender',
-      renglon: malEscrito.n,
-      mensaje: malEscrito.error.mensaje,
-      renglones: info,
-    };
-  }
+  const info = textos.map(({ n, texto }) => ({ n, texto, ...parsearRenglon(texto) }));
+  // Se reporta el PRIMER problema en orden de lectura: un renglón ilegible más
+  // abajo no debe ocultar un error que el estudiante cometió antes.
+  const sinEntender = (r) => ({ estado: 'sin_entender', renglon: r.n, mensaje: r.error.mensaje, renglones: info });
+  if (!info[0].ok) return sinEntender(info[0]);
   const primero = info[0];
   if (primero.tipo !== 'ecuacion') {
     return {
@@ -952,6 +1068,10 @@ export function analizarProcedimiento(renglones) {
       mensaje: 'El primer renglón debe ser la ecuación, con su x.',
       renglones: info,
     };
+  }
+  if (primero.cadena) {
+    // "3x + 5 = 20 = 25": el enunciado se contradice; no hay una ecuación que resolver.
+    return { estado: 'sin_entender', renglon: primero.n, mensaje: 'Revisa la ecuación: sus igualdades no coinciden entre sí.', renglones: info };
   }
   const sol0 = resolver(primero.eq);
   if (sol0.tipo !== 'unica') {
@@ -970,6 +1090,7 @@ export function analizarProcedimiento(renglones) {
   for (let i = 1; i < info.length; i++) {
     const r = info[i];
     let diag = null;
+    if (!r.ok) return sinEntender(r);
 
     if (r.tipo === 'numerica') {
       if (r.verdadera) {
@@ -978,11 +1099,11 @@ export function analizarProcedimiento(renglones) {
         continue;
       }
       // Un renglón sin x y falso: o vino de un error típico (8 = 20) o es una cuenta mal hecha.
-      const c = clasificar(previa.eq, r.eq);
+      const c = clasificarSeguro(previa.eq, r.eq);
       diag = c.tipo === TIPOS.NO_CLASIFICADO ? aritmeticaNumerica(r) : c;
     } else if (r.cadena) {
       const solIni = resolver(r.eqInicial);
-      diag = mismaSolucion(sol0, solIni) ? aritmeticaDeCadena(r.cadena[0]) : clasificar(previa.eq, r.eqInicial);
+      diag = mismaSolucion(sol0, solIni) ? aritmeticaDeCadena(r.cadena[0]) : clasificarSeguro(previa.eq, r.eqInicial);
     } else {
       const sol = resolver(r.eq);
       if (mismaSolucion(sol0, sol)) {
@@ -996,11 +1117,12 @@ export function analizarProcedimiento(renglones) {
         previa = r;
         continue;
       }
-      diag = clasificar(previa.eq, r.eq);
+      diag = clasificarSeguro(previa.eq, r.eq);
     }
 
     r.valido = false;
     for (let j = i + 1; j < info.length; j++) info[j].despuesDelError = true;
+    if (r.decimales) mostrarComoDecimal(diag.detalle, r.decimales);
     return {
       estado: 'error',
       solucion: sol0.valor,
@@ -1380,9 +1502,9 @@ function orientarX(eq) {
 /* Filtro de salida (para la capa opcional de IA)                      */
 /* ------------------------------------------------------------------ */
 
-/** Un número no debe ser parte de otro: ni dígitos, ni fracción, ni decimal (5 en 15, 5/3 o 5.5). */
-const INICIO = '(?<![\\d/]|\\d\\.)';
-const FIN = '(?![\\d/]|\\.\\d)';
+/** Un número no debe ser parte de otro: ni dígitos, ni fracción, ni decimal (5 en 15, 5/3, 5.5 o 5,5). */
+const INICIO = '(?<![\\d/]|\\d[.,])';
+const FIN = '(?![\\d/]|[.,]\\d)';
 
 const PALABRAS_NUMERO = {
   0: 'cero', 1: 'uno', 2: 'dos', 3: 'tres', 4: 'cuatro', 5: 'cinco', 6: 'seis', 7: 'siete',
@@ -1391,37 +1513,70 @@ const PALABRAS_NUMERO = {
 };
 
 /**
- * ¿El texto revela el valor de x? Detecta "x = 5", "x vale 5", "es 5", "cinco",
- * o el número suelto cuando no aparece ni en el ejercicio ni en lo que escribió
- * el estudiante. Se usa para descartar respuestas de la IA.
+ * Normaliza texto en lenguaje natural (no ecuaciones): unifica signos y
+ * espacios, pero NO convierte ":" en división ni "," en punto decimal, para
+ * que "El valor de x: 5" o "prueba con 5, 6 y 7" se lean como texto. Nunca lanza.
+ */
+function normalizarTexto(texto) {
+  return String(texto ?? '')
+    .normalize('NFKC')
+    .replace(/[\p{Cf}]/gu, '')
+    .replace(/[\u2212\u2010-\u2015\uFE63˗➖]/g, '-')
+    .replace(/[×✕✖⋅·•∙∗]/g, '*')
+    .replace(/[÷⁄∕➗]/g, '/')
+    .replace(/[≈≅]/g, '=')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const escaparRegex = (v) => v.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&');
+
+/**
+ * ¿El texto revela el valor de x? Detecta "x = 5", "x vale 5", "el valor de
+ * x: 5", "la respuesta es 5", "x es cinco", o el número suelto cuando no
+ * aparece ni en el ejercicio ni en lo que escribió el estudiante. Se usa para
+ * descartar respuestas de la IA. Nunca lanza: ante la duda, devuelve true.
  */
 export function revelaSolucion(texto, solucion, contexto = []) {
-  const s = Fr.from(solucion);
-  const t = normalizar(String(texto)).toLowerCase();
-  const legible = String(texto).toLowerCase().replace(/[−–]/g, '-');
-  const valorTxt = s.toString();
-  const valorDecimal = s.isInt() ? null : String(Math.round(s.toNumber() * 100) / 100);
-  const candidatosTxt = [valorTxt, valorDecimal].filter(Boolean);
+  let s;
+  try {
+    s = Fr.from(solucion);
+  } catch {
+    return true;
+  }
+  const t = normalizarTexto(texto);
+  const compacto = t.replace(/\s+/g, '');
+  const valores = [s.toString()];
+  if (!s.isInt()) {
+    valores.push(String(Math.round(s.toNumber() * 100) / 100), String(Math.round(s.toNumber() * 10) / 10));
+  }
 
-  for (const v of candidatosTxt) {
-    const esc = v.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&');
-    if (new RegExp(`x=${esc}${FIN}`).test(t)) return true;
-    if (new RegExp(`(?:vale|es igual a|da|resultado es|respuesta es|solución es|solucion es)\\s*${esc}${FIN}`).test(legible)) return true;
+  for (const v of valores) {
+    const esc = escaparRegex(v);
+    if (new RegExp(`x[=:]${esc}${FIN}`).test(compacto)) return true;
+    const frase = '(?:x\\s*(?:vale|es igual a|es|da)|valor de (?:la )?x(?:\\s*(?:es|:))?|resultado(?:\\s*es|:)|respuesta(?:\\s*es|:)|soluci[oó]n(?:\\s*es|:)|da)';
+    if (new RegExp(`${frase}\\s*${esc}${FIN}`).test(t)) return true;
   }
   if (s.isInt() && Math.abs(s.n) <= 20) {
     const palabra = PALABRAS_NUMERO[Math.abs(s.n)];
-    const enContexto = contexto.some((c) => new RegExp(`\\b${palabra}\\b`).test(String(c).toLowerCase()));
-    if (!enContexto && new RegExp(`(?:x\\s*(?:vale|es|=)\\s*(?:menos\\s+)?)${palabra}\\b`).test(legible)) return true;
+    const enContexto = contexto.some((c) => new RegExp(`\\b${palabra}\\b`).test(normalizarTexto(c)));
+    if (!enContexto && new RegExp(`(?:x\\s*(?:vale|es|=|:)|resultado es|respuesta es)\\s*(?:menos\\s+)?${palabra}\\b`).test(t)) return true;
   }
   // Número suelto igual a la solución que no estaba en el ejercicio ni en los renglones.
   const numerosContexto = new Set();
   for (const c of contexto) {
-    for (const m of normalizar(String(c)).matchAll(/\d+(?:\.\d+)?(?:\/\d+)?/g)) numerosContexto.add(m[0]);
+    let linea;
+    try {
+      linea = normalizar(String(c));
+    } catch {
+      linea = normalizarTexto(c);
+    }
+    for (const m of linea.matchAll(/\d+(?:[.,]\d+)?(?:\/\d+)?/g)) numerosContexto.add(m[0].replace(',', '.'));
   }
   const absTxt = s.abs().toString();
   if (!numerosContexto.has(absTxt)) {
-    const esc = absTxt.replace(/[/]/g, '\\/');
-    if (new RegExp(`${INICIO}${esc}${FIN}`).test(t)) return true;
+    if (new RegExp(`${INICIO}${escaparRegex(absTxt)}${FIN}`).test(t)) return true;
   }
   return false;
 }

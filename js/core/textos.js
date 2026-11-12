@@ -16,11 +16,13 @@ import {
   bonito,
   ecuacion,
   fmtLado,
+  fmtNum,
   parsearRenglon,
   pasosSolucion,
   procedimientoConError,
   siguientePaso,
 } from './engine.js';
+import { Fr } from './fraction.js';
 
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
@@ -107,6 +109,20 @@ function datosPaso(paso) {
  * @param {string[]} renglonesAlumno renglones escritos por el estudiante (sin el enunciado)
  */
 export function pistasPara(ejercicioTexto, renglonesAlumno, pack) {
+  try {
+    return pistasSinRed(ejercicioTexto, renglonesAlumno, pack);
+  } catch {
+    // Números fuera de rango o un renglón raro: pistas generales, nunca una excepción en pantalla.
+    return {
+      pistas: pack.pistas.revisar.map((p) => rellenar(p, { renglon: 'anterior', anterior: bonito(ejercicioTexto) })),
+      solucion: [],
+      paso: null,
+      error: null,
+    };
+  }
+}
+
+function pistasSinRed(ejercicioTexto, renglonesAlumno, pack) {
   const todos = [ejercicioTexto, ...(renglonesAlumno || [])];
   const analisis = analizarProcedimiento(todos);
   let base = ecuacion(ejercicioTexto);
@@ -149,6 +165,35 @@ export function pistasPara(ejercicioTexto, renglonesAlumno, pack) {
 /* ------------------------------------------------------------------ */
 
 const ladoClave = { izquierdo: 'L', derecho: 'R' };
+
+/** Fracción a partir de su texto ASCII ("25/3", "-4"). */
+function fraccion(texto) {
+  const [n, d = '1'] = String(texto).replace('−', '-').split('/');
+  return new Fr(Number(n), Number(d));
+}
+
+/** Muestra un valor como número ("25/3", "−4") o como coeficiente de x ("5x", "x", "−x"). */
+function formatearValor(fr, esX) {
+  if (!esX) return fmtNum(fr);
+  if (fr.eq(1)) return 'x';
+  if (fr.eq(-1)) return '−x';
+  return `${fmtNum(fr)}x`;
+}
+
+/** Tercera opción de la pregunta de cuentas: un valor cercano que no sea ni el correcto ni el del estudiante. */
+function distractor(d) {
+  try {
+    const esperado = fraccion(d.esperadoValor ?? d.esperado);
+    const escrito = fraccion(d.escritoValor ?? d.escrito);
+    for (const delta of [1, -1, 2, -2, 3]) {
+      const candidato = esperado.add(delta);
+      if (!candidato.eq(esperado) && !candidato.eq(escrito)) return formatearValor(candidato, d.esX);
+    }
+  } catch {
+    /* valor que no se pudo leer: opción genérica */
+  }
+  return 'Ninguna de estas';
+}
 
 /** Rota las opciones para que la correcta no siempre quede en el mismo lugar. */
 function ordenar(opciones, semilla) {
@@ -213,16 +258,10 @@ export function preguntaOrientadora(tipo, delAlumno, pack) {
       ];
     } else {
       texto = rellenar(q.texto, d);
-      const esperado = d.esperado;
-      const escrito = d.escrito;
-      const n = Number(String(esperado).replace('−', '-'));
-      let otra = Number.isFinite(n) ? String(n + 1) : `${esperado}0`;
-      if (otra === String(escrito).replace('−', '-')) otra = String(n - 1);
-      otra = otra.replace('-', '−');
       opciones = [
-        { id: 'a', texto: esperado, correcta: true, retro: rellenar(q.retroCorrecta, d) },
-        { id: 'b', texto: escrito, correcta: false, retro: rellenar(q.retroSuya, d) },
-        { id: 'c', texto: otra, correcta: false, retro: rellenar(q.retroOtra, d) },
+        { id: 'a', texto: d.esperado, correcta: true, retro: rellenar(q.retroCorrecta, d) },
+        { id: 'b', texto: d.escrito, correcta: false, retro: rellenar(q.retroSuya, d) },
+        { id: 'c', texto: distractor(d), correcta: false, retro: rellenar(q.retroOtra, d) },
       ];
     }
   } else if (tipo === TIPOS.SIGNO_NEGATIVO) {

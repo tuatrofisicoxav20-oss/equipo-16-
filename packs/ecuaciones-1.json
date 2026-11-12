@@ -6,10 +6,22 @@
   "tema": "Ecuaciones lineales con una incógnita",
   "descripcion": "Resolver ecuaciones de primer grado paso por paso, entendiendo por qué cada paso conserva el equilibrio.",
   "diagnostico": [
-    { "id": "d1", "ecuacion": "3x + 5 = 20" },
-    { "id": "d2", "ecuacion": "x/4 − 1 = 2" },
-    { "id": "d3", "ecuacion": "5x + 2 = 2x + 14" },
-    { "id": "d4", "ecuacion": "−2x + 3 = 11" }
+    {
+      "id": "d1",
+      "ecuacion": "3x + 5 = 20"
+    },
+    {
+      "id": "d2",
+      "ecuacion": "x/4 − 1 = 2"
+    },
+    {
+      "id": "d3",
+      "ecuacion": "5x + 2 = 2x + 14"
+    },
+    {
+      "id": "d4",
+      "ecuacion": "−2x + 3 = 11"
+    }
   ],
   "errores": {
     "SIGNO_TRANSPOSICION": {
@@ -19,10 +31,12 @@
       "tono": "coral",
       "resumen": "Pasa un término al otro lado del = sin cambiarle el signo.",
       "alumno": {
-        "sin_cambio_signo": "En el renglón {renglon}, el {terminoSinSigno} cambió de lado pero conservó su signo. Cuando un término pasa al otro lado del =, su operación se invierte: si estaba {verbo}, pasa {verboInverso}."
+        "sin_cambio_signo": "En el renglón {renglon}, el {terminoSinSigno} cambió de lado pero conservó su signo. Cuando un término pasa al otro lado del =, su operación se invierte: si estaba {verbo}, pasa {verboInverso}.",
+        "varios_sin_cambio_signo": "En el renglón {renglon}, {terminos} cambiaron de lado pero conservaron su signo. Cada término que cruza el = cambia su operación: lo que suma pasa restando y lo que resta pasa sumando."
       },
       "docente": {
-        "sin_cambio_signo": "Transpone {termino} sin cambiar el signo: escribió {quedo} donde debía quedar {debioQuedar}."
+        "sin_cambio_signo": "Transpone {termino} sin cambiar el signo: escribió {quedo} donde debía quedar {debioQuedar}.",
+        "varios_sin_cambio_signo": "Transpone varios términos sin cambiarles el signo: escribió {quedo} donde debía quedar {debioQuedar}."
       },
       "ruta": {
         "titulo": "Lo que suma, pasa restando",
@@ -145,12 +159,14 @@
       "alumno": {
         "quita_de_un_lado": "En el renglón {renglon} quitaste el {terminoSinSigno} del lado {lado}, pero del lado {otroLado} no hiciste nada. Lo que haces de un lado del = lo tienes que hacer del otro.",
         "divide_solo_x": "En el renglón {renglon} dividiste entre {coefNum} solo el lado de la x. El otro lado también se tiene que dividir.",
-        "divide_solo_numero": "En el renglón {renglon} dividiste entre {coefNum} solo los números y la x se quedó igual. Se dividen los dos lados."
+        "divide_solo_numero": "En el renglón {renglon} dividiste entre {coefNum} solo los números y la x se quedó igual. Se dividen los dos lados.",
+        "varios_quita_de_un_lado": "En el renglón {renglon} quitaste {terminos} de un lado del =, pero del otro lado no hiciste lo mismo. Lo que haces de un lado lo tienes que hacer del otro."
       },
       "docente": {
         "quita_de_un_lado": "Elimina {termino} de un solo lado ({operacion} solo en el lado {lado}).",
         "divide_solo_x": "Divide entre {coefNum} solo el lado de la incógnita (escribió x = {escrito}).",
-        "divide_solo_numero": "Divide entre {coefNum} solo el término independiente."
+        "divide_solo_numero": "Divide entre {coefNum} solo el término independiente.",
+        "varios_quita_de_un_lado": "Elimina varios términos ({terminos}) de un solo lado de la ecuación."
       },
       "ruta": {
         "titulo": "Lo que haces de un lado, hazlo del otro",
@@ -371,40 +387,105 @@
     "dudaContestada": "Ya volvió la señal y te contesté {n} {dudas}.",
     "respuestas": [
       {
-        "claves": ["signo", "cambia", "otro lado", "pasa", "restando", "sumando", "transpon"],
+        "claves": [
+          "signo",
+          "cambia",
+          "otro lado",
+          "pasa",
+          "restando",
+          "sumando",
+          "transpon"
+        ],
         "texto": "Piensa en una balanza: si quitas 5 de un platillo, tienes que quitar 5 del otro para que siga en equilibrio. Por eso lo que suma de un lado aparece restando del otro. ¿Con qué número de tu ejercicio quieres probarlo?"
       },
       {
-        "claves": ["divid", "multiplic", "coeficiente", "veces", "pegado"],
+        "claves": [
+          "divid",
+          "multiplic",
+          "coeficiente",
+          "veces",
+          "pegado"
+        ],
         "texto": "El número pegado a la x está multiplicando: 3x es 3 veces x. Una multiplicación se deshace dividiendo, no restando. ¿Entre qué número dividirías los dos lados de tu ejercicio?"
       },
       {
-        "claves": ["negativ", "menos", "signos"],
+        "claves": [
+          "negativ",
+          "menos",
+          "signos"
+        ],
         "texto": "Al dividir, si los dos números tienen el mismo signo el resultado es positivo; si tienen signos distintos, es negativo. Por ejemplo, 8 ÷ (−2) da un número negativo. Cuando termines, sustituye tu respuesta para comprobarla."
       },
       {
-        "claves": ["juntar", "junto", "semejante", "sumar la x", "sumo la x"],
+        "claves": [
+          "juntar",
+          "junto",
+          "semejante",
+          "sumar la x",
+          "sumo la x"
+        ],
         "texto": "Las x y los números solos son como cajas y pesas: no se pueden juntar entre sí. 3x + 5 se queda como 3x + 5 hasta que pases el 5 al otro lado."
       },
       {
-        "claves": ["comprob", "verific", "está bien", "esta bien", "correcto"],
+        "claves": [
+          "comprob",
+          "verific",
+          "está bien",
+          "esta bien",
+          "correcto"
+        ],
         "texto": "Para saber si tu respuesta está bien, sustitúyela en la ecuación original. Si los dos lados dan lo mismo, está bien. ¿Quieres intentarlo con tu resultado?"
       },
       {
-        "claves": ["qué es", "que es", "incógnita", "incognita", "para qué", "para que"],
+        "claves": [
+          "qué es",
+          "que es",
+          "incógnita",
+          "incognita",
+          "para qué",
+          "para que"
+        ],
         "texto": "La x es un número que todavía no conocemos. Resolver la ecuación es descubrir qué número hace que los dos lados del = valgan lo mismo, como una balanza en equilibrio."
       },
       {
-        "claves": ["no entiendo", "ayuda", "difícil", "dificil", "no sé", "no se", "confund"],
+        "claves": [
+          "no entiendo",
+          "ayuda",
+          "difícil",
+          "dificil",
+          "no sé",
+          "no se",
+          "confund"
+        ],
         "texto": "Vamos poquito a poco. Haz una sola operación por renglón y aplícala a los dos lados. Si te atoras, toca «Pista»: te doy una a la vez, sin decirte la respuesta."
       }
     ],
     "porDefecto": "Buena pregunta. Te propongo pensarlo con la balanza: lo que hagas de un lado del =, hazlo también del otro. Si quieres, pide una pista en tu ejercicio."
   },
   "materias": [
-    { "id": "matematicas", "nombre": "Matemáticas", "tema": "Ecuaciones lineales", "disponible": true },
-    { "id": "espanol", "nombre": "Español", "tema": "", "disponible": false },
-    { "id": "ciencias", "nombre": "Ciencias", "tema": "", "disponible": false },
-    { "id": "historia", "nombre": "Historia", "tema": "", "disponible": false }
+    {
+      "id": "matematicas",
+      "nombre": "Matemáticas",
+      "tema": "Ecuaciones lineales",
+      "disponible": true
+    },
+    {
+      "id": "espanol",
+      "nombre": "Español",
+      "tema": "",
+      "disponible": false
+    },
+    {
+      "id": "ciencias",
+      "nombre": "Ciencias",
+      "tema": "",
+      "disponible": false
+    },
+    {
+      "id": "historia",
+      "nombre": "Historia",
+      "tema": "",
+      "disponible": false
+    }
   ]
 }
