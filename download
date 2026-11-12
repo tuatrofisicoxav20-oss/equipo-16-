@@ -1,0 +1,14 @@
+# Archivos del entorno local
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Carpetas de herramientas y dependencias que no utiliza esta demo
+.vercel/
+node_modules/
+*.log
+
+# Archivos temporales
+*.tmp
+*.bak
