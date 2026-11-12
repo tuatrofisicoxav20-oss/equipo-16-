@@ -54,7 +54,7 @@ function medirBarras() {
  */
 const ESTILOS_POR_VISTA = {
   docente: ['css/docente.css', 'css/ficha.css', 'css/impresion.css'],
-  pitch: ['css/pitch.css'],
+  pitch: ['css/pitch.css', 'css/libre.css', 'css/diapositiva.css'],
 };
 
 function cargarEstilos(rutas = []) {

@@ -61,6 +61,15 @@ const EN_CONSTRUCCION = new Set([
   'js/ui/cuadernillo.js',
   'js/views/docente.js',
   'js/views/pitch.js',
+  // Fases 3 y 5
+  'css/libre.css',
+  'css/diapositiva.css',
+  'js/ui/cola.js',
+  'js/ui/actualizacion.js',
+  'js/ui/libre.js',
+  'js/ui/diapositiva.js',
+  'js/ui/atajos.js',
+  'js/data/escenas.js',
 ]);
 
 test('cada entrada de PRECACHE existe en el proyecto', (t) => {

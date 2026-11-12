@@ -316,3 +316,47 @@ abrirFicha(resumenAlumno, pack) → void        // <dialog> modal accesible: pro
                                               // solución pedida, comprobación sin ayuda, dudas, historial
 imprimirCuadernillo({ titulo, alumnos, tipo, ejercicios }, pack) → void   // arma la hoja y llama window.print()
 ```
+
+## Fase 3 — Sin conexión de verdad (lo que ya existe y lo que falta)
+
+Ya existe y está probado (`tests/e2e/avion.mjs`): `sw.js` (precache de la app y del paquete, recarga en modo
+avión), `manifest.webmanifest`, íconos, `js/services/sw-registro.js` (`registrarServiceWorker`,
+`estadoSinConexion()` → `{ version, archivos, bytes }`), la cola en `store.js` y el vaciado automático al
+volver la red. `tests/sw.test.js` falla si un archivo de la app no está en `PRECACHE`.
+
+Falta (fase 3):
+- **Cola visible con animación** — `js/ui/cola.js`: `montarCola(contenedor, { store, red, compacta })` →
+  `{ destruir() }`. Muestra "N actividades guardadas en este cel, pendientes de sincronizar"; al volver la red
+  llama `store.sincronizar({ onPaso })` y la cola se vacía con una animación breve (cada actividad "sube" y el
+  contador baja), con `anunciar()` ("Sincronizando 2 de 4…", "Listo: tu maestra o maestro ya ve tu avance").
+  Sin animación con movimiento reducido. La vista del estudiante la monta en la barra superior (compacta) y en
+  Inicio.
+- **Actualización del service worker** — cuando hay una versión nueva esperando: aviso "Hay una versión nueva
+  de Tecu" con botón "Actualizar" (mensaje `skipWaiting` al SW y recarga). Nunca interrumpe un ejercicio.
+- **Descargas** muestra también lo que guarda el service worker ("App lista sin internet · 33 archivos ·
+  650 KB") con `estadoSinConexion()`.
+- **Dudas sin conexión**: guardadas y contestadas al reconectar (ya implementado en `estudiante.js`; falta
+  prueba de extremo a extremo).
+- **Rendimiento en gama baja**: primera carga en 3G simulado y CPU ×6 con Playwright/CDP; presupuesto de peso.
+
+## Fase 5 — Modo presentación (`?vista=pitch`)
+
+`montarPitch(raiz)` (`js/views/pitch.js`, carga `css/pitch.css`). Para proyector (1366×768 y 1920×1080):
+- **Escenario**: dos teléfonos lado a lado (iframes `?alumno=ana&embebido=1` y `?alumno=luis&embebido=1`,
+  360×740 escalados para caber) y a la derecha el panel docente (iframe `?vista=docente&compacto=1`). Todo vivo:
+  son las vistas reales comunicándose por `localStorage` + `BroadcastChannel`.
+- **Barra de pasos del guion** con el arreglo `GUIDE` de `js/data/guiones.js`: problema → Ana y Luis → rutas
+  distintas → modo avión → sincronización → panel docente. Cada paso es un botón (1 clic) que prepara la escena
+  y muestra su nota para el presentador.
+- **Controles**: "Reproducir a Ana", "Reproducir a Luis" (escriben su procedimiento renglón por renglón con
+  animación usando `GUIONES`), "Modo libre" (un juez escribe su propia ecuación y su error en un cuaderno grande
+  y ve el diagnóstico), "Modo avión" (los dos teléfonos sin red), "Reiniciar demo" (con confirmación: deja todo
+  en estado inicial).
+- **Diapositiva "El problema"**: la estadística de `packs/contexto.json` con su fuente; si `fuente` está vacía,
+  un aviso visible solo para el presentador.
+- **Atajos de teclado** para el presentador: 1–6 pasos, A/L reproducir, M modo avión, F modo libre, R reiniciar,
+  ? ayuda (con diálogo accesible que los lista).
+- **API de control** (ya implementada en las vistas): estudiante → `reproducirDiagnostico`, `avanzarRuta`,
+  `reproducirPractica`, `simularRed`, `irA`, `reiniciar`; docente → `abrirFicha`, `cerrarFicha`, `enfocar`.
+  Las vistas responden con `{ tecu: 'estado', … }` para mostrar debajo de cada teléfono en qué pantalla va y
+  cuántos pendientes tiene.

@@ -61,6 +61,15 @@ const PRECACHE = [
   'js/views/estudiante.js',
   'js/views/docente.js',
   'js/views/pitch.js',
+  'js/data/escenas.js',
+  'js/ui/atajos.js',
+  'js/ui/diapositiva.js',
+  'js/ui/libre.js',
+  'js/ui/actualizacion.js',
+  'js/ui/cola.js',
+  'css/diapositiva.css',
+  'css/libre.css',
+  'css/cola.css',
 ];
 
 self.addEventListener('install', (evento) => {
