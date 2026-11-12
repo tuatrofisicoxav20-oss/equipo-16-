@@ -45,6 +45,15 @@ export function html(partes, ...valores) {
   return new HtmlConfiable(out);
 }
 
+/**
+ * Valor para atributos ARIA booleanos: siempre "true" o "false".
+ * Ojo: html`` convierte `false` en '' (útil para ${cond && html`…`}), así que
+ * aria-checked="${false}" quedaría vacío e inválido. Usa aria-checked="${bool(x)}".
+ */
+export function bool(valor) {
+  return valor ? 'true' : 'false';
+}
+
 /** Atributo booleano o vacío: ${attr('disabled', cond)} */
 export function attr(nombre, condicion, valor = '') {
   if (!condicion) return crudo('');

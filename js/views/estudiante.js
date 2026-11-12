@@ -187,6 +187,23 @@ const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
 const idMensaje = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+/** Texto de Tecu con las ecuaciones citadas («3x = 25») en .math, como en el cuaderno. */
+function conMath(texto) {
+  return String(texto ?? '')
+    .split(/(«[^»]+»)/)
+    .map((parte) =>
+      /^«[^»]+»$/.test(parte)
+        ? html`«<span class="math">${/=/.test(parte) ? formatearEcuacion(parte.slice(1, -1)) : parte.slice(1, -1)}</span>»`
+        : parte,
+    );
+}
+
+/** Opción de respuesta: la cuenta después de los dos puntos va en .math ("Restando: 20 − 5"). */
+function opcionConMath(texto) {
+  const m = /^([^:]+:\s*)(.*\d.*)$/.exec(String(texto ?? ''));
+  return m ? html`${m[1]}<span class="math">${m[2]}</span>` : texto;
+}
+
 function analizar(ejercicio, renglones) {
   return analizarProcedimiento([ejercicio, ...(renglones || [])]);
 }
@@ -902,12 +919,20 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       <div class="est-barra__estado">${chipRed}${chipPendientes}</div>`;
   }
 
-  /** Si la barra no cabe en una línea, se esconde el nombre (Tecu, la conexión y los pendientes se quedan). */
+  /**
+   * La barra debe caber en una línea: si no cabe, primero se esconde el nombre y luego el
+   * tecolote (decorativo). La conexión y los pendientes siempre se quedan a la vista.
+   */
   function ajustarBarra() {
-    barra.classList.remove('est-barra--compacta');
-    const marca = barra.querySelector('.est-barra__marca');
-    const estado = barra.querySelector('.est-barra__estado');
-    if (marca && estado && estado.offsetTop > marca.offsetTop + 8) barra.classList.add('est-barra--compacta');
+    barra.classList.remove('est-barra--compacta', 'est-barra--mini');
+    const partida = () => {
+      const marca = barra.querySelector('.est-barra__marca');
+      const estado = barra.querySelector('.est-barra__estado');
+      return Boolean(marca && estado && estado.offsetTop > marca.offsetTop + 8);
+    };
+    if (!partida()) return;
+    barra.classList.add('est-barra--compacta');
+    if (partida()) barra.classList.add('est-barra--mini');
   }
 
   function htmlNav() {
@@ -1505,12 +1530,12 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       ${ACTIVIDADES.map((a, k) => {
         const estado = k < actual ? 'hecho' : k === actual ? 'actual' : 'pendiente';
         const repasable = estado === 'hecho' && (a === 'pregunta' || a === 'visual') && !enComprobacion;
-        const textoEstado = estado === 'hecho' ? 'hecho' : estado === 'actual' ? 'paso actual' : 'pendiente';
+        const textoEstado = estado === 'hecho' ? 'hecha' : estado === 'actual' ? 'en curso' : 'pendiente';
         const nombre = ACTIVIDAD[a].corto;
         return html`<li data-estado="${estado}" ${attr('aria-current', estado === 'actual', 'step')} ${attr('data-viendo', viendo === a)}>
           ${repasable
             ? html`<button type="button" class="est-pasos__boton" data-act="repasar" data-actividad="${a}" data-foco="paso-${a}"
-                aria-label="${nombre}: hecho. Toca para repasar">${nombre}</button>`
+                aria-label="${nombre}: hecha. Toca para repasar">${nombre}</button>`
             : html`<span class="est-pasos__nombre">${nombre}<span class="solo-lector">: ${textoEstado}</span></span>`}
         </li>`;
       })}
@@ -1572,15 +1597,15 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       html: html`
         ${sobretitulo(r, 'pregunta')}
         <h2 class="titulo-2" id="est-act-titulo" data-titulo>${ACTIVIDAD.pregunta.nombre}</h2>
-        ${tecuDice(p.resuelta ? 'feliz' : 'pensando', html`<p>${q.texto}</p>`, { tamano: 64 })}
+        ${tecuDice(p.resuelta ? 'feliz' : 'pensando', html`<p>${conMath(q.texto)}</p>`, { tamano: 64 })}
         <div class="opciones est-opciones" role="group" aria-label="Elige una respuesta">
           ${q.opciones.map((o) => {
             const elegida = p.elegidas.includes(o.id);
             const clase = elegida ? (o.correcta ? 'opcion--correcta' : 'opcion--incorrecta') : '';
             return html`<button type="button" class="opcion ${clase}" data-act="elegirOpcion" data-id="${o.id}" data-foco="opcion-${o.id}"
               ${attr('aria-disabled', elegida || p.resuelta, 'true')}>
-              <span class="est-opcion__texto">${o.texto}</span>
-              ${elegida ? html`<span class="est-opcion__estado">${o.correcta ? 'Correcta' : 'No es esta'}</span>` : ''}
+              <span class="est-opcion__texto">${opcionConMath(o.texto)}</span>
+              ${elegida ? html`<span class="est-opcion__estado">${o.correcta ? 'Correcta' : 'Incorrecta'}</span>` : ''}
             </button>`;
           })}
         </div>
@@ -1618,7 +1643,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     }
     guardar();
     render();
-    anunciar(`${o.correcta ? 'Correcto.' : 'No es esa.'} ${o.retro}`);
+    anunciar(`${o.correcta ? 'Correcta.' : 'Incorrecta.'} ${o.retro}`);
     if (o.correcta) enfocar('[data-foco="siguiente"]');
   }
 

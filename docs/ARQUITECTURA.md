@@ -65,6 +65,7 @@ cambiar una interfaz o un archivo que no es tuyo, **no lo edites**: repórtalo a
 esc(texto)                      // escapa HTML
 html`...${valor}...`            // plantilla que escapa todo lo interpolado...
 crudo(htmlConfiable)            // ...salvo lo envuelto en crudo() (SVG propio, HTML ya armado con html``)
+bool(valor) → 'true' | 'false'  // para aria-checked / aria-pressed / aria-expanded: html`` convierte false en ''
 anunciar(mensaje, { urgente })  // lector de pantalla (aria-live polite o assertive)
 aviso(mensaje, { tipo, duracion })        // toast visual + anunciar(); tipo: info|exito|alerta|error
 enfocarTitulo(raiz)             // enfoca el [data-titulo] (o el primer h1/h2) de la raíz
@@ -218,6 +219,16 @@ API de control para el modo pitch (mensajes `postMessage` del mismo origen):
 { tecu: 'control', cmd: 'reiniciar' }
 // La vista responde con window.parent.postMessage({ tecu: 'estado', alumno, pantalla, pendientes, ruta }, origen)
 ```
+
+### Notas de la API de control del estudiante (comportamiento real)
+
+- Los comandos se ejecutan en cola, uno a la vez. `reiniciar` no toca la conexión simulada: manda `simularRed`
+  aparte. `reproducirDiagnostico` reinicia el diagnóstico desde el ejercicio 1 pero conserva los eventos ya
+  registrados: manda `reiniciar` antes si quieres empezar de cero. `avanzarRuta` en práctica resuelve los
+  ejercicios que falten y pasa a la comprobación; `reproducirPractica` resuelve solo el ejercicio actual.
+- El mensaje `estado` incluye además `actividad`, `enLinea`, `dominado`, `ejercicio` y `sincronizando`.
+- Con red, los eventos se suben solos 0.7 s después del último. Una ruta sin errores registra `ruta: null` y
+  `datos.sinErrores: true`. El `error` de cada evento incluye `detalle`.
 
 ## Kit de clases CSS (lo implementa `styles.css`; lo usan todas las vistas)
 
