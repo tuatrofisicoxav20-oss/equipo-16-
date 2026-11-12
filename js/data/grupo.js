@@ -294,12 +294,17 @@ function asignarErrores(ctx, rng, perfiles) {
 /** Reparte `n` lugares según los pesos (mayor residuo, en enteros; empates: el orden de la lista). */
 function cuotas(pesos, n) {
   const total = pesos.reduce((suma, [, peso]) => suma + peso, 0);
-  const filas = pesos.map(([tipo, peso], i) => ({ tipo, i, n: Math.floor((n * peso) / total), resto: (n * peso) % total }));
-  let faltan = n - filas.reduce((suma, f) => suma + f.n, 0);
+  const filas = pesos.map(([tipo, peso], i) => ({
+    tipo,
+    i,
+    lugares: Math.floor((n * peso) / total),
+    resto: (n * peso) % total,
+  }));
+  let faltan = n - filas.reduce((suma, f) => suma + f.lugares, 0);
   for (const fila of [...filas].sort((a, b) => b.resto - a.resto || a.i - b.i)) {
-    if (faltan-- > 0) fila.n += 1;
+    if (faltan-- > 0) fila.lugares += 1;
   }
-  return filas.flatMap((f) => Array(f.n).fill(f.tipo));
+  return filas.flatMap((f) => Array(f.lugares).fill(f.tipo));
 }
 
 /**
