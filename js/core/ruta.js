@@ -17,10 +17,11 @@ export function resumirDiagnostico(resultados) {
   const conteo = {};
   const primeraVez = {};
   let correctos = 0;
-  resultados.forEach((r, i) => {
-    const a = r.analisis;
+  (resultados || []).forEach((r, i) => {
+    const a = r?.analisis;
+    if (!a) return; // ejercicio sin análisis (saltado o sin terminar): no cuenta como error
     if (a.estado === 'correcto') correctos++;
-    if (a.estado === 'error') {
+    if (a.estado === 'error' && a.error) {
       const t = a.error.tipo;
       conteo[t] = (conteo[t] || 0) + 1;
       if (primeraVez[t] === undefined) primeraVez[t] = i;
@@ -33,16 +34,19 @@ export function resumirDiagnostico(resultados) {
     (a, b) =>
       conteo[b] - conteo[a] || primeraVez[a] - primeraVez[b] || PRIORIDAD.indexOf(a) - PRIORIDAD.indexOf(b),
   );
-  return { conteo, dominante: pool[0] || null, correctos, total: resultados.length };
+  return { conteo, dominante: pool[0] || null, correctos, total: (resultados || []).length };
 }
 
 /**
  * Ejercicios de la mini-ruta: 3 de práctica progresiva (niveles 1→3) y uno
  * para la comprobación sin ayuda. Misma semilla => mismos ejercicios.
+ * @param {string} tipo uno de TIPOS
+ * @param {string|number} semilla
+ * @param {Iterable<string>} [evitar] ecuaciones ya vistas (arreglo o Set)
  */
 export function construirRuta(tipo, semilla, evitar = []) {
-  const rng = createRng(typeof semilla === 'string' ? hashString(semilla) : semilla);
-  const usados = new Set(evitar.map(bonito));
+  const rng = createRng(semilla); // createRng ya convierte los textos con hashString
+  const usados = new Set([...evitar].map(bonito));
   const practica = [1, 2, 3].map((nivel) => {
     const e = generarEjercicio(tipo, nivel, rng, usados);
     usados.add(e.ecuacion);
@@ -52,8 +56,12 @@ export function construirRuta(tipo, semilla, evitar = []) {
   return { tipo, practica, comprobacion };
 }
 
-/** Otro ejercicio para reintentar la comprobación sin repetir los anteriores. */
-export function otraComprobacion(tipo, semilla, usados) {
-  const rng = createRng(hashString(`${semilla}:${usados.length}`));
-  return generarEjercicio(tipo, 3, rng, usados);
+/**
+ * Otro ejercicio para reintentar la comprobación sin repetir los anteriores.
+ * @param {Iterable<string>} [usados] ecuaciones ya vistas (arreglo o Set)
+ */
+export function otraComprobacion(tipo, semilla, usados = []) {
+  const lista = [...usados];
+  const rng = createRng(hashString(`${semilla}:${lista.length}`));
+  return generarEjercicio(tipo, 3, rng, lista.map(bonito)); // misma normalización que construirRuta
 }

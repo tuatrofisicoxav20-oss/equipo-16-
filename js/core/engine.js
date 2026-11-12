@@ -664,6 +664,19 @@ function xIgual(valor, ladoX) {
   return ladoX === 'L' ? { L: X, R: N } : { L: N, R: X };
 }
 
+/**
+ * x.op(y), o null si el resultado no cabe en enteros seguros. Así una regla de
+ * error con números enormes (8+ cifras) se descarta en lugar de anular el análisis.
+ */
+function opSegura(x, op, y) {
+  try {
+    return x[op](y);
+  } catch (e) {
+    if (e instanceof RangeError) return null;
+    throw e;
+  }
+}
+
 /** Paso de división (o multiplicación) final, correcto y con sus errores típicos. */
 function divisiones(base) {
   const d = formaDespejable(base.eq);
@@ -685,26 +698,26 @@ function divisiones(base) {
   const comun = { coef: fmtCoefX(a), coefNum: fmtNum(a), b: fmtNum(b), correcto: fmtNum(correcto) };
   const variantes = [];
   if (a.isInt()) {
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', b.sub(a)]);
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', b.add(a)]);
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'multiplica', b.mul(a)]);
-    if (!b.isZero()) variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'invierte', a.div(b)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', opSegura(b, 'sub', a)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', opSegura(b, 'add', a)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'multiplica', opSegura(b, 'mul', a)]);
+    if (!b.isZero()) variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'invierte', opSegura(a, 'div', b)]);
   } else if (Math.abs(a.n) === 1) {
     const q = new Fr(a.d * Math.sign(a.n));
     comun.divisor = fmtNum(q);
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'divide', b.div(q)]);
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', b.sub(q)]);
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', b.add(q)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'divide', opSegura(b, 'div', q)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', opSegura(b, 'sub', q)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', opSegura(b, 'add', q)]);
   } else {
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'multiplica', b.mul(a)]);
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', b.sub(a)]);
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', b.add(a)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'multiplica', opSegura(b, 'mul', a)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', opSegura(b, 'sub', a)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', opSegura(b, 'add', a)]);
   }
   if (a.isNeg() || b.isNeg()) variantes.push([TIPOS.SIGNO_NEGATIVO, 'pierde_signo', correcto.neg()]);
   variantes.push([TIPOS.UN_SOLO_LADO, 'divide_solo_x', b]);
 
   for (const [tipo, variante, valor] of variantes) {
-    if (valor.eq(correcto)) continue;
+    if (!valor || valor.eq(correcto)) continue;
     out.push({
       eq: xIgual(valor, ladoX),
       mal: { tipo, detalle: { variante, ...comun, escrito: fmtNum(valor) } },
@@ -712,13 +725,13 @@ function divisiones(base) {
     });
   }
   // Divide (o multiplica) solo el lado de los números: 3x = 15 -> 3x = 5
-  const soloNumero = b.div(a);
-  if (!soloNumero.eq(b)) {
+  // (el número que queda es el mismo `correcto`, b/a: no hace falta recalcularlo)
+  if (!correcto.eq(b)) {
     const X = [{ c: a, x: true }];
-    const N = [{ c: soloNumero, x: false }];
+    const N = [{ c: correcto, x: false }];
     out.push({
       eq: ladoX === 'L' ? { L: X, R: N } : { L: N, R: X },
-      mal: { tipo: TIPOS.UN_SOLO_LADO, detalle: { variante: 'divide_solo_numero', ...comun, escrito: fmtNum(soloNumero) } },
+      mal: { tipo: TIPOS.UN_SOLO_LADO, detalle: { variante: 'divide_solo_numero', ...comun, escrito: fmtNum(correcto) } },
       ops,
     });
   }
@@ -735,11 +748,6 @@ function divisiones(base) {
   return out;
 }
 
-/**
- * Todos los renglones que un estudiante podría escribir a partir de `eq`
- * siguiendo la estrategia escolar (pasar términos, reducir, dividir), con a lo
- * más un error típico en el camino. Cada candidato trae su error (o null).
- */
 /**
  * Subconjuntos de términos a mover. Con pocos términos probamos todos; con
  * muchos (alguien del jurado escribe 9 términos) solo los que un estudiante
@@ -759,9 +767,26 @@ function mascaras(n) {
   return [...out];
 }
 
+/** Ejecuta fn(); si la aritmética exacta se desborda (RangeError), devuelve `siFalla`. */
+function sinDesborde(fn, siFalla = null) {
+  try {
+    return fn();
+  } catch (e) {
+    if (e instanceof RangeError) return siFalla;
+    throw e;
+  }
+}
+
+/**
+ * Todos los renglones que un estudiante podría escribir a partir de `eq`
+ * siguiendo la estrategia escolar (pasar términos, reducir, dividir), con a lo
+ * más un error típico en el camino. Cada candidato trae su error (o null).
+ * Las variantes cuya aritmética no cabe en enteros seguros se omiten.
+ * @returns {{eq: object, mal: {tipo: string, detalle: object}|null, ops: number, cuenta?: string}[]}
+ */
 export function candidatos(eq) {
   const out = [];
-  const inicios = [{ eq, mal: null, ops: 0 }, ...fusiones(eq).map((f) => ({ ...f, ops: 1 }))];
+  const inicios = [{ eq, mal: null, ops: 0 }, ...sinDesborde(() => fusiones(eq), []).map((f) => ({ ...f, ops: 1 }))];
   for (const ini of inicios) {
     for (const ladoX of ['L', 'R']) {
       const W = fueraDeLugar(ini.eq, ladoX);
@@ -789,16 +814,20 @@ export function candidatos(eq) {
           }
         }
         for (const v of variantes) {
-          const Q = transponer(ini.eq, v.ops);
-          if (!Q) continue;
-          const base = { eq: Q, mal: v.mal, ops: ini.ops + T.length };
-          out.push(base, ...divisiones(base));
-          if (!base.mal) {
-            // Después de pasar términos, solo tiene sentido juntar del lado de las x.
-            for (const f of fusiones(Q, [ladoX])) {
-              const fb = { eq: f.eq, mal: f.mal, ops: base.ops + 1 };
-              out.push(fb, ...divisiones(fb));
+          try {
+            const Q = transponer(ini.eq, v.ops);
+            if (!Q) continue;
+            const base = { eq: Q, mal: v.mal, ops: ini.ops + T.length };
+            out.push(base, ...divisiones(base));
+            if (!base.mal) {
+              // Después de pasar términos, solo tiene sentido juntar del lado de las x.
+              for (const f of fusiones(Q, [ladoX])) {
+                const fb = { eq: f.eq, mal: f.mal, ops: base.ops + 1 };
+                out.push(fb, ...divisiones(fb));
+              }
             }
+          } catch (e) {
+            if (!(e instanceof RangeError)) throw e; // números enormes: se descarta solo esta variante
           }
         }
       }
@@ -902,28 +931,73 @@ function elegir(lista) {
   );
   const mejor = orden[0];
   const alternativas = [...new Set(orden.map((c) => c.mal.tipo))].filter((t) => t !== mejor.mal.tipo);
-  return { tipo: mejor.mal.tipo, detalle: mejor.mal.detalle, ops: mejor.ops, alternativas };
+  // Copia: los candidatos viven en la memoria de clasificar() y no se deben poder modificar desde fuera.
+  return { tipo: mejor.mal.tipo, detalle: { ...mejor.mal.detalle }, ops: mejor.ops, alternativas };
 }
 
 /**
+ * Candidatos de `previa` con su vector, ya separados (los correctos ordenados
+ * por pasos). Se memorizan porque el mismo renglón previo se clasifica muchas
+ * veces: procedimientoConError() prueba varias líneas desde el mismo renglón y
+ * el grupo simulado repite los 4 ejercicios del diagnóstico (196 llamadas, 12
+ * renglones distintos). Solo lectura. Las ecuaciones largas no se guardan: cada
+ * candidato ocupa ~1.5 KB y una de 30 términos genera más de 4000.
+ */
+const MEMO_CANDIDATOS_MAX = 16;
+const MEMO_CANDIDATOS_POR_ENTRADA = 250;
+const memoCandidatos = new Map();
+
+const llaveLado = (ts) => ts.map((t) => `${t.x ? 'x' : ''}${t.c.n}/${t.c.d}`).join(' ');
+
+function candidatosClasificables(previa) {
+  const llave = `${llaveLado(previa.L)}=${llaveLado(previa.R)}`;
+  let memo = memoCandidatos.get(llave);
+  if (memo) return memo;
+  const conError = [];
+  const correctos = [];
+  for (const c of candidatos(previa)) {
+    const v = sinDesborde(() => vector(c.eq));
+    if (!v) continue;
+    c.vector = v;
+    (c.mal ? conError : correctos).push(c);
+  }
+  correctos.sort((p, q) => p.ops - q.ops);
+  memo = { conError, correctos };
+  if (conError.length + correctos.length <= MEMO_CANDIDATOS_POR_ENTRADA) {
+    if (memoCandidatos.size >= MEMO_CANDIDATOS_MAX) memoCandidatos.delete(memoCandidatos.keys().next().value);
+    memoCandidatos.set(llave, memo);
+  }
+  return memo;
+}
+
+const noClasificado = (tipos = []) => ({
+  tipo: TIPOS.NO_CLASIFICADO,
+  detalle: { variante: 'desconocido', posibles: tipos },
+  confianza: 'baja',
+  alternativas: tipos,
+});
+
+/**
  * Explica cómo se pasó de `previa` (correcta) a `escrita` (que cambió la solución).
- * @returns {{tipo, detalle, confianza: 'alta'|'media'|'baja', alternativas: string[]}}
+ * Nunca lanza por números enormes: en ese caso responde NO_CLASIFICADO.
+ * @returns {{tipo: string, detalle: object, confianza: 'alta'|'media'|'baja', alternativas: string[], ops?: number}}
  */
 export function clasificar(previa, escrita) {
-  const vS = vector(escrita);
-  const todos = candidatos(previa).map((c) => ({ ...c, vector: vector(c.eq) }));
+  return sinDesborde(() => clasificarExacto(previa, escrita), null) ?? noClasificado();
+}
 
-  const exactos = todos.filter((c) => c.mal && coinciden(vS, c.vector));
+function clasificarExacto(previa, escrita) {
+  const vS = vector(escrita);
+  const { conError, correctos } = candidatosClasificables(previa);
+
+  const exactos = conError.filter((c) => coinciden(vS, c.vector));
   if (exactos.length) {
     const elegido = elegir(exactos);
     // Una explicación que necesita 3 operaciones seguidas es posible, no segura.
     return { ...elegido, confianza: elegido.ops >= 3 ? 'media' : 'alta' };
   }
 
-  const arit = buscarAritmetica(
-    vS,
-    todos.filter((c) => !c.mal).sort((p, q) => p.ops - q.ops),
-  );
+  const arit = buscarAritmetica(vS, correctos);
   if (arit) return { ...arit, alternativas: [] };
 
   // Nivel 2: el estudiante ya escribió "x = valor" y ese valor es el que da un
@@ -933,17 +1007,15 @@ export function clasificar(previa, escrita) {
   let tipos = [];
   if (despeje(escrita) !== null) {
     const solS = resolver(escrita);
-    const equivalentes = todos.filter((c) => c.mal && mismaSolucion(resolver(c.eq), solS));
+    const equivalentes = conError.filter((c) => {
+      if (c.sol === undefined) c.sol = sinDesborde(() => resolver(c.eq)); // también se memoriza
+      return c.sol !== null && mismaSolucion(c.sol, solS);
+    });
     tipos = [...new Set(equivalentes.map((c) => c.mal.tipo))];
     if (tipos.length === 1) return { ...elegir(equivalentes), confianza: 'media' };
   }
 
-  return {
-    tipo: TIPOS.NO_CLASIFICADO,
-    detalle: { variante: 'desconocido', posibles: tipos },
-    confianza: 'baja',
-    alternativas: tipos,
-  };
+  return noClasificado(tipos);
 }
 
 function aritmeticaDeCadena(errorCadena) {
@@ -1031,12 +1103,13 @@ function esAproximacion(sol0, info) {
  * }}
  */
 export function analizarProcedimiento(renglones) {
+  const avance = { renglon: 1, info: [] };
   try {
-    return analizarSinRed(renglones);
+    return analizarSinRed(renglones, avance);
   } catch (e) {
     if (!(e instanceof RangeError)) throw e;
-    // Números enormes (p. ej. 99999999x = 99999999): mensaje claro en vez de una excepción en la interfaz.
-    return { estado: 'sin_entender', renglon: 1, mensaje: MENSAJES.grande(), renglones: [] };
+    // Números enormes (p. ej. 99999999x = 1/99999999): mensaje claro, en el renglón donde ocurrió.
+    return { estado: 'sin_entender', renglon: avance.renglon, mensaje: MENSAJES.grande(), renglones: avance.info };
   }
 }
 
@@ -1050,12 +1123,14 @@ function clasificarSeguro(previa, escrita) {
   }
 }
 
-function analizarSinRed(renglones) {
+function analizarSinRed(renglones, avance = { renglon: 1, info: [] }) {
   // Conserva el número de renglón original aunque haya renglones vacíos en medio.
   const textos = (renglones || []).map((r, idx) => ({ n: idx + 1, texto: String(r ?? '').trim() })).filter((r) => r.texto);
   if (!textos.length) return { estado: 'vacio', renglones: [] };
 
   const info = textos.map(({ n, texto }) => ({ n, texto, ...parsearRenglon(texto) }));
+  avance.info = info;
+  avance.renglon = info[0].n;
   // Se reporta el PRIMER problema en orden de lectura: un renglón ilegible más
   // abajo no debe ocultar un error que el estudiante cometió antes.
   const sinEntender = (r) => ({ estado: 'sin_entender', renglon: r.n, mensaje: r.error.mensaje, renglones: info });
@@ -1089,6 +1164,7 @@ function analizarSinRed(renglones) {
   let previa = primero;
   for (let i = 1; i < info.length; i++) {
     const r = info[i];
+    avance.renglon = r.n;
     let diag = null;
     if (!r.ok) return sinEntender(r);
 
@@ -1178,9 +1254,14 @@ function elegirLadoX(eq) {
 
 /**
  * Pasos canónicos para resolver `eq`. Cada paso trae su tipo (para las pistas),
- * el texto del renglón y la ecuación resultante.
+ * el texto del renglón y la ecuación resultante. Lista vacía si no hay solución
+ * única o si los números no caben en la aritmética exacta.
  */
 export function pasosSolucion(eqInicial) {
+  return sinDesborde(() => pasosExactos(eqInicial), []);
+}
+
+function pasosExactos(eqInicial) {
   const pasos = [];
   let eq = { L: clonarLado(eqInicial.L), R: clonarLado(eqInicial.R) };
   if (resolver(eq).tipo !== 'unica') return pasos;

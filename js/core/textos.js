@@ -14,7 +14,6 @@ import {
   TIPOS,
   analizarProcedimiento,
   bonito,
-  ecuacion,
   fmtLado,
   fmtNum,
   parsearRenglon,
@@ -122,10 +121,30 @@ export function pistasPara(ejercicioTexto, renglonesAlumno, pack) {
   }
 }
 
+const PISTAS_EJERCICIO_INVALIDO = [
+  'Revisa que el ejercicio tenga números, una x, signos y un solo =.',
+  'Si está bien escrito y aun así no se puede resolver, pide otro ejercicio.',
+];
+
 function pistasSinRed(ejercicioTexto, renglonesAlumno, pack) {
   const todos = [ejercicioTexto, ...(renglonesAlumno || [])];
   const analisis = analizarProcedimiento(todos);
-  let base = ecuacion(ejercicioTexto);
+  const ejercicioInvalido =
+    analisis.estado === 'vacio' ||
+    analisis.estado === 'sin_solucion_unica' ||
+    (analisis.estado === 'sin_entender' && analisis.renglon === 1);
+  if (ejercicioInvalido) {
+    // Ejercicio escrito a mano (modo libre) que no se puede resolver paso a paso: decir por qué
+    // (antes: "Revisa el renglón anterior…" o, si no tenía solución, "Ya tienes la x sola").
+    return {
+      pistas: [analisis.mensaje || 'Escribe primero el ejercicio.', ...PISTAS_EJERCICIO_INVALIDO],
+      solucion: [bonito(ejercicioTexto)],
+      paso: null,
+      error: null,
+    };
+  }
+  const inicial = analisis.renglones[0].eq; // ya parseado: no hace falta volver a llamar a ecuacion()
+  let base = inicial;
   let error = null;
 
   if (analisis.estado === 'error') {
@@ -137,7 +156,7 @@ function pistasSinRed(ejercicioTexto, renglonesAlumno, pack) {
     if (ultima) base = ultima.eq;
   }
 
-  const solucion = [bonito(ejercicioTexto), ...pasosSolucion(ecuacion(ejercicioTexto)).map((p) => p.texto)];
+  const solucion = [bonito(ejercicioTexto), ...pasosSolucion(inicial).map((p) => p.texto)];
   const paso = siguientePaso(base);
   if (!paso) {
     return {
