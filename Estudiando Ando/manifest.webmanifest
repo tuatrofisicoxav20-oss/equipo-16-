@@ -1,0 +1,14 @@
+{
+  "name": "Tecu Aprende",
+  "short_name": "Tecu",
+  "description": "Aprendizaje adaptativo con un tutor de IA que guía sin dar respuestas y funciona con conectividad limitada.",
+  "lang": "es-MX",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F6F8",
+  "theme_color": "#0B2F45",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
