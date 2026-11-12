@@ -1,0 +1,745 @@
+/*
+ * Ficha individual del estudiante (js/ui/ficha.js) — panel docente.
+ *
+ * Es un <dialog class="dialogo dialogo--ancho ficha">: el kit (styles.css) pone
+ * el fondo oscuro, el radio, la sombra, el ancho de escritorio (52rem) y el
+ * alto máximo. Aquí va el acomodo interno:
+ *   - El diálogo es el que hace scroll; la barra de arriba (nombre + Cerrar) y la
+ *     de abajo (Imprimir) quedan fijas con position: sticky. El scroll-padding
+ *     usa su alto medido (--ficha-cabeza-alto / --ficha-pie-alto, los llena
+ *     ficha.js) para que lo enfocado nunca quede tapado (WCAG 2.4.11).
+ *   - Celular (≤ 40rem): ocupa toda la pantalla.
+ *   - Pantallas bajitas (celular acostado, zoom 400 %): las barras dejan de ser
+ *     fijas para que quede espacio para leer.
+ * Solo tokens del kit; nada depende solo del color (siempre hay icono + texto).
+ */
+
+.ficha {
+  --ficha-relleno: var(--espacio-5);
+  padding: 0;
+  scroll-padding-top: calc(var(--ficha-cabeza-alto, 4.5rem) + var(--espacio-2));
+  scroll-padding-bottom: calc(var(--ficha-pie-alto, 0px) + var(--espacio-2));
+}
+
+.ficha__marco {
+  min-height: 100%;
+}
+
+.ficha :is(h2, h3, h4, p, dl, dd, ol, ul) {
+  margin: 0;
+}
+
+/* Barra de arriba: avatar, nombre, "En vivo" y Cerrar ---------------------- */
+.ficha__cabeza {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4) var(--ficha-relleno);
+  border-bottom: var(--borde-fino) solid var(--color-borde-suave);
+  background: var(--color-superficie);
+}
+
+.ficha__identidad {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.ficha__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--color-primario-suave);
+  color: var(--color-primario);
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ficha__nombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-2);
+  min-width: 0;
+}
+
+.ficha__titulo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ficha__vivo::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-error);
+  box-shadow: 0 0 0 2px var(--color-superficie);
+}
+
+.ficha__cerrar {
+  flex: none;
+}
+
+/* Cuerpo -------------------------------------------------------------------- */
+.ficha__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-6);
+  padding: var(--espacio-5) var(--ficha-relleno) var(--espacio-6);
+}
+
+.ficha__seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.ficha__h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding-bottom: var(--espacio-2);
+  border-bottom: var(--borde-control) solid var(--color-borde-suave);
+}
+
+.ficha__h3 > .icono {
+  color: var(--color-primario);
+}
+
+.ficha__h4 {
+  margin-top: var(--espacio-2);
+  font-size: var(--texto-base);
+  font-weight: 800;
+}
+
+.ficha__cuenta {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding-inline: 0.4rem;
+  border: var(--borde-fino) solid var(--color-borde);
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie-2);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.ficha__nota {
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+}
+
+.ficha__vacio {
+  padding: var(--espacio-5) var(--espacio-4);
+}
+
+/* Resumen: estado, última actividad y ruta ---------------------------------- */
+.ficha-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+
+.ficha-resumen__dato {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-width: 0;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+}
+
+.ficha-resumen__dato:first-child {
+  grid-column: 1 / -1;
+}
+
+.ficha-resumen__dato--ruta {
+  border-color: var(--tono);
+  border-inline-start: 0.375rem solid var(--tono);
+  background: var(--tono-suave);
+}
+
+.ficha-resumen dt,
+.ficha-diag dt,
+.ficha-cifra dt {
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+}
+
+.ficha-resumen dd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-1);
+}
+
+.ficha-resumen__valor {
+  font-size: var(--texto-grande);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.ficha-resumen__nota {
+  color: var(--color-texto);
+  font-size: var(--texto-chico);
+}
+
+.ficha-ruta {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  color: var(--tono);
+  font-size: var(--texto-grande);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.ficha-ruta .icono {
+  margin-top: 0.05em;
+}
+
+@media (min-width: 40rem) {
+  .ficha-resumen {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 1.4fr);
+  }
+
+  .ficha-resumen__dato:first-child {
+    grid-column: auto;
+  }
+}
+
+/* Sugerencias y mensajes en positivo ---------------------------------------- */
+.ficha-sugerencia {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-fino) solid var(--color-acento-fuerte);
+  border-radius: var(--radio);
+  background: var(--color-acento-suave);
+  color: var(--color-texto);
+}
+
+.ficha-sugerencia > .icono {
+  flex: none;
+  margin-top: 0.05em;
+  color: var(--color-acento-fuerte);
+}
+
+.ficha-positivo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  color: var(--color-exito);
+  font-weight: 700;
+}
+
+.ficha-positivo > .icono {
+  flex: none;
+}
+
+.ficha-ok {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-control) solid var(--color-exito);
+  border-inline-start-width: 0.5rem;
+  border-radius: var(--radio);
+  background: var(--color-exito-suave);
+}
+
+.ficha-ok__titulo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  color: var(--color-exito);
+  font-weight: 800;
+}
+
+.ficha-ok__titulo > .icono {
+  flex: none;
+}
+
+/* Procedimiento renglón por renglón (hoja rayada del kit) -------------------- */
+.ficha-proc {
+  --renglon: 2.75rem;
+}
+
+.ficha-proc__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ficha-proc__renglon {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* La marca del kit (✓, ✗ o círculo en el margen) a la altura de la ecuación. */
+.ficha-proc .cuaderno__renglon::before {
+  top: calc(var(--espacio-1) + (var(--renglon) - 2 * var(--espacio-1)) / 2);
+}
+
+.ficha-proc__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-3);
+  min-height: calc(var(--renglon) - 2 * var(--espacio-1));
+  min-width: 0;
+}
+
+.ficha-proc__num {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding-inline: 0.25rem;
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  color: var(--color-texto-sec);
+  font-family: var(--fuente);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ficha-proc__eq {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ficha-proc__etiqueta {
+  color: var(--color-texto-sec);
+  font-family: var(--fuente);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ficha-proc__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  color: var(--color-texto-sec);
+  font-family: var(--fuente);
+  font-size: var(--texto-chico);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ficha-proc__estado .icono {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.ficha-proc__renglon[data-estado='ok'] .ficha-proc__estado {
+  color: var(--color-exito);
+}
+
+.ficha-proc__renglon[data-estado='error'] .ficha-proc__estado {
+  color: var(--color-error);
+  font-weight: 900;
+}
+
+/* El renglón roto: además del fondo y la ✗ del kit, un borde y el texto "Aquí cambió la solución". */
+.ficha-proc__renglon--roto {
+  box-shadow: inset 0.25rem 0 0 var(--color-error);
+}
+
+.ficha-proc__explicacion {
+  margin: var(--espacio-1) 0 var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-fino) solid var(--color-error);
+  border-inline-start-width: 0.25rem;
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-family: var(--fuente);
+  font-size: var(--texto-base);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+/* Tipo de error y certeza ---------------------------------------------------- */
+.ficha-diag {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--espacio-3) var(--espacio-5);
+}
+
+.ficha-diag__dato {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+.ficha-diag .chip {
+  min-height: 2rem;
+  font-size: var(--texto-base);
+}
+
+.ficha-certeza {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  font-weight: 600;
+}
+
+.ficha-certeza > .icono {
+  flex: none;
+}
+
+.ficha-certeza--alta > .icono { color: var(--color-exito); }
+.ficha-certeza--media > .icono { color: var(--color-alerta); }
+
+.ficha-certeza--media strong {
+  color: var(--color-alerta);
+}
+
+.ficha-certeza--revisar {
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-control) dashed var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-superficie-2);
+  font-weight: 800;
+}
+
+/* Indicadores --------------------------------------------------------------- */
+.ficha-cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--espacio-3);
+}
+
+.ficha-cifra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-width: 0;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio);
+  background: var(--color-superficie-2);
+}
+
+.ficha-cifra dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--espacio-1);
+}
+
+.ficha-cifra__valor {
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.ficha-cifra__unidad {
+  font-weight: 700;
+}
+
+/* Errores por tipo: nombre, número y barra (la barra es decorativa: el número va escrito). */
+.ficha-errores {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ficha-errores__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-3);
+}
+
+.ficha-errores__nombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-2);
+  min-width: 0;
+  font-weight: 700;
+}
+
+.ficha-errores__nombre > .icono {
+  color: var(--tono);
+}
+
+.ficha-errores__marca {
+  padding: 0.05rem 0.5rem;
+  border: var(--borde-fino) solid var(--tono);
+  border-radius: var(--radio-pildora);
+  background: var(--tono-suave);
+  color: var(--tono);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.ficha-errores__cuenta {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ficha-errores__num {
+  font-size: var(--texto-grande);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.ficha-errores__barra {
+  grid-column: 1 / -1;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radio-pildora);
+  background: var(--tono-suave);
+}
+
+.ficha-errores__barra > span {
+  display: block;
+  width: var(--valor, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tono);
+}
+
+/* Dudas a Tecu --------------------------------------------------------------- */
+.ficha-dudas {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ficha-duda {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+}
+
+.ficha-duda__pregunta {
+  font-weight: 800;
+}
+
+.ficha-duda__respuesta {
+  padding-inline-start: var(--espacio-3);
+  border-inline-start: 0.25rem solid var(--color-primario-suave);
+}
+
+.ficha-duda__quien {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  color: var(--color-primario);
+  font-weight: 800;
+}
+
+.ficha-duda__pendiente {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  align-self: flex-start;
+  padding: 0.125rem 0.625rem;
+  border: var(--borde-fino) dashed var(--color-alerta);
+  border-radius: var(--radio-pildora);
+  background: var(--color-alerta-suave);
+  color: var(--color-alerta);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+}
+
+/* Historial ------------------------------------------------------------------ */
+.ficha-historial {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ficha-evento {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) 0;
+  border-bottom: var(--borde-fino) solid var(--color-borde-suave);
+}
+
+.ficha-evento:first-child {
+  padding-top: 0;
+}
+
+.ficha-evento:last-child {
+  border-bottom: 0;
+}
+
+.ficha-evento__icono {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-superficie-2);
+  color: var(--color-primario);
+}
+
+.ficha-evento__icono .icono {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.ficha-evento[data-resultado='ok'] .ficha-evento__icono { background: var(--color-exito-suave); color: var(--color-exito); }
+.ficha-evento[data-resultado='error'] .ficha-evento__icono { background: var(--color-error-suave); color: var(--color-error); }
+.ficha-evento[data-resultado='alerta'] .ficha-evento__icono { background: var(--color-alerta-suave); color: var(--color-alerta); }
+
+.ficha-evento__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.ficha-evento__meta {
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+}
+
+.ficha-evento__ecuacion .math {
+  color: var(--color-texto);
+  font-weight: 700;
+}
+
+/* Barra de abajo: Imprimir ----------------------------------------------------- */
+.ficha__pie {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--espacio-2) var(--espacio-3);
+  padding: var(--espacio-3) var(--ficha-relleno);
+  border-top: var(--borde-fino) solid var(--color-borde-suave);
+  background: var(--color-superficie);
+}
+
+.ficha__error {
+  display: flex;
+  flex: 1 1 14rem;
+  align-items: center;
+  gap: var(--espacio-2);
+  color: var(--color-error);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+}
+
+/* Celular: la ficha ocupa toda la pantalla ------------------------------------ */
+@media (max-width: 40rem) {
+  .ficha.dialogo {
+    --ficha-relleno: var(--espacio-4);
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .ficha__cabeza {
+    padding-block: var(--espacio-3);
+    padding-top: calc(var(--espacio-3) + env(safe-area-inset-top, 0px));
+  }
+
+  .ficha__avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.0625rem;
+  }
+
+  .ficha__titulo {
+    font-size: var(--titulo-3);
+  }
+
+  .ficha__cuerpo {
+    gap: var(--espacio-5);
+    padding-block: var(--espacio-4) var(--espacio-5);
+  }
+
+  .ficha__pie {
+    padding-bottom: calc(var(--espacio-3) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ficha__imprimir {
+    flex: 1 1 100%;
+  }
+}
+
+/* Muy angosto (320 px): sin avatar, para que el nombre y "Cerrar" quepan en un renglón. */
+@media (max-width: 22.5rem) {
+  .ficha__avatar {
+    display: none;
+  }
+}
+
+/* Pantallas bajitas: las barras dejan de estar fijas para que quede espacio para leer. */
+@media (max-height: 30rem) {
+  .ficha {
+    scroll-padding-block: var(--espacio-2);
+  }
+
+  .ficha__cabeza,
+  .ficha__pie {
+    position: static;
+  }
+}
+
+/* Colores forzados: la barra de errores y el borde del renglón roto siguen viéndose. */
+@media (forced-colors: active) {
+  .ficha-errores__barra {
+    border: 1px solid CanvasText;
+  }
+
+  .ficha-errores__barra > span {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .ficha-proc__renglon--roto {
+    outline: 2px solid CanvasText;
+    outline-offset: -2px;
+  }
+}

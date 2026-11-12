@@ -131,10 +131,16 @@ function prepararEjercicio(entrada, tipo, pack) {
   };
 }
 
-/** Hoja 1: el ejercicio 1 (comparte hoja con la portada). Después, de 3 en 3. */
+/**
+ * Hoja 1: el ejercicio 1 (comparte hoja con la portada). Después, de 3 en 3; en una
+ * hoja con 2 o menos (la ruta del panel trae 3), cada ejercicio usa los 8 renglones.
+ */
 function repartirEnHojas(ejercicios) {
   const hojas = [ejercicios.slice(0, 1)];
-  for (let i = 1; i < ejercicios.length; i += POR_HOJA) hojas.push(ejercicios.slice(i, i + POR_HOJA));
+  for (let i = 1; i < ejercicios.length; i += POR_HOJA) {
+    const hoja = ejercicios.slice(i, i + POR_HOJA);
+    hojas.push(hoja.length < POR_HOJA ? hoja.map((e) => ({ ...e, renglones: RENGLONES.max })) : hoja);
+  }
   return hojas;
 }
 
@@ -157,7 +163,7 @@ export function prepararCuadernillo({ titulo, alumnos = [], tipo, ejercicios, se
   return {
     titulo: String(titulo ?? '').trim() || info.nombre || 'Cuadernillo',
     tipo: tipoRuta,
-    tema: [pack?.tema || 'Ecuaciones lineales', pack?.materia, pack?.grado].filter(Boolean).join(' · '),
+    tema: [pack?.tema || 'Ecuaciones lineales', pack?.grado].filter(Boolean).join(' · '),
     ruta: {
       titulo: info.ruta?.titulo || 'Ecuaciones paso a paso',
       meta: info.ruta?.meta || '',
@@ -192,8 +198,11 @@ function tecuEnGrises() {
   );
 }
 
-/** Geometría de la balanza impresa (unidades del viewBox, 320 de ancho). */
-const B = Object.freeze({ ancho: 320, centro: 160, cx: { L: 78, R: 242 }, medio: 70, celda: 24, porFila: 5 });
+/**
+ * Geometría de la balanza impresa (unidades del viewBox, 320 de ancho): platillos de
+ * 144 con hasta 6 piezas por fila; cada pieza mide 21 en una celda de 23.
+ */
+const B = Object.freeze({ ancho: 320, centro: 160, cx: { L: 80, R: 240 }, medio: 72, celda: 23, porFila: 6 });
 const r1 = (n) => Math.round(n * 10) / 10;
 
 /** Cajas (x) y pesas (1) de un lado, como en la balanza de la app. null si no se puede dibujar. */
@@ -230,7 +239,7 @@ function gruposDeReparto(piezas) {
     const pesas = piezas[otro];
     const limpio =
       cajas.length && pesas.length && cajas.every((p) => p.caja && !p.neg) && pesas.every((p) => !p.caja && !p.neg);
-    if (limpio && cajas.length <= 5 && pesas.length % cajas.length === 0 && pesas.length / cajas.length <= 5) {
+    if (limpio && cajas.length <= 4 && pesas.length % cajas.length === 0 && pesas.length / cajas.length <= 5) {
       return { lado: otro, grupos: cajas.length, porGrupo: pesas.length / cajas.length };
     }
   }
@@ -260,13 +269,13 @@ function piezaSVG({ p }, x, y) {
   const trazo = p.tachada ? '#6b6b6b' : '#000';
   const punteado = p.neg ? ' stroke-dasharray="3 2"' : '';
   const forma = p.caja
-    ? `<rect x="-10" y="-10" width="20" height="20" rx="2.5" fill="#fff" stroke="${trazo}" stroke-width="1.6"${punteado}/>` +
-      (p.neg ? '' : `<path d="M-10 -4 H10" stroke="${trazo}" stroke-width="1.1"/>`)
-    : `<circle r="10" fill="#fff" stroke="${trazo}" stroke-width="1.6"${punteado}/>`;
+    ? `<rect x="-10.5" y="-10.5" width="21" height="21" rx="2.5" fill="#fff" stroke="${trazo}" stroke-width="1.6"${punteado}/>`
+    : `<circle r="10.5" fill="#fff" stroke="${trazo}" stroke-width="1.6"${punteado}/>`;
   const etiqueta = p.caja ? (p.neg ? '−x' : 'x') : p.neg ? '−1' : '1';
-  const texto = `<text y="${p.caja && !p.neg ? 6.5 : 4.4}" font-size="${p.caja && !p.neg ? 12 : 11}" fill="${trazo}">${etiqueta}</text>`;
+  const [base, tamano] = p.neg ? [4.4, 12] : p.caja ? [4.4, 17] : [5, 14];
+  const texto = `<text y="${base}" font-size="${tamano}" fill="${trazo}">${etiqueta}</text>`;
   const tache = p.tachada
-    ? '<path d="M-9 -9 L9 9 M9 -9 L-9 9" stroke="#000" stroke-width="2.4" stroke-linecap="round"/>'
+    ? '<path d="M-9.5 -9.5 L9.5 9.5 M9.5 -9.5 L-9.5 9.5" stroke="#000" stroke-width="2.6" stroke-linecap="round"/>'
     : '';
   return `<g transform="translate(${r1(x)} ${r1(y)})">${forma}${texto}${tache}</g>`;
 }
@@ -313,7 +322,7 @@ function balanzaSVG(texto, modo) {
 
   const platillo = (cx) =>
     `<rect x="${cx - 3}" y="${sup + 11}" width="6" height="${viga - sup - 16}"/>` +
-    `<path d="M${cx - B.medio} ${sup} H${cx + B.medio} L${cx + 62} ${sup + 9} Q${cx} ${sup + 15} ${cx - 62} ${sup + 9} Z"/>`;
+    `<path d="M${cx - B.medio} ${sup} H${cx + B.medio} L${cx + B.medio - 8} ${sup + 9} Q${cx} ${sup + 15} ${cx - B.medio + 8} ${sup + 9} Z"/>`;
   const estructura =
     `<path d="M116 ${viga + 58} H204 L192 ${viga + 46} H128 Z"/>` +
     `<rect x="155" y="${viga}" width="10" height="46"/>` +
@@ -331,9 +340,9 @@ function balanzaSVG(texto, modo) {
     const cx = B.cx[reparto.lado];
     for (let g = 0; g < reparto.grupos; g++) {
       const xs = lugares[reparto.lado].filter((u) => u.grupo === g).map((u) => cx + u.dx);
-      const x = Math.min(...xs) - 13;
-      const y = yDe(reparto.porGrupo - 1) - 13;
-      grupos += `<rect x="${r1(x)}" y="${r1(y)}" width="26" height="${reparto.porGrupo * B.celda + 2}" rx="8" fill="none" stroke="#000" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+      const x = Math.min(...xs) - 13.5;
+      const y = yDe(reparto.porGrupo - 1) - 13.5;
+      grupos += `<rect x="${r1(x)}" y="${r1(y)}" width="27" height="${reparto.porGrupo * B.celda + 1.5}" rx="8" fill="none" stroke="#000" stroke-width="1.2" stroke-dasharray="4 3"/>`;
     }
   }
 
@@ -352,7 +361,7 @@ function balanzaSVG(texto, modo) {
 
   const hayNegativas = [...piezas.L, ...piezas.R].some((p) => p.neg);
   const leyenda = [
-    'Cada caja es una x y cada pesa vale 1.',
+    'Cada caja es una x y cada pesa vale 1.',
     hayNegativas ? 'Una caja con signo menos resta peso.' : '',
     quitadas ? 'Lo tachado se quita de los dos platillos.' : '',
     reparto ? 'Las pesas se reparten en grupos iguales, uno por caja.' : '',
@@ -420,11 +429,9 @@ function hojaPortada(d, nombre, ejercicios) {
   return html`<div class="cuadernillo__hoja">
     <header class="cuadernillo__portada">
       <span class="cuadernillo__tecu">${crudo(tecuEnGrises())}</span>
-      <div>
-        <p class="cuadernillo__marca">Tecu Aprende · Cuadernillo</p>
-        <h1 class="cuadernillo__titulo">${d.ruta.titulo}</h1>
-        <p class="cuadernillo__tema">${d.tema}</p>
-      </div>
+      <p class="cuadernillo__marca">Tecu Aprende · Cuadernillo</p>
+      <h1 class="cuadernillo__titulo">${d.ruta.titulo}</h1>
+      <p class="cuadernillo__tema">${d.tema}</p>
       <p class="cuadernillo__folio">Hoja 1 de ${d.hojasPorAlumno}</p>
     </header>
     <dl class="cuadernillo__datos">${dato('Nombre', nombre)}${dato('Grupo')}${dato('Fecha')}</dl>
@@ -457,17 +464,19 @@ function juegoDeAlumno(d, nombre) {
   </article>`;
 }
 
+/** «renglón equivocado» + explicación; a qué respuesta lleva, si no es ese mismo renglón. */
 function vigilarHTML(v) {
-  return html`<p><strong class="math">«${v.linea}»</strong></p>
-    <p>${v.explicacion}</p>
-    ${v.llegaA ? html`<p>Con ese error llega a <span class="math">${v.llegaA}</span>.</p>` : ''}`;
+  const llega = v.llegaA && v.llegaA !== v.linea;
+  return html`<strong class="math">«${v.linea}»</strong> ${v.explicacion}${
+    llega ? html` Con ese error llega a <strong class="math">${v.llegaA}</strong>.` : ''
+  }`;
 }
 
 function filaClave(e, conVigilar) {
   const etiqueta = [e.nivel ? `Nivel ${e.nivel}` : '', e.reto ? 'Reto final' : ''].filter(Boolean).join(' · ');
   return html`<tr>
     <th scope="row">
-      <span class="math cuadernillo__clave-ecuacion">${e.numero}. ${e.texto}</span>
+      <span class="cuadernillo__clave-ecuacion">${e.numero}. ${htmlEcuacion(e.texto)}</span>
       ${etiqueta ? html`<span class="cuadernillo__clave-nivel">${etiqueta}</span>` : ''}
     </th>
     <td>${e.pasos.length ? html`<ol class="cuadernillo__pasos">${e.pasos.map((p) => html`<li class="math">${p}</li>`)}</ol>` : 'Ya está resuelta.'}</td>

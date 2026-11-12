@@ -42,8 +42,6 @@ import { resumirAlumnos, resumirGrupo, aQuienLlamar, gruposDeRefuerzo } from '..
 const GRUPO = '1.º A';
 const MATERIA = 'Matemáticas';
 const TITULO = `Panel docente · ${GRUPO} · ${MATERIA}`;
-/** La misma semilla del grupo simulado: los cuadernillos salen iguales en cada ensayo. */
-const SEMILLA_REFUERZO = 'tecu-1A-veracruz';
 const MAX_LLAMADAS = 6;
 const MAX_LLAMADAS_COMPACTO = 3;
 /** Cuánto dura el resaltado de lo que cambió (y la marca "Actualizado"). */
@@ -118,6 +116,12 @@ const porcentaje = (n, total) => (total > 0 ? Math.round((100 * n) / total) : 0)
 const totalErrores = (r) => Object.values(r?.conteoErrores || {}).reduce((s, n) => s + (Number(n) || 0), 0);
 
 const capitalizar = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+/** Texto como oración: con punto final si no trae puntuación. */
+const oracion = (texto) => {
+  const t = String(texto ?? '').trim();
+  return !t || /[.!?…:)]$/.test(t) ? t : `${t}.`;
+};
 
 /** «Ana», «Ana y Luis», «Ana, Luis y Sofía M.» */
 function enLista(textos) {
@@ -215,7 +219,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     orden: ordenInicial(compacto),
     /** clave → { hasta, tipo: 'nuevo'|'presentando' } */
     resaltes: new Map(),
-    /** Ficha abierta desde el panel: { id, dialogo, foco } */
+    /** Ficha abierta desde el panel: { id, foco } (foco = data-foco del botón que la abrió). */
     ficha: null,
     error: null,
   };
@@ -229,13 +233,14 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
   const syncsRecibidos = new Map();
   const temporizadores = { agrupar: 0, silencio: 0, limpiar: 0 };
   let cargaFicha = null;
+  let moduloFicha = null;
   let cargaCuadernillo = null;
   let quitarServidor = () => {};
   let destruido = false;
 
   const quitarDelegar = delegar(raiz, {
     ficha: (el) => abrirFichaDe(el.dataset.id, el.dataset.foco),
-    imprimir: (el) => imprimirGrupo(el.dataset.tipo, el),
+    imprimir: (el) => imprimirGrupo(el.dataset.tipo),
     ordenar: (el) => ordenarPor(el.dataset.col),
     reintentar: () => iniciar(),
   });
@@ -305,7 +310,8 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     const llamar = (aQuienLlamar(resumenes, pack, { ahora, max: MAX_LLAMADAS }) || [])
       .map((item) => ({ ...item, resumen: resumenDe(item.alumno) }))
       .filter((item) => item.resumen);
-    const refuerzo = (gruposDeRefuerzo(resumenes, pack, { semilla: SEMILLA_REFUERZO }) || []).map((g) => ({
+    // Sin semilla propia: la de la analítica, para que el cuadernillo salga igual en cada ensayo.
+    const refuerzo = (gruposDeRefuerzo(resumenes, pack) || []).map((g) => ({
       ...g,
       integrantes: (g.alumnos || []).map((a) => resumenDe(a) || { id: idDe(a), nombre: String(a?.nombre ?? a) }),
       ejercicios: Array.isArray(g.ejercicios) ? g.ejercicios : [],
@@ -364,6 +370,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     if (alumnos.length) state.ultimaSync = { fecha: new Date(), alumnos };
     resaltar(clavesCambiadas(anterior, state.datos, alumnos), 'nuevo', MS_RESALTE);
     render();
+    refrescarFicha();
     avisarAlPadre();
 
     for (const [id, n] of cambiados) porAnunciar.set(id, (porAnunciar.get(id) || 0) + n);
@@ -487,11 +494,15 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
 
   /* ---------------- Acciones ---------------- */
 
+  /** Trae js/ui/ficha.js una sola vez (también lo deja a la mano para usarlo sin esperar). */
   function cargarFicha() {
-    cargaFicha ??= import('../ui/ficha.js').catch((error) => {
-      cargaFicha = null;
-      throw error;
-    });
+    cargaFicha ??= import('../ui/ficha.js').then(
+      (modulo) => (moduloFicha = modulo),
+      (error) => {
+        cargaFicha = null;
+        throw error;
+      },
+    );
     return cargaFicha;
   }
 
@@ -503,9 +514,21 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     return cargaCuadernillo;
   }
 
+  /** Opciones de la ficha: imprimir la hoja de ese estudiante y regresar el foco al cerrar. */
+  function opcionesFicha(claveFoco) {
+    return {
+      onImprimir: (resumen) => imprimirAlumno(resumen),
+      onCerrar: () => {
+        state.ficha = null;
+        // La ficha regresa el foco a lo que la abrió; si el panel se repintó y no lo encontró, aquí.
+        setTimeout(() => devolverFoco(claveFoco), 0);
+      },
+    };
+  }
+
   /**
-   * Abre la ficha de un estudiante (diálogo modal de js/ui/ficha.js). Al cerrarla,
-   * el foco vuelve al botón que la abrió aunque el panel se haya repintado mientras tanto.
+   * Abre la ficha de un estudiante (diálogo modal de js/ui/ficha.js). Hay una sola a la
+   * vez: si ya hay otra abierta, la ficha cambia de estudiante.
    */
   async function abrirFichaDe(id, claveFoco = null) {
     const resumen = state.datos?.porId.get(String(id));
@@ -519,39 +542,32 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
       return;
     }
     if (destruido) return;
-    cerrarFicha();
-    const antes = new Set(document.querySelectorAll('dialog'));
-    modulo.abrirFicha(resumen, state.pack);
-    const dialogo = [...document.querySelectorAll('dialog[open]')].find((d) => !antes.has(d)) || null;
-    state.ficha = { id: resumen.id, dialogo, foco: claveFoco };
-    dialogo?.addEventListener(
-      'close',
-      () => {
-        if (state.ficha?.dialogo === dialogo) state.ficha = null;
-        // Después de que la ficha regrese el foco: si su botón ya no existe (repintado), al nuevo.
-        setTimeout(() => devolverFoco(claveFoco), 0);
-      },
-      { once: true },
-    );
+    const foco = claveFoco ?? state.ficha?.foco ?? null;
+    state.ficha = { id: resumen.id, foco };
+    modulo.abrirFicha(resumen, state.pack, opcionesFicha(foco));
+  }
+
+  /** Después de un cambio en vivo: la ficha abierta se actualiza en su lugar (conserva foco y scroll). */
+  function refrescarFicha() {
+    const id = moduloFicha?.fichaAbierta?.();
+    const resumen = id ? state.datos?.porId.get(String(id)) : null;
+    if (resumen) moduloFicha.abrirFicha(resumen, state.pack, opcionesFicha(state.ficha?.foco ?? null));
   }
 
   function devolverFoco(claveFoco) {
     if (!claveFoco || destruido) return;
     const activo = document.activeElement;
     if (activo && activo !== document.body && activo.isConnected) return;
-    const destino = raiz.querySelector(`[data-foco="${CSS.escape(claveFoco)}"]`);
-    destino?.focus();
+    raiz.querySelector(`[data-foco="${CSS.escape(claveFoco)}"]`)?.focus();
   }
 
   function cerrarFicha() {
-    const dialogo = state.ficha?.dialogo;
+    moduloFicha?.cerrarFicha?.();
     state.ficha = null;
-    if (dialogo?.open) dialogo.close();
   }
 
-  async function imprimirGrupo(tipo, boton) {
-    const grupo = state.datos?.refuerzo.find((g) => g.tipo === tipo);
-    if (!grupo) return;
+  /** Arma el cuadernillo (js/ui/cuadernillo.js) y abre el diálogo de impresión del navegador. */
+  async function imprimir(opciones) {
     let modulo;
     try {
       modulo = await cargarCuadernillo();
@@ -560,23 +576,45 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
       aviso('No se pudo preparar el cuadernillo. Recarga la página e inténtalo otra vez.', { tipo: 'error' });
       return;
     }
-    const info = infoError(tipo);
-    anunciar(`Preparando el cuadernillo de ${grupo.nombre || info.nombre}.`);
     try {
-      modulo.imprimirCuadernillo(
-        {
-          titulo: grupo.nombre || info.nombre,
-          alumnos: grupo.integrantes.map((a) => a.nombre),
-          tipo,
-          ejercicios: grupo.ejercicios,
-        },
-        state.pack,
-      );
+      modulo.imprimirCuadernillo(opciones, state.pack);
     } catch (error) {
       console.error('[tecu] Falló la impresión del cuadernillo', error);
-      aviso('No se pudo imprimir el cuadernillo.', { tipo: 'error' });
+      aviso('No se pudo preparar el cuadernillo.', { tipo: 'error' });
     }
-    if (boton?.isConnected) boton.focus({ preventScroll: true });
+  }
+
+  /** Cuadernillo de un grupo de refuerzo: un juego por integrante, con los mismos ejercicios. */
+  function imprimirGrupo(tipo) {
+    const grupo = state.datos?.refuerzo.find((g) => g.tipo === tipo);
+    if (!grupo) return;
+    return imprimir({
+      titulo: grupo.nombre || infoError(tipo).nombre,
+      alumnos: grupo.integrantes.map((a) => a.nombre),
+      tipo,
+      ejercicios: grupo.ejercicios,
+    });
+  }
+
+  /**
+   * Hoja de un solo estudiante (botón de su ficha): los ejercicios de la ruta que le tocó
+   * en la app; si no los trae, los de su grupo de refuerzo o los que arma el cuadernillo.
+   */
+  function imprimirAlumno(resumen) {
+    const tipo = resumen.ruta || resumen.errorDominante || 'NO_CLASIFICADO';
+    const eventos = Array.isArray(resumen.eventos) ? resumen.eventos : [];
+    const rutaApp = [...eventos].reverse().find((e) => e?.tipo === 'ruta' && Array.isArray(e.datos?.ejercicios));
+    const delGrupo = state.datos?.refuerzo.find((g) => g.tipo === tipo)?.ejercicios;
+    const ejercicios = rutaApp
+      ? rutaApp.datos.ejercicios.map((ecuacion, i) => ({ ecuacion: String(ecuacion), nivel: i + 1 }))
+      : delGrupo;
+    return imprimir({
+      titulo: resumen.nombre,
+      alumnos: [resumen.nombre],
+      tipo,
+      ejercicios,
+      semilla: `${resumen.id}:${resumen.ruta ?? 'GENERAL'}`,
+    });
   }
 
   function ordenarPor(columna) {
@@ -824,7 +862,9 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
           ${barraDato(
             n,
             total,
-            html`<strong>${n} de ${total}</strong> estudiantes (${porcentaje(n, total)} %)${veces ? html` · ${plural(veces, 'vez', 'veces')} en total` : ''}`,
+            html`<strong>${n} de ${total}</strong> estudiantes lo tienen como error principal (${porcentaje(n, total)} %)${
+              veces ? html` · ${plural(veces, 'vez', 'veces')} en el grupo` : ''
+            }`,
           )}
           ${ejemplo
             ? html`
@@ -884,7 +924,15 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
         <dl class="docente-kpis">
           ${kpi('activos', 'grupo', html`${cuantos(g.activosSemana)}<span class="docente-kpi__de"> de ${total}</span>`, 'Activos esta semana', 'entraron a Tecu en los últimos 7 días')}
           ${kpi('dominados', 'trofeo', cuantos(g.dominados), 'Temas dominados', 'aprobaron la comprobación sin ayuda')}
-          ${kpi('revisar', 'pregunta', cuantos(g.porRevisar), 'Por revisar', 'errores que Tecu no pudo clasificar: revísalos en clase')}
+          ${kpi(
+            'revisar',
+            'pregunta',
+            cuantos(g.porRevisar),
+            'Por revisar',
+            cuantos(g.erroresPorRevisar) > cuantos(g.porRevisar)
+              ? `estudiantes con errores que Tecu no pudo clasificar (${cuantos(g.erroresPorRevisar)} en total): revísalos en clase`
+              : 'estudiantes con errores que Tecu no pudo clasificar: revísalos en clase',
+          )}
         </dl>
       </section>`;
   }
@@ -919,6 +967,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     const r = item.resumen;
     const motivo = MOTIVOS[item.motivo] || MOTIVOS.por_revisar;
     const sugerencia = sugerenciaDe(item);
+    const explicacion = state.compacto ? '' : oracion(item.explicacion);
     return html`
       <li class="tarjeta docente-llamada" data-motivo="${item.motivo}"${resalte(`llamada:${r.id}`)}>
         <div class="docente-llamada__cabeza">
@@ -927,7 +976,8 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
           <span class="chip ${motivo.clase}">${ico(motivo.icono)} ${motivo.texto}</span>
           ${marcaNuevo(`llamada:${r.id}`)}
         </div>
-        ${item.detalle ? html`<p class="docente-llamada__porque">${item.detalle}</p>` : ''}
+        ${item.detalle ? html`<p class="docente-llamada__porque">${oracion(item.detalle)}</p>` : ''}
+        ${explicacion ? html`<p class="docente-llamada__explicacion">${explicacion}</p>` : ''}
         ${sugerencia
           ? html`
               <div class="docente-llamada__plan">

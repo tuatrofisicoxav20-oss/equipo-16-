@@ -450,6 +450,11 @@
   font-weight: 700;
 }
 
+.docente-llamada__explicacion {
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+}
+
 .docente-llamada__plan {
   display: flex;
   flex-direction: column;

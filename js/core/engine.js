@@ -704,7 +704,8 @@ function fmtOperando(fr, { primero = false } = {}) {
  * Paso de división (o multiplicación) final, correcto y con sus errores típicos.
  * Los candidatos con error salen marcados `final`: describen el último paso
  * ("dividiste solo los números", "restaste el 3") y no sirven para explicar un
- * despeje que el estudiante terminó de otra forma (nivel 2 de clasificar).
+ * despeje que el estudiante terminó de otra forma (nivel 2 de clasificar) ni un
+ * renglón donde la x quedó en varios términos (5x − 4x = 14 − 2: ver xReducida).
  * Heredan `fantasma` del renglón del que salen (ver candidatos()).
  */
 function divisiones(base) {

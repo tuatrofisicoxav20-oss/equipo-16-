@@ -35,15 +35,26 @@ const MINUTO = 60 * 1000;
 const HORA = 60 * MINUTO;
 const DIA = 24 * HORA;
 
-/** Estado del estudiante → chip con icono y texto (el color nunca va solo). */
+/**
+ * Estado del estudiante → chip con icono y texto (el color nunca va solo).
+ * Mismos textos que la tabla del panel (js/views/docente.js), neutros en género.
+ */
 export const ESTADOS_ALUMNO = Object.freeze({
-  sin_actividad: { texto: 'Sin actividad', icono: 'reloj', chip: 'neutro' },
+  sin_actividad: { texto: 'Sin empezar', icono: 'usuario', chip: 'neutro' },
   diagnostico: { texto: 'En diagnóstico', icono: 'lapiz', chip: 'info' },
   en_ruta: { texto: 'En su ruta', icono: 'aprender', chip: 'info' },
-  atorado: { texto: 'Atorado', icono: 'alerta', chip: 'error' },
+  atorado: { texto: 'Se atoró', icono: 'alerta', chip: 'error' },
   dominado: { texto: 'Dominó el tema', icono: 'trofeo', chip: 'exito' },
-  inactivo: { texto: 'Inactivo', icono: 'reloj', chip: 'alerta' },
+  inactivo: { texto: 'Sin entrar', icono: 'reloj', chip: 'alerta' },
 });
+
+/** Dónde va dentro de su ruta (ResumenAlumno.actividad). */
+const LUGAR_EN_RUTA = {
+  pregunta: 'la pregunta de Tecu',
+  visual: 'la balanza',
+  practica: 'la práctica',
+  comprobacion: 'la comprobación sin ayuda',
+};
 
 /** Si el paquete aún no trae pack.llamadas: mismo sentido, en español claro. */
 const RESPALDO_LLAMADAS = {
@@ -138,21 +149,29 @@ function estadoDe(r, hayEventos) {
 }
 
 /** Por qué tiene ese estado, en una frase. */
-function motivoEstado(clave, d, pack) {
+function motivoEstado(clave, d, r, pack) {
   switch (clave) {
     case 'sin_actividad':
       return 'Todavía no empieza el diagnóstico.';
     case 'diagnostico': {
-      const total = Array.isArray(pack?.diagnostico) && pack.diagnostico.length ? pack.diagnostico.length : 4;
-      return `Lleva ${Math.min(d.diagnosticosHechos, total)} de ${total} ejercicios del diagnóstico.`;
+      const diag = esObjeto(r.diagnostico) ? r.diagnostico : {};
+      const delPaquete = Array.isArray(pack?.diagnostico) && pack.diagnostico.length ? pack.diagnostico.length : 4;
+      const total = entero(diag.total) || delPaquete;
+      const hechos = numeroO(diag.hechos, d.diagnosticosHechos);
+      return `Lleva ${Math.min(hechos, total)} de ${total} ejercicios del diagnóstico.`;
     }
     case 'en_ruta':
+      if (LUGAR_EN_RUTA[r.actividad]) return `Va en ${LUGAR_EN_RUTA[r.actividad]}.`;
       return d.practicas ? `Lleva ${plural(d.practicas, 'ejercicio', 'ejercicios')} de práctica en su ruta.` : 'Empezó su ruta.';
     case 'atorado': {
-      const fallidas = Math.max(d.comprobacion.intentos - d.comprobacion.aprobadas, 0);
-      return fallidas
-        ? `No ha pasado la comprobación sin ayuda (${plural(fallidas, 'intento', 'intentos')}).`
-        : 'Necesita apoyo para pasar la comprobación sin ayuda.';
+      const c = d.comprobacion;
+      const falladas = numeroO(r.comprobaciones?.falladas, Math.max(c.intentos - c.aprobadas, 0));
+      if (falladas >= 2 && !c.aprobadas) return `No ha pasado la comprobación sin ayuda (${plural(falladas, 'intento', 'intentos')}).`;
+      const sinAvanzar = entero(r.erroresSinAvanzar);
+      if (sinAvanzar && r.errorDominante) {
+        return `Lleva ${plural(sinAvanzar, 'error', 'errores')} de «${minuscula(infoError(r.errorDominante, pack).nombre)}» sin avanzar en su ruta.`;
+      }
+      return falladas ? `No ha pasado la comprobación sin ayuda (${plural(falladas, 'intento', 'intentos')}).` : 'Necesita apoyo para avanzar en su ruta.';
     }
     case 'dominado':
       return 'Aprobó la comprobación sin ayuda.';
@@ -163,7 +182,14 @@ function motivoEstado(clave, d, pack) {
   }
 }
 
-/** Ruta asignada: la de su error, la comprobación final (diagnóstico sin errores) o ninguna. */
+const RUTA_GENERAL = {
+  tono: 'verde',
+  icono: 'estrella',
+  titulo: 'Demuestra lo que sabes',
+  detalle: 'Diagnóstico sin errores: va directo a la comprobación final.',
+};
+
+/** Ruta asignada: la de su error, la general (diagnóstico sin errores) o ninguna todavía. */
 function rutaDe(r, recientes, pack) {
   const deRuta = (tipo, titulo) => {
     const e = infoError(tipo, pack);
@@ -172,15 +198,10 @@ function rutaDe(r, recientes, pack) {
   const tipo = typeof r.ruta === 'string' ? r.ruta : esObjeto(r.ruta) ? r.ruta.tipo : null;
   if (tipo && pack?.errores?.[tipo]) return deRuta(tipo, esObjeto(r.ruta) ? r.ruta.titulo : '');
   const evento = recientes.find((e) => e.tipo === 'ruta');
-  if (!evento) return null;
-  if (evento.ruta && pack?.errores?.[evento.ruta]) return deRuta(evento.ruta, evento.datos?.titulo);
-  if (!evento.ruta || evento.datos?.sinErrores) {
-    return {
-      tono: 'verde',
-      icono: 'estrella',
-      titulo: evento.datos?.titulo || 'Demuestra lo que sabes',
-      detalle: 'Diagnóstico sin errores: va directo a la comprobación final.',
-    };
+  if (evento?.ruta && pack?.errores?.[evento.ruta]) return deRuta(evento.ruta, evento.datos?.titulo);
+  // analitica: ruta null con actividad = la ruta general (diagnóstico sin errores).
+  if ((evento && (!evento.ruta || evento.datos?.sinErrores)) || (!tipo && r.actividad)) {
+    return { ...RUTA_GENERAL, titulo: evento?.datos?.titulo || RUTA_GENERAL.titulo };
   }
   return null;
 }
@@ -217,6 +238,7 @@ function explicacionDocente(error, pack) {
   const conocido = Boolean(pack?.errores?.[error.tipo]);
   try {
     if (!conocido || error.tipo === TIPOS.NO_CLASIFICADO) {
+      if (!entero(error.renglon)) return 'Tecu marcó un error pero no pudo ubicar el renglón. Revisen juntos el procedimiento completo.';
       return explicarError({ ...error, tipo: TIPOS.NO_CLASIFICADO, detalle: { variante: 'desconocido' } }, pack, 'docente');
     }
     if (esObjeto(error.detalle)) return explicarError(error, pack, 'docente');
@@ -259,9 +281,11 @@ function eventoDe(proc, recientes, conError) {
 }
 
 /**
- * Último procedimiento con error, listo para pintar. Si al error le falta
- * `detalle` (eventos de antes) o la confianza, se recalcula con el motor; sus
- * datos solo se usan si ve el mismo error en el mismo renglón.
+ * Un procedimiento listo para pintar (ResumenAlumno.ultimoProcedimiento: el más
+ * reciente con error o, si nunca se equivocó, el más reciente). Si al error le
+ * falta `detalle` (eventos de antes) o la confianza, se recalcula con
+ * analizarProcedimiento([ejercicio, ...renglones]); sus datos solo se usan si el
+ * motor ve el mismo error en el mismo renglón. Sin error registrado, no se inventa uno.
  */
 function prepararProcedimiento(proc, recientes, pack, ahora) {
   if (!esObjeto(proc) || typeof proc.ejercicio !== 'string' || !proc.ejercicio.trim()) return null;
@@ -274,9 +298,8 @@ function prepararProcedimiento(proc, recientes, pack, ahora) {
     console.error(e);
   }
   const delMotor = analisis?.estado === 'error' ? analisis.error : null;
-  const registrado = esObjeto(proc.error) && proc.error.tipo ? { ...proc.error } : null;
-  const error = registrado || (delMotor ? { ...delMotor } : null);
-  if (error && !entero(error.renglon) && delMotor) error.renglon = delMotor.renglon;
+  const error = esObjeto(proc.error) && proc.error.tipo ? { ...proc.error } : null;
+  if (error && !entero(error.renglon) && delMotor && delMotor.tipo === error.tipo) error.renglon = delMotor.renglon;
   const coincide = Boolean(error && delMotor && delMotor.renglon === entero(error.renglon) && delMotor.tipo === error.tipo);
   if (error && coincide) {
     if (!esObjeto(error.detalle)) error.detalle = delMotor.detalle;
@@ -284,13 +307,22 @@ function prepararProcedimiento(proc, recientes, pack, ahora) {
     if (!Array.isArray(error.alternativas)) error.alternativas = delMotor.alternativas || [];
   }
   const evento = eventoDe({ ejercicio: proc.ejercicio, renglones }, recientes, Boolean(error));
+  const tipoEvento = evento?.tipo || proc.tipoEvento || null;
+  const fecha = evento?.fecha ?? proc.fecha ?? null;
   return {
     ejercicio: proc.ejercicio,
     lineas: marcarLineas(lineas, error, analisis),
     error,
+    estadoMotor: analisis?.estado || proc.resultado || null,
     info: error ? infoError(error.tipo, pack) : null,
     explicacion: explicacionDocente(error, pack),
-    contexto: evento ? { texto: etiquetaActividad(evento), fecha: cuando(evento.fecha, ahora), pistas: evento.tipo === 'practica' ? entero(evento.pistasUsadas) : null } : null,
+    contexto: tipoEvento
+      ? {
+          texto: etiquetaActividad(evento || { tipo: tipoEvento }),
+          fecha: cuando(fecha, ahora),
+          pistas: tipoEvento === 'practica' && evento ? entero(evento.pistasUsadas) : null,
+        }
+      : null,
   };
 }
 
@@ -414,7 +446,7 @@ function datosFicha(r, pack, ahora) {
     diagnosticosHechos: new Set(eventos.filter((e) => e.tipo === 'diagnostico').map((e) => e.datos?.numero ?? e.ejercicio)).size,
     ruta: rutaDe(r, recientes, pack),
   };
-  d.motivo = motivoEstado(estado.clave, d, pack);
+  d.motivo = motivoEstado(estado.clave, d, r, pack);
 
   if (estado.clave === 'inactivo') {
     d.sugerencia = sugerenciaPorMotivo('inactivo', { dias: d.dias }, pack) || RESPALDO_LLAMADAS.inactivo.replace('{dias}', d.dias ?? 'varios');
@@ -422,17 +454,21 @@ function datosFicha(r, pack, ahora) {
     d.sugerencia = sugerenciaPorMotivo('sin_diagnostico', {}, pack) || RESPALDO_LLAMADAS.sin_diagnostico;
   }
 
-  // Dónde se atoró: el último procedimiento con error o, si no tiene, el último correcto.
-  d.procedimiento = prepararProcedimiento(r.ultimoProcedimiento, recientes, pack, ahora);
-  if (d.procedimiento && !d.procedimiento.error) d.procedimiento = null;
-  if (d.procedimiento && d.procedimiento.info.tipo !== TIPOS.NO_CLASIFICADO) {
-    d.procedimiento.sugerencia = sugerenciaLlamada(d.procedimiento.error.tipo, d.procedimiento.ejercicio, pack);
-  }
-  if (!d.procedimiento) {
-    const bien = recientes.find(
-      (e) => e.resultado === 'correcto' && typeof e.ejercicio === 'string' && Array.isArray(e.renglones) && e.renglones.length,
-    );
-    d.correcto = bien ? prepararProcedimiento({ ejercicio: bien.ejercicio, renglones: bien.renglones }, recientes, pack, ahora) : null;
+  // Dónde se atoró: el último procedimiento con error. Si no hay, el más reciente (en positivo).
+  const proc = prepararProcedimiento(r.ultimoProcedimiento, recientes, pack, ahora);
+  if (proc?.error) {
+    d.procedimiento = proc;
+    if (proc.info.tipo !== TIPOS.NO_CLASIFICADO) proc.sugerencia = sugerenciaLlamada(proc.error.tipo, proc.ejercicio, pack);
+  } else {
+    d.procedimiento = null;
+    let reciente = proc && proc.lineas.length > 1 ? proc : null;
+    if (!reciente) {
+      const ev = recientes.find(
+        (e) => e.resultado === 'correcto' && typeof e.ejercicio === 'string' && Array.isArray(e.renglones) && e.renglones.length,
+      );
+      reciente = ev ? prepararProcedimiento({ ejercicio: ev.ejercicio, renglones: ev.renglones }, recientes, pack, ahora) : null;
+    }
+    d.correcto = reciente;
   }
 
   // Errores por tipo, del más al menos frecuente.
@@ -588,15 +624,15 @@ function htmlContexto(p) {
 }
 
 /** Qué tan seguro está el motor: «Alta», «Probable» o «revísenlo juntos». */
-function htmlCerteza(error, info, pack) {
+function htmlCerteza(error, info, d) {
   if (info.tipo === TIPOS.NO_CLASIFICADO) {
     return html`<span class="ficha-certeza ficha-certeza--revisar">${ico('pregunta')}<span>Tecu no reconoce este error: revísenlo juntos.</span></span>`;
   }
   if (error.confianza === 'media' || error.confianza === 'baja') {
     const otras = (Array.isArray(error.alternativas) ? error.alternativas : [])
-      .filter((t) => t !== error.tipo && pack?.errores?.[t])
-      .map((t) => infoError(t, pack).nombre);
-    return html`<span class="ficha-certeza ficha-certeza--media">${ico('info')}<span><strong>Probable.</strong> ${otras.length ? `También podría ser: ${otras.join(', ')}. ` : ''}Confírmalo con el estudiante.</span></span>`;
+      .filter((t) => t !== error.tipo && d.pack?.errores?.[t])
+      .map((t) => minuscula(infoError(t, d.pack).nombre));
+    return html`<span class="ficha-certeza ficha-certeza--media">${ico('info')}<span><strong>Probable.</strong> ${otras.length ? `También podría ser: ${otras.join(', ')}. ` : ''}Confírmalo con ${d.nombre}.</span></span>`;
   }
   return html`<span class="ficha-certeza ficha-certeza--alta">${ico('check')}<span>Alta: el renglón coincide con este error.</span></span>`;
 }
@@ -612,25 +648,34 @@ function htmlConError(d, p) {
       </div>
       <div class="ficha-diag__dato">
         <dt>Certeza de Tecu</dt>
-        <dd>${htmlCerteza(p.error, p.info, d.pack)}</dd>
+        <dd>${htmlCerteza(p.error, p.info, d)}</dd>
       </div>
     </dl>
     ${d.estado.clave === 'dominado'
       ? html`<p class="ficha-positivo">${ico('exito')}<span>Ya lo superó: después aprobó la comprobación sin ayuda.</span></p>`
       : ''}
     ${p.sugerencia
-      ? html`<p class="ficha-sugerencia">${ico('reloj')}<span><strong>Para 15 minutos con el estudiante:</strong> ${p.sugerencia}</span></p>`
+      ? html`<p class="ficha-sugerencia">${ico('reloj')}<span><strong>Para 15 minutos con ${d.nombre}:</strong> ${p.sugerencia}</span></p>`
       : ''}`;
 }
 
+/** Cómo quedó el procedimiento más reciente cuando no hay error que mostrar. */
+const SIN_ERROR = {
+  correcto: 'Su último procedimiento está bien de principio a fin.',
+  incompleto: 'Su último procedimiento va bien, pero lo dejó sin terminar.',
+  sin_entender: 'En su último procedimiento Tecu no entendió un renglón (está marcado).',
+};
+
 function htmlSinErrores(d) {
   const p = d.correcto;
+  const titulo = d.totalErrores
+    ? 'No hay un procedimiento con error para mostrar.'
+    : 'No se ha atorado: no tiene errores en lo que ha entregado.';
+  const texto = p ? SIN_ERROR[p.estadoMotor] || SIN_ERROR.correcto : 'Todavía no entrega procedimientos escritos.';
   return html`
     <div class="ficha-ok">
-      <p class="ficha-ok__titulo">${ico('exito')}<span>No se ha atorado: no tiene errores en lo que ha entregado.</span></p>
-      ${p
-        ? html`<p class="ficha-ok__texto">Su último procedimiento está bien de principio a fin.</p>`
-        : html`<p class="ficha-ok__texto">Todavía no entrega procedimientos escritos.</p>`}
+      <p class="ficha-ok__titulo">${ico('exito')}<span>${titulo}</span></p>
+      <p class="ficha-ok__texto">${texto}</p>
     </div>
     ${p ? html`${htmlContexto(p)}${htmlProcedimiento(p, d.nombre)}` : ''}`;
 }

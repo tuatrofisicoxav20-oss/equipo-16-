@@ -43,11 +43,19 @@
 
 .cuadernillo__portada {
   display: grid;
+  grid-template-areas:
+    'tecu marca folio'
+    'tecu titulo titulo'
+    'tecu tema tema';
   grid-template-columns: auto 1fr auto;
-  gap: 0.45cm;
+  gap: 0 0.45cm;
   align-items: center;
   padding-bottom: 0.25cm;
   border-bottom: 2pt solid #000000;
+}
+
+.cuadernillo__tecu {
+  grid-area: tecu;
 }
 
 .cuadernillo__tecu .tecu {
@@ -57,6 +65,7 @@
 }
 
 .cuadernillo__marca {
+  grid-area: marca;
   font-size: 12pt;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -64,20 +73,27 @@
 }
 
 .cuadernillo__titulo {
+  grid-area: titulo;
   font-size: 24pt;
   font-weight: 900;
   line-height: 1.1;
 }
 
 .cuadernillo__tema {
+  grid-area: tema;
   font-size: 13pt;
 }
 
 .cuadernillo__folio {
-  align-self: start;
+  grid-area: folio;
   font-size: 12pt;
   font-weight: 700;
   white-space: nowrap;
+}
+
+/* Ecuaciones: si no caben en una línea, se parten antes del "=" (como en el cuaderno). */
+.cuadernillo .cuaderno__lado {
+  display: inline-block;
 }
 
 /* Nombre, Grupo y Fecha (y el resumen de la clave) ========================= */
@@ -86,6 +102,7 @@
   display: grid;
   grid-template-columns: 3fr 1.3fr 1.5fr;
   gap: 0.6cm;
+  align-items: end;
   margin: 0.45cm 0;
 }
 
@@ -95,17 +112,25 @@
   align-items: baseline;
 }
 
+.cuadernillo__datos .cuadernillo__dato {
+  align-items: flex-end;
+}
+
 .cuadernillo__dato dt {
   font-weight: 800;
 }
 
+/* La raya para escribir (o el nombre impreso) queda a la altura de la etiqueta. */
 .cuadernillo__datos dd {
+  display: flex;
   flex: 1;
+  align-items: flex-end;
   min-height: 0.8cm;
   padding: 0 0.15cm;
   border-bottom: 1pt solid #000000;
   font-size: 15pt;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .cuadernillo__resumen {
@@ -123,7 +148,7 @@
 
 .cuadernillo__antes-cuerpo {
   display: grid;
-  grid-template-columns: 7cm 1fr;
+  grid-template-columns: 7.4cm 1fr;
   gap: 0.6cm;
   align-items: center;
 }
@@ -288,14 +313,20 @@
 }
 
 .cuadernillo__clave-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1cm 0.5cm;
+  align-items: center;
   margin-bottom: 0.3cm;
   padding-bottom: 0.25cm;
   border-bottom: 2pt solid #000000;
 }
 
+.cuadernillo__clave-cabeza .cuadernillo__marca {
+  flex-basis: 100%;
+}
+
 .cuadernillo__sello {
-  display: inline-block;
-  margin-top: 0.15cm;
   padding: 0.05cm 0.3cm;
   border: 2pt solid #000000;
   border-radius: 4pt;
@@ -334,9 +365,9 @@
   font-weight: 800;
 }
 
-.cuadernillo__tabla thead th:nth-child(1) { width: 4.3cm; }
-.cuadernillo__tabla thead th:nth-child(2) { width: 4.4cm; }
-.cuadernillo__tabla thead th:nth-child(3) { width: 2.6cm; }
+.cuadernillo__tabla thead th:nth-child(1) { width: 4.5cm; }
+.cuadernillo__tabla thead th:nth-child(2) { width: 4cm; }
+.cuadernillo__tabla thead th:nth-child(3) { width: 2.4cm; }
 
 .cuadernillo__tabla tbody th {
   font-weight: 400;
@@ -361,9 +392,6 @@
   white-space: nowrap;
 }
 
-.cuadernillo__tabla td p + p {
-  margin-top: 0.08cm;
-}
 
 /* Impresión: solo el cuadernillo, en hojas carta ============================ */
 
