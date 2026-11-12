@@ -306,7 +306,9 @@ export async function crearVistaAcerca({ anfitrion, perfil = 'estudiante' } = {}
         () => null,
       ),
     ]);
-    const delPaquete = Array.isArray(paquete?.ciclo) ? paquete.ciclo.map((paso) => String(paso?.nombre ?? paso ?? '').trim()).filter(Boolean) : [];
+    const delPaquete = Array.isArray(paquete?.ciclo)
+      ? paquete.ciclo.map((paso) => String(typeof paso === 'string' ? paso : paso?.nombre || paso?.titulo || '').trim()).filter(Boolean)
+      : [];
     return { contexto, pasosDelCiclo: delPaquete.length ? delPaquete : CICLO_RESPALDO };
   }
 

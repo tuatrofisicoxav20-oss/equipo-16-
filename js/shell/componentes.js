@@ -33,22 +33,13 @@ export function ic(nombre, tamano = 20) {
 /* Tecu                                                                */
 /* ------------------------------------------------------------------ */
 
-/** Encuadre de la cara sobre el dibujo completo de 120 × 120 (respaldo local, ver tecuCara). */
-const ENCUADRE_CARA = '19 3 82 82';
-
-/**
- * Tecu en versión cara, para la marca del encabezado (decorativo: el nombre va al lado).
- * Pide a tecuSVG la variante `cara`; si todavía no la tiene, recorta el dibujo completo.
- */
+/** Tecu en versión cara, para la marca del encabezado (decorativo: el nombre va al lado). */
 export function tecuCara(tamano = 30) {
-  let svg = '';
   try {
-    svg = String(tecuSVG({ estado: 'normal', tamano, decorativo: true, cara: true }));
+    return crudo(tecuSVG({ estado: 'normal', tamano, decorativo: true, cara: true }));
   } catch {
-    svg = '';
+    return crudo('');
   }
-  if (svg.includes('viewBox="0 0 120 120"')) svg = svg.replace('viewBox="0 0 120 120"', `viewBox="${ENCUADRE_CARA}"`);
-  return crudo(svg);
 }
 
 /** Tecu de cuerpo entero, decorativo, en uno de sus estados. */
