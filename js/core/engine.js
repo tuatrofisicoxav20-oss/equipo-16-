@@ -146,6 +146,11 @@ export function normalizar(raw) {
   s = s.replace(/[−‐-―﹣˗➖]/g, '-');
   s = s.replace(/[×✕✖⋅·•∙∗]/g, '*');
   s = s.replace(/[÷⁄∕➗]/g, '/');
+  // Número mixto escolar: "8 1/3" es 8 + 1/3 (sin esto se leía 81/3). Solo con una fracción propia
+  // (1/3, no 4/2) y sin tocar "3 x = 1 5" ni "1/2 1/2".
+  s = s.replace(/(?<![\d.,/])(\d+)\s+([1-9]\d*)\s*\/\s*(\d+)(?![\d.,])/g, (m, entero, n, d) =>
+    Number(n) < Number(d) ? `(${entero}+${n}/${d})` : m,
+  );
   s = s.replace(/[[{]/g, '(').replace(/[\]}]/g, ')'); // corchetes y llaves como paréntesis
   s = s.replace(/≈/g, '='); // x ≈ 8.33 (la aproximación ya se valida aparte)
   s = s.replace(/X/g, 'x');
@@ -552,6 +557,7 @@ function detalleTermino(t, lado) {
   return {
     termino: fmtTerminoConSigno(t),
     terminoSinSigno: fmtTerminoSinSigno(t),
+    terminoConArticulo: conArticulo(t), // "el 5", "el 2x", "la x": para plantillas que no digan "el x"
     signoOriginal: t.c.isNeg() ? 'resta' : 'suma',
     lado: LADO_NOMBRE[lado],
     otroLado: LADO_NOMBRE[otroLado(lado)],
@@ -592,10 +598,16 @@ function malDeTransposicion(modo, w) {
 
 const MODOS_MAL = ['sin_cambio_signo', 'solo_un_lado', 'inversa_div', 'inversa_mul'];
 
+/** "el 5", "el 2x", pero "la x" (la incógnita sola, aunque tenga signo menos). */
+function conArticulo(t) {
+  const texto = fmtTerminoSinSigno(t);
+  return texto === 'x' ? 'la x' : `el ${texto}`;
+}
+
 /** El mismo error en varios términos a la vez (todos sin cambiar signo, o todos quitados de un lado). */
 function malDeVarios(modo, T) {
-  const lista = T.map((w) => fmtTerminoSinSigno(w.t));
-  const terminos = lista.length === 2 ? `el ${lista[0]} y el ${lista[1]}` : `${lista.slice(0, -1).map((t) => `el ${t}`).join(', ')} y el ${lista[lista.length - 1]}`;
+  const lista = T.map((w) => conArticulo(w.t));
+  const terminos = `${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}`;
   const base = { ...detalleTermino(T[0].t, T[0].lado), terminos, cantidad: T.length };
   if (modo === 'sin_cambio_signo') {
     return {
@@ -1034,23 +1046,42 @@ const noClasificado = (tipos = []) => ({
 });
 
 /**
+ * Con más términos que esto en el renglón previo, clasificar() no busca la regla:
+ * los candidatos crecen como n³ (27 términos fuera de lugar ≈ 1.5 s en un celular
+ * de gama baja) y ningún ejercicio de 1.º de secundaria se ve así. Responde
+ * NO_CLASIFICADO: el error sí se señala en su renglón, solo no se explica.
+ */
+const MAX_TERMINOS_CLASIFICAR = 16;
+
+/**
  * Explica cómo se pasó de `previa` (correcta) a `escrita` (que cambió la solución).
  * Nunca lanza por números enormes: en ese caso responde NO_CLASIFICADO.
  * @returns {{tipo: string, detalle: object, confianza: 'alta'|'media'|'baja', alternativas: string[], ops?: number}}
  */
 export function clasificar(previa, escrita) {
+  if (previa.L.length + previa.R.length > MAX_TERMINOS_CLASIFICAR) return noClasificado();
   return sinDesborde(() => clasificarExacto(previa, escrita), null) ?? noClasificado();
+}
+
+/** Resultado de elegir() sin la marca interna de empate. */
+function sinEmpate({ empate, ...elegido }) {
+  return elegido;
 }
 
 function clasificarExacto(previa, escrita) {
   const vS = vector(escrita);
-  const { conError, correctos } = candidatosClasificables(previa);
+  const memo = candidatosClasificables(previa);
+  // Un despeje ("x = 5") nunca se explica con un renglón fantasma: el estudiante no escribió −15 = −3x.
+  const esDespeje = despeje(escrita) !== null;
+  const conError = esDespeje ? memo.conErrorDespeje : memo.conError;
+  const correctos = esDespeje ? memo.correctosDespeje : memo.correctos;
 
-  const exactos = conError.filter((c) => coinciden(vS, c.vector));
+  const exactos = conError.filter((c) => esElCandidato(vS, c));
   if (exactos.length) {
     const elegido = elegir(exactos);
-    // Una explicación que necesita 3 operaciones seguidas es posible, no segura.
-    return { ...elegido, confianza: elegido.ops >= 3 ? 'media' : 'alta' };
+    // Una explicación que necesita 3 operaciones seguidas es posible, no segura; tampoco
+    // cuando otra regla, de otro tipo, explica el renglón con los mismos pasos.
+    return { ...sinEmpate(elegido), confianza: elegido.ops >= 3 || elegido.empate ? 'media' : 'alta' };
   }
 
   const arit = buscarAritmetica(vS, correctos);
@@ -1059,16 +1090,19 @@ function clasificarExacto(previa, escrita) {
   // Nivel 2: el estudiante ya escribió "x = valor" y ese valor es el que da un
   // candidato con error (cometió el error y resolvió el resto de memoria).
   // Solo aplica a renglones despejados: en otros casos una coincidencia
-  // numérica podría inventar un diagnóstico.
+  // numérica podría inventar un diagnóstico. Los errores del último paso
+  // (`final`) no cuentan: "dividiste solo los números y la x se quedó igual"
+  // contradice un renglón donde la x sí quedó sola.
   let tipos = [];
-  if (despeje(escrita) !== null) {
+  if (esDespeje) {
     const solS = resolver(escrita);
     const equivalentes = conError.filter((c) => {
+      if (c.final) return false;
       if (c.sol === undefined) c.sol = sinDesborde(() => resolver(c.eq)); // también se memoriza
       return c.sol !== null && mismaSolucion(c.sol, solS);
     });
     tipos = [...new Set(equivalentes.map((c) => c.mal.tipo))];
-    if (tipos.length === 1) return { ...elegir(equivalentes), confianza: 'media' };
+    if (tipos.length === 1) return { ...sinEmpate(elegir(equivalentes)), confianza: 'media' };
   }
 
   return noClasificado(tipos);
@@ -1094,9 +1128,20 @@ function aritmeticaDeCadena(errorCadena) {
   };
 }
 
+/** ¿La parte de un renglón muestra una operación (20 − 5, 3(8.33), 15/3) y no solo un número? */
+const muestraCuenta = (parte) => parte.terms.length >= 2 || /[*/()]/.test(parte.texto);
+
+/**
+ * Renglón sin x y falso, que ninguna regla explica: una cuenta mal hecha.
+ * Devuelve null si no hay ninguna cuenta a la vista ("15 = 3", "1 = 2"):
+ * ahí no hay qué revisar y el motor no lo inventa.
+ */
 function aritmeticaNumerica(info) {
   const [A, B] = [info.partes[0], info.partes[info.partes.length - 1]];
-  const calculo = A.terms.length >= B.terms.length ? A : B;
+  if (!muestraCuenta(A) && !muestraCuenta(B)) return null;
+  // La cuenta es el lado que muestra la operación (30 = 3(8.33) también), y si no, el de más términos.
+  const peso = (p) => (muestraCuenta(p) ? 100 : 0) + p.terms.length;
+  const calculo = peso(A) >= peso(B) ? A : B;
   const resultado = calculo === A ? B : A;
   return {
     tipo: TIPOS.ARITMETICA,
@@ -1145,6 +1190,30 @@ function esAproximacion(sol0, info) {
   if (sol0.tipo !== 'unica' || !info.decimales) return false;
   const v = despeje(info.eq);
   return v !== null && aproxima(sol0.valor, v, info.decimales);
+}
+
+/**
+ * Renglón numérico que solo es falso por un redondeo, no por una cuenta mal hecha:
+ *   - "25/3 = 8.33": cada igualdad es exacta o una parte es la otra bien redondeada;
+ *   - "3(8.33) = 25" después de "x ≈ 8.33": la comprobación con el valor redondeado.
+ *     Cada igualdad puede diferir a lo más lo que mueve ese redondeo: la suma de los
+ *     coeficientes de x del enunciado (en valor absoluto) por |8.33 − 25/3|.
+ */
+function cuadraConRedondeo(r, previa, eq0, sol) {
+  const partes = r.partes;
+  const pares = partes.slice(1).map((q, i) => [partes[i], q]);
+  const redondeo = ([p, q]) => p.form.b.eq(q.form.b) || aproxima(p.form.b, q.form.b, q.decimales) || aproxima(q.form.b, p.form.b, p.decimales);
+  if (pares.every(redondeo)) return true;
+  if (previa.nota !== 'aproximado') return false;
+  const aprox = despeje(previa.eq);
+  if (aprox === null) return false;
+  return sinDesborde(() => {
+    const coefX = [...eq0.L, ...eq0.R].filter((t) => t.x).reduce((s, t) => s.add(t.c.abs()), Fr.ZERO);
+    const tolerancia = aprox.sub(sol).abs().mul(coefX.cmp(Fr.ONE) < 0 ? Fr.ONE : coefX);
+    const cerca = (u, v) => u.sub(v).abs().cmp(tolerancia) <= 0;
+    const valores = partes.map((p) => p.form.b);
+    return pares.every(([p, q]) => cerca(p.form.b, q.form.b)) && cerca(valores[0], valores[valores.length - 1]);
+  }, false);
 }
 
 /**
@@ -1230,9 +1299,16 @@ function analizarSinRed(renglones, avance = { renglon: 1, info: [] }) {
         r.nota = 'calculo';
         continue;
       }
-      // Un renglón sin x y falso: o vino de un error típico (8 = 20) o es una cuenta mal hecha.
+      if (cuadraConRedondeo(r, previa, primero.eq, sol0.valor)) {
+        r.valido = true;
+        r.nota = 'calculo';
+        r.redondeo = true; // la cuenta está bien con el valor redondeado (3(8.33) = 25)
+        continue;
+      }
+      // Un renglón sin x y falso: o vino de un error típico (8 = 20) o es una cuenta mal hecha
+      // (si no hay ninguna operación a la vista, como "15 = 3", queda sin clasificar).
       const c = clasificarSeguro(previa.eq, r.eq);
-      diag = c.tipo === TIPOS.NO_CLASIFICADO ? aritmeticaNumerica(r) : c;
+      diag = (c.tipo === TIPOS.NO_CLASIFICADO && aritmeticaNumerica(r)) || c;
     } else if (r.cadena) {
       const solIni = resolver(r.eqInicial);
       diag = mismaSolucion(sol0, solIni) ? aritmeticaDeCadena(r.cadena[0]) : clasificarSeguro(previa.eq, r.eqInicial);
@@ -1684,6 +1760,8 @@ export function revelaSolucion(texto, solucion, contexto = []) {
   }
   const t = normalizarTexto(texto);
   const compacto = t.replace(/\s+/g, '');
+  // "en el renglón 2", "renglones 2 y 3": son números de renglón, no valores de x.
+  const sinRenglones = t.replace(/rengl[oó]n(?:es)?\s+\d+(?:\s*(?:,|y|e|al|a|-)\s*\d+)*/g, 'renglón');
   const valores = [s.toString()];
   if (!s.isInt()) {
     valores.push(String(Math.round(s.toNumber() * 100) / 100), String(Math.round(s.toNumber() * 10) / 10));
@@ -1713,7 +1791,7 @@ export function revelaSolucion(texto, solucion, contexto = []) {
   }
   const absTxt = s.abs().toString();
   if (!numerosContexto.has(absTxt)) {
-    if (new RegExp(`${INICIO}${escaparRegex(absTxt)}${FIN}`).test(t)) return true;
+    if (new RegExp(`${INICIO}${escaparRegex(absTxt)}${FIN}`).test(sinRenglones)) return true;
   }
   return false;
 }

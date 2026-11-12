@@ -1753,6 +1753,11 @@ html.alto-contraste .dialogo::backdrop {
   }
 }
 
+/* Diálogo amplio (ficha del estudiante en el panel docente) */
+.dialogo--ancho {
+  width: min(52rem, calc(100% - 2 * var(--espacio-4)));
+}
+
 /* Vacío -------------------------------------------------------------------- */
 .vacio {
   display: flex;
@@ -1956,6 +1961,28 @@ html.alto-contraste .dialogo::backdrop {
   background: var(--color-superficie-2);
   font-size: var(--texto-chico);
   font-weight: 800;
+}
+
+/* Tabla ancha (p. ej. estudiantes × errores): se desplaza a los lados dentro de su caja
+   y la primera columna queda fija. Ponle tabindex="0", role="region" y aria-label. */
+.tabla-desplazable {
+  max-width: 100%;
+  overflow-x: auto;
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+}
+
+.tabla-desplazable :is(thead th:first-child, tbody th[scope='row'], tbody td:first-child) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-superficie);
+  box-shadow: 1px 0 0 var(--color-borde-suave);
+}
+
+.tabla-desplazable thead th:first-child {
+  background: var(--color-superficie-2);
 }
 
 /* 8. Movimiento ============================================================ */

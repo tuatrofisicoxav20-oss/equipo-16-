@@ -664,10 +664,19 @@ describe('Reglas de error: variantes y posiciones sin prueba previa', () => {
   });
 
   test('cuando dos reglas explican el renglón, gana la de mayor prioridad y la otra queda como alternativa', () => {
-    const e = diag('x/2 = -3', 'x = 6').error;
-    assert.equal(e.tipo, TIPOS.SIGNO_NEGATIVO);
-    assert.ok(e.alternativas.includes(TIPOS.SIGNO_TRANSPOSICION));
+    // Antes se probaba con x/2 = −3 → x = 6, pero ahí la alternativa SIGNO_TRANSPOSICION solo
+    // salía del camino "fantasma" (−3 = −x/2: "el −3 cambió de lado", un término que el alumno
+    // nunca movió); el motor ya no lo usa para explicar un despeje. El sustituto sugerido por la
+    // revisión (−2x + 3 = 11 → x = 4) tampoco tiene alternativa sin ese camino. Este sí es un
+    // empate real: −2x = 6 (el 6 no cambió de signo) y −2x = −6 → x = −3 (se perdió el signo al
+    // dividir) llegan a x = −3 con los mismos pasos; gana la prioridad y la confianza baja a media.
+    const e = diag('−2x + 6 = 0', 'x = −3').error;
+    assert.equal(e.tipo, TIPOS.SIGNO_TRANSPOSICION);
+    assert.ok(e.alternativas.includes(TIPOS.SIGNO_NEGATIVO));
     assert.ok(!e.alternativas.includes(e.tipo));
+    assert.equal(e.confianza, 'media');
+    // x/2 = −3 → x = 6 sigue siendo SIGNO_NEGATIVO, ahora sin alternativas inventadas.
+    assert.deepEqual(diag('x/2 = -3', 'x = 6').error.alternativas, []);
   });
 
   test('NO_CLASIFICADO: confianza baja, sin alternativas inventadas, con la lista de posibles', () => {
@@ -753,9 +762,13 @@ describe('Reglas de error: variantes y posiciones sin prueba previa', () => {
     assert.equal(procedimientoConError('3x + 3x = 18', TIPOS.TERMINOS_NO_SEMEJANTES), null);
     assert.equal(procedimientoConError('3x + 5 = 20', 'TIPO_QUE_NO_EXISTE'), null);
     assert.equal(procedimientoConError('x + 5 = 20', TIPOS.NO_CLASIFICADO), null);
-    // Con números tan chicos, todo desliz de ±1 o ±2 coincide con otro error del
-    // catálogo: no inventa un procedimiento "de ARITMETICA" que se diagnosticaría distinto.
-    assert.equal(procedimientoConError('x + 1 = 2', TIPOS.ARITMETICA), null);
+    // Antes aquí se exigía null para procedimientoConError('x + 1 = 2', ARITMETICA): el desliz
+    // x = 2 − 1 → x = 2 se diagnosticaba por el camino "fantasma" (1 − 2 = −x) como otro error
+    // del catálogo. Sin ese camino es un error de cuenta legítimo y el procedimiento generado se
+    // vuelve a diagnosticar como ARITMETICA.
+    const chico = procedimientoConError('x + 1 = 2', TIPOS.ARITMETICA);
+    assert.deepEqual(chico, ['x + 1 = 2', 'x = 2 − 1', 'x = 2']);
+    assert.equal(analizarProcedimiento(chico).error.tipo, TIPOS.ARITMETICA);
   });
 
   test('procedimientoConError: sin división final, la inversa equivocada se comete al pasar el número', () => {

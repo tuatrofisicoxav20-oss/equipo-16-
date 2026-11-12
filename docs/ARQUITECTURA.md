@@ -251,6 +251,22 @@ escribe el propio motor con `procedimientoConError` y se vuelven a diagnosticar 
 así que son coherentes) + los eventos reales del "servidor" (`eventosServidor()`), que traen a Ana, Luis y a
 cualquier otro celular que sincronice (por ejemplo, un juez que abrió la app con el QR).
 
+### Decisiones de la fase 4
+
+- El grupo simulado **se genera en memoria** (determinista, con semilla) y **no se guarda** en `localStorage`:
+  así "Reiniciar demo" (`reiniciarTodo()`) nunca lo duplica ni lo borra. El panel lo genera una vez por sesión
+  (caché en memoria) con `ahora` fijo al cargar, y en cada aviso de `escucharServidor()` vuelve a leer
+  `eventosServidor()` y lo mezcla con el grupo. Ids fijos: alumnos `sim-01`…`sim-28`, eventos `sim-01-e001`…
+- Alumnos en vivo: cualquier `alumno` que aparezca en `eventosServidor()` (ana, luis, invitado, …) se muestra
+  arriba con la insignia "En vivo". Nombres: 'ana' → "Ana", 'luis' → "Luis", 'invitado' → "Invitado (QR)".
+- El panel carga `css/docente.css`, `css/ficha.css` y `css/impresion.css` (lo hace `main.js` al abrir
+  `?vista=docente`). Usa las clases del kit de `styles.css`; extras ya disponibles: `.dialogo--ancho` (ficha),
+  `.tabla-desplazable` (primera columna fija), `.chip--tono`, `.fila--entre`, `.fila--centro`, `.pila--chica`,
+  `.texto-chico`, `.marca`, `.campo*`. Iconos: `icono(nombre)` de `js/ui/iconos.js` (61; `hayIcono(nombre)`).
+- Ecuaciones en el panel: `htmlEcuacion`, `formatearEcuacion` y `leerEcuacion` de `js/ui/cuaderno.js`.
+- Textos de llamadas: `pack.llamadas.inactivo` y `pack.llamadas.sin_diagnostico` (los está agregando el agente
+  de contenido; si no existen aún, usa un respaldo local en español claro y anótalo).
+
 ### `js/data/grupo.js`
 
 ```js

@@ -74,7 +74,7 @@ const ICONOS = {
   libro: '<path d="M12 6.5C10.3 5 7.8 4.5 3.5 4.5v14c4.3 0 6.8.5 8.5 2 1.7-1.5 4.2-2 8.5-2v-14c-4.3 0-6.8.5-8.5 2z"/><path d="M12 6.5v14"/>',
   balanza: '<path d="M12 4v16M8 20h8M4.5 7h15"/><path d="m4.5 7-3 6.5h6zM19.5 7l-3 6.5h6z"/><path d="M1.5 13.5a3 3 0 0 0 6 0M16.5 13.5a3 3 0 0 0 6 0"/>',
   proyector: '<path d="M3 4.5h18"/><path d="M4.5 4.5v10h15v-10"/><path d="M12 14.5V18"/><path d="m8 21.5 4-3.5 4 3.5"/>',
-  grafica: '<path d="M4 20.5h16"/><rect x="5.5" y="12" width="3" height="5.5" rx=".5"/><rect x="10.5" y="6.5" width="3" height="11" rx=".5"/><rect x="15.5" y="9.5" width="3" height="8" rx=".5"/>',
+  grafica: '<path d="M3.5 20.5h17"/><rect x="5" y="11" width="3.5" height="6.5" rx=".5"/><rect x="10.25" y="4.5" width="3.5" height="13" rx=".5"/><rect x="15.5" y="8" width="3.5" height="9.5" rx=".5"/>',
 
   // Preferencias
   voz: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/>',

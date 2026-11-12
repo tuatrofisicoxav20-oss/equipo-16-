@@ -31,15 +31,15 @@
       "tono": "coral",
       "resumen": "Pasa un término al otro lado del = sin cambiarle el signo.",
       "alumno": {
-        "sin_cambio_signo": "En el renglón {renglon}, el {terminoSinSigno} cambió de lado pero conservó su signo. Cuando un término pasa al otro lado del =, su operación se invierte: si estaba {verbo}, pasa {verboInverso}.",
-        "varios_sin_cambio_signo": "En el renglón {renglon}, {terminos} cambiaron de lado pero conservaron su signo. Cada término que cruza el = cambia su operación: lo que suma pasa restando y lo que resta pasa sumando."
+        "sin_cambio_signo": "En el renglón {renglon}, {elTermino} cambió de lado pero conservó su signo. Pasar {elTermino} al otro lado es {inversa} {terminoSinSigno} en los dos lados del =: por eso, si estaba {verbo}, aparece {verboInverso}.",
+        "varios_sin_cambio_signo": "En el renglón {renglon}, {terminos} cambiaron de lado pero conservaron su signo. Cada término que pasa al otro lado del = aparece con la operación contraria: lo que sumaba, restando; lo que restaba, sumando."
       },
       "docente": {
         "sin_cambio_signo": "Transpone {termino} sin cambiar el signo: escribió {quedo} donde debía quedar {debioQuedar}.",
-        "varios_sin_cambio_signo": "Transpone varios términos sin cambiarles el signo: escribió {quedo} donde debía quedar {debioQuedar}."
+        "varios_sin_cambio_signo": "Transpone {cantidad} términos sin cambiar el signo: escribió {quedo} donde debía quedar {debioQuedar}."
       },
       "ruta": {
-        "titulo": "Lo que suma, pasa restando",
+        "titulo": "Lo que suma pasa restando",
         "meta": "Saber qué le pasa a un término cuando cambia de lado del =.",
         "ejemplo": "2x + 3 = 11",
         "visual": {
@@ -49,36 +49,40 @@
           "cierre": "Quitar 3 pesas de los dos platillos es lo mismo que escribir 2x = 11 − 3. Por eso el 3 que sumaba aparece restando."
         }
       },
-      "llamada15": "Resuelvan juntos {ejercicio} con la balanza. Pídele que diga en voz alta qué le pasa a cada término cuando cambia de lado.",
-      "actividadGrupo": "Balanza en el pizarrón: quiten la misma pesa de los dos platillos y escriban juntos el renglón que resulta. Repitan con un número que esté restando."
+      "llamada15": "Resuelvan juntos {ejercicio} dibujando una balanza en el cuaderno. En cada renglón, que diga en voz alta qué hizo en los dos lados (por ejemplo, «resté 5 de los dos lados»).",
+      "actividadGrupo": "Balanza en el pizarrón: quiten la misma pesa de los dos platillos y escriban juntos el renglón que resulta. Luego resuelvan x − 3 = 5: ahí se agregan 3 pesas a los dos platillos."
     },
     "INVERSA_EQUIVOCADA": {
       "nombre": "Operación inversa",
       "nombreCorto": "Inversa",
       "icono": "inversa",
       "tono": "morado",
-      "resumen": "Usa la operación equivocada para deshacer: resta o multiplica el coeficiente en lugar de dividir.",
+      "resumen": "No deshace con la operación contraria: por ejemplo, resta el coeficiente en lugar de dividir o vuelve a dividir cuando la x ya estaba dividida.",
       "alumno": {
         "resta": "En el renglón {renglon}, para quitar el {coefNum} que multiplica a la x, lo restaste. Pero {coef} quiere decir {coefNum} veces x: una multiplicación se deshace dividiendo.",
         "suma": "En el renglón {renglon}, para quitar el {coefNum} que multiplica a la x, lo sumaste. Una multiplicación se deshace dividiendo.",
         "multiplica": "En el renglón {renglon}, volviste a multiplicar por {coefNum}. Para deshacer una multiplicación hay que dividir.",
         "invierte": "En el renglón {renglon} dividiste al revés: {coefNum} entre {b}. El número que va arriba es el que está solo del otro lado.",
         "divide": "En el renglón {renglon}, la x estaba dividida entre {divisor} y volviste a dividir. Una división se deshace multiplicando.",
-        "aditivo_divide": "En el renglón {renglon}, el {terminoSinSigno} estaba {verbo} y lo pasaste dividiendo. Lo que suma o resta se quita con la operación contraria, no dividiendo.",
-        "aditivo_multiplica": "En el renglón {renglon}, el {terminoSinSigno} estaba {verbo} y lo pasaste multiplicando. Lo que suma o resta se quita con la operación contraria."
+        "aditivo_divide": "En el renglón {renglon}, {elTermino} estaba {verbo} y lo pasaste dividiendo. Lo que suma o resta se quita con la operación contraria, no dividiendo.",
+        "aditivo_multiplica": "En el renglón {renglon}, {elTermino} estaba {verbo} y lo pasaste multiplicando. Lo que suma o resta se quita con la operación contraria.",
+        "resta_divisor": "En el renglón {renglon}, la x estaba dividida entre {divisor} y le restaste {divisor}. Una división se deshace multiplicando.",
+        "suma_divisor": "En el renglón {renglon}, la x estaba dividida entre {divisor} y le sumaste {divisor}. Una división se deshace multiplicando."
       },
       "docente": {
-        "resta": "Para despejar {coef} = {b} restó el coeficiente ({b} − {coefNum} = {escrito}) en lugar de dividir (x = {correcto}).",
-        "suma": "Para despejar {coef} = {b} sumó el coeficiente (escribió {escrito}) en lugar de dividir (x = {correcto}).",
-        "multiplica": "Para despejar {coef} = {b} multiplicó por el coeficiente (escribió {escrito}) en lugar de dividir (x = {correcto}).",
-        "invierte": "Invirtió la división: {coefNum} ÷ {b} = {escrito} en lugar de {b} ÷ {coefNum} = {correcto}.",
+        "resta": "Para despejar {coef} = {b} restó el coeficiente ({b} − {coefNumParentesis} = {escrito}) en lugar de dividir (x = {correcto}).",
+        "suma": "Para despejar {coef} = {b} sumó el coeficiente ({b} + {coefNumParentesis} = {escrito}) en lugar de dividir (x = {correcto}).",
+        "multiplica": "Para despejar {coef} = {b} multiplicó por el coeficiente ({b} · {coefNumParentesis} = {escrito}) en lugar de dividir (x = {correcto}).",
+        "invierte": "Invirtió la división: {coefNum} ÷ {bParentesis} = {escrito} en lugar de {b} ÷ {coefNumParentesis} = {correcto}.",
         "divide": "En {coef} = {b} dividió entre {divisor} en lugar de multiplicar (escribió {escrito}; x = {correcto}).",
-        "aditivo_divide": "Quitó el término {termino} dividiendo en lugar de restarlo.",
-        "aditivo_multiplica": "Quitó el término {termino} multiplicando en lugar de restarlo."
+        "aditivo_divide": "Quitó el término {termino} dividiendo en lugar de {inversa} {terminoSinSigno} en los dos lados.",
+        "aditivo_multiplica": "Quitó el término {termino} multiplicando en lugar de {inversa} {terminoSinSigno} en los dos lados.",
+        "resta_divisor": "Para despejar {coef} = {b} restó el divisor ({b} − {divisorParentesis} = {escrito}) en lugar de multiplicar (x = {correcto}).",
+        "suma_divisor": "Para despejar {coef} = {b} sumó el divisor ({b} + {divisorParentesis} = {escrito}) en lugar de multiplicar (x = {correcto})."
       },
       "ruta": {
-        "titulo": "Lo que multiplica, pasa dividiendo",
-        "meta": "Deshacer una multiplicación con la división, no con la resta.",
+        "titulo": "Lo que multiplica pasa dividiendo",
+        "meta": "Deshacer cada operación con su contraria: la multiplicación con la división y la división con la multiplicación.",
         "ejemplo": "4x = 12",
         "visual": {
           "modo": "repartir",
@@ -87,8 +91,8 @@
           "cierre": "Repartir en 3 grupos iguales es dividir entre 3. Por eso 3x = 12 se resuelve con x = 12 ÷ 3, no con 12 − 3."
         }
       },
-      "llamada15": "Con {ejercicio}: repartan pesas o fichas en grupos iguales. Que te explique por qué se divide y no se resta.",
-      "actividadGrupo": "Reparto en equipos: con fichas, cada equipo reparte el total entre el número de cajas y escribe la división que hizo."
+      "llamada15": "Con {ejercicio}: que diga qué le hace el número a la x (¿la multiplica o la divide?) y con qué operación se deshace. Usen fichas o frijoles: repartir en grupos iguales es dividir; juntar grupos iguales es multiplicar.",
+      "actividadGrupo": "Reparto en equipos: con fichas, cada equipo reparte el total entre el número de cajas y escribe la división. Luego al revés: si la cuarta parte son 3 fichas, ¿cuántas hay en total? Escriben la multiplicación."
     },
     "ARITMETICA": {
       "nombre": "Cuentas",
@@ -99,16 +103,16 @@
       "alumno": {
         "cuenta": "En el renglón {renglon} el paso va bien, pero revisa la cuenta: {cuenta} no da {escrito}.",
         "cadena": "En el renglón {renglon} escribiste que {cuenta} = {escrito}. Revisa esa cuenta con calma.",
-        "copia": "En el renglón {renglon} cambió un número que debía quedarse igual: el {esperado} se volvió {escrito}. Revisa que se copie bien."
+        "copia": "En el renglón {renglon} escribiste {escritoTermino}, pero {eseNumero} no sale del renglón anterior. Revisa cómo lo copiaste o la cuenta que hiciste."
       },
       "docente": {
         "cuenta": "Procedimiento correcto con error aritmético: {cuenta} da {esperado}, escribió {escrito}.",
         "cadena": "Error aritmético en una cadena de igualdades: {cuenta} = {escrito} (es {esperado}).",
-        "copia": "Error al copiar: {esperado} pasó como {escrito}."
+        "copia": "Error de copia o de cuenta: debía quedar {esperadoTermino} y escribió {escritoTermino}."
       },
       "ruta": {
         "titulo": "Revisa tus cuentas",
-        "meta": "Comprobar cada resultado antes de seguir, sustituyendo en la ecuación.",
+        "meta": "Revisar cada cuenta antes de seguir y comprobar la respuesta sustituyéndola en la ecuación original.",
         "ejemplo": "4x + 7 = 31",
         "visual": {
           "modo": "comprobar",
@@ -125,7 +129,7 @@
       "nombreCorto": "Términos",
       "icono": "terminos",
       "tono": "verde",
-      "resumen": "Suma términos con x y números solos como si fueran lo mismo (3x + 5 = 8x).",
+      "resumen": "Suma términos con x y números solos como si fueran lo mismo (3x + 5 → 8x).",
       "alumno": {
         "todo_a_x": "En el renglón {renglon} juntaste {terminos} y quedó {resultado}. Las x y los números solos no se suman entre sí: son como cajas y pesas.",
         "par_a_x": "En el renglón {renglon} juntaste {terminos} y quedó {resultado}. Una x y un número solo no se pueden sumar.",
@@ -147,7 +151,7 @@
           "cierre": "2x + x se pueden juntar porque las dos son cajas: quedan 3x. El 3 es una pesa y se queda aparte: 3x + 3."
         }
       },
-      "llamada15": "Con fichas o dibujos: cajas para las x y pesas para los números. Que agrupe {ejercicio} antes de resolverlo.",
+      "llamada15": "Con {ejercicio}: que dibuje cajas para las x y frijoles o pesas para los números, y que junte solo cajas con cajas y números con números antes de resolver.",
       "actividadGrupo": "Clasificación: repartan tarjetas con términos (3x, 5, −2x, 7) y que el grupo forme montones de términos semejantes."
     },
     "UN_SOLO_LADO": {
@@ -157,16 +161,20 @@
       "tono": "azul",
       "resumen": "Hace una operación en un lado de la ecuación y no en el otro.",
       "alumno": {
-        "quita_de_un_lado": "En el renglón {renglon} quitaste el {terminoSinSigno} del lado {lado}, pero del lado {otroLado} no hiciste nada. Lo que haces de un lado del = lo tienes que hacer del otro.",
+        "quita_de_un_lado": "En el renglón {renglon} quitaste {elTermino} del lado {lado}: como estaba {verbo}, eso es {inversa} {terminoSinSigno}. Pero al lado {otroLado} no le hiciste nada, y lo que haces de un lado del = lo tienes que hacer del otro.",
         "divide_solo_x": "En el renglón {renglon} dividiste entre {coefNum} solo el lado de la x. El otro lado también se tiene que dividir.",
         "divide_solo_numero": "En el renglón {renglon} dividiste entre {coefNum} solo los números y la x se quedó igual. Se dividen los dos lados.",
-        "varios_quita_de_un_lado": "En el renglón {renglon} quitaste {terminos} de un lado del =, pero del otro lado no hiciste lo mismo. Lo que haces de un lado lo tienes que hacer del otro."
+        "varios_quita_de_un_lado": "En el renglón {renglon} quitaste {terminos}, pero no hiciste lo mismo del otro lado del =. Lo que haces de un lado lo tienes que hacer del otro.",
+        "divide_solo_x_divisor": "En el renglón {renglon} multiplicaste por {divisor} solo el lado de la x. El otro lado también se tiene que multiplicar por {divisor}.",
+        "divide_solo_numero_divisor": "En el renglón {renglon} multiplicaste por {divisor} solo el número y la x se quedó igual. Se multiplican los dos lados."
       },
       "docente": {
         "quita_de_un_lado": "Elimina {termino} de un solo lado ({operacion} solo en el lado {lado}).",
         "divide_solo_x": "Divide entre {coefNum} solo el lado de la incógnita (escribió x = {escrito}).",
-        "divide_solo_numero": "Divide entre {coefNum} solo el término independiente.",
-        "varios_quita_de_un_lado": "Elimina varios términos ({terminos}) de un solo lado de la ecuación."
+        "divide_solo_numero": "Divide entre {coefNum} solo el término independiente (escribió {coef} = {escrito}).",
+        "varios_quita_de_un_lado": "Elimina {cantidad} términos de un solo lado ({terminos}) sin hacer lo mismo en el otro.",
+        "divide_solo_x_divisor": "Multiplica por {divisor} solo el lado de la incógnita (escribió x = {escrito}).",
+        "divide_solo_numero_divisor": "Multiplica por {divisor} solo el término independiente (escribió {coef} = {escrito})."
       },
       "ruta": {
         "titulo": "Lo que haces de un lado, hazlo del otro",
@@ -177,25 +185,27 @@
           "unLado": true,
           "ecuacion": "x + 4 = 10",
           "instruccion": "Quita pesas para dejar sola la caja. Prueba qué pasa si quitas de un solo platillo y luego de los dos.",
-          "cierre": "Si quitas solo de un platillo, la balanza se cae: la ecuación deja de ser cierta. Por eso cada operación va en los dos lados."
+          "cierre": "Si quitas solo de un platillo, la balanza se inclina: los dos lados ya no pesan lo mismo. Por eso cada operación va en los dos lados."
         }
       },
-      "llamada15": "Con {ejercicio}: que haga cada operación en los dos lados y la escriba con otro color en ambos.",
-      "actividadGrupo": "Balanza de dos colores: cada operación se escribe en rojo en el lado izquierdo y en rojo en el derecho, siempre en pares."
+      "llamada15": "Con {ejercicio}: que haga cada operación en los dos lados y la escriba con el mismo color en ambos.",
+      "actividadGrupo": "Operaciones en pares: en el pizarrón, cada operación se escribe con el mismo color en el lado izquierdo y en el derecho. Si una queda sin su par, el grupo la encuentra y la corrige."
     },
     "SIGNO_NEGATIVO": {
       "nombre": "Signo negativo al dividir",
       "nombreCorto": "Negativos",
       "icono": "negativo",
       "tono": "rosa",
-      "resumen": "Pierde el signo al dividir entre un coeficiente negativo.",
+      "resumen": "Se equivoca en el signo del resultado al dividir con números negativos.",
       "alumno": {
-        "pierde_signo": "En el renglón {renglon} se perdió un signo menos al dividir. Revisa: {b} entre {coefNum}, ¿da positivo o negativo?",
-        "quita_signo_coef": "En el renglón {renglon} el {coef} se volvió {escrito}: desapareció el signo menos."
+        "pierde_signo": "En el renglón {renglon}, el resultado de la división quedó con el signo contrario. Revisa: {b} entre {coefNum}, ¿da positivo o negativo?",
+        "quita_signo_coef": "En el renglón {renglon} el {coef} se volvió {escrito}: desapareció el signo menos.",
+        "pierde_signo_divisor": "En el renglón {renglon}, el resultado quedó con el signo contrario. Revisa: {b} por {divisor}, ¿da positivo o negativo?"
       },
       "docente": {
-        "pierde_signo": "Pierde el signo al dividir: {b} ÷ {coefNum} es {correcto} y escribió {escrito}.",
-        "quita_signo_coef": "Elimina el signo del coeficiente: {coef} → {escrito}."
+        "pierde_signo": "Signo equivocado al dividir: {b} ÷ {coefNumParentesis} = {correcto}; escribió {escrito}.",
+        "quita_signo_coef": "Elimina el signo del coeficiente: {coef} → {escrito}.",
+        "pierde_signo_divisor": "Signo equivocado al multiplicar: {b} · {divisorParentesis} = {correcto}; escribió {escrito}."
       },
       "ruta": {
         "titulo": "Cuidado con el menos",
@@ -208,20 +218,20 @@
           "cierre": "Con −2x = 8 la caja tiene que valer un número negativo: menos por menos da más. Por eso 8 ÷ (−2) es negativo."
         }
       },
-      "llamada15": "Con {ejercicio}: que compruebe su resultado sustituyendo x. Si no se cumple, repasen juntos la ley de los signos.",
-      "actividadGrupo": "Ley de los signos con fichas de dos colores: rojo para negativos, azul para positivos; repartan y comparen signos."
+      "llamada15": "Con {ejercicio}: que sustituya su resultado y diga si se cumple. Luego, en papel: 12 ÷ 3, 12 ÷ (−3), −12 ÷ 3 y −12 ÷ (−3); que explique el signo de cada uno y lo compruebe con una multiplicación.",
+      "actividadGrupo": "Patrones en el pizarrón: escriban 12 ÷ 3, 12 ÷ (−3), −12 ÷ 3 y −12 ÷ (−3). Cada equipo comprueba con una multiplicación (cociente × divisor = dividendo) y el grupo escribe la regla de los signos."
     },
     "NO_CLASIFICADO": {
-      "nombre": "Por revisar con el docente",
+      "nombre": "Por revisar en clase",
       "nombreCorto": "Revisar",
       "icono": "pregunta",
       "tono": "gris",
       "resumen": "El motor detectó dónde cambió la solución, pero no reconoce el error. Lo marca para revisión.",
       "alumno": {
-        "desconocido": "No reconozco este error. En el renglón {renglon} la ecuación cambió y ya no tiene la misma solución, pero no sé explicar qué pasó. Se lo marco a tu maestra o maestro para que lo revisen juntos."
+        "desconocido": "En el renglón {renglon} la ecuación cambió y ya no tiene la misma solución. Todavía no sé explicar qué pasó, así que le aviso a tu maestra o maestro para que lo revisen juntos."
       },
       "docente": {
-        "desconocido": "Error no clasificado en el renglón {renglon}: la solución cambia, pero ninguna regla del catálogo lo explica. Conviene revisarlo con el estudiante."
+        "desconocido": "Error no clasificado en el renglón {renglon}: la solución cambia, pero ninguna regla del catálogo lo explica. Pídele que explique ese renglón con sus palabras."
       },
       "ruta": {
         "titulo": "Paso a paso con la balanza",
@@ -240,13 +250,13 @@
   },
   "preguntas": {
     "SIGNO_TRANSPOSICION": {
-      "texto": "{intro} Fíjate en el {terminoSinSigno}: estaba {verbo} del lado {lado}. Al pasarlo al otro lado del =, ¿cómo queda?",
+      "texto": "{intro} Fíjate en {elTermino}: estaba {verbo} del lado {lado}. Si pasa al otro lado del =, ¿cómo queda?",
       "correcta": "{verboInversoCap}: {otroLadoTexto} {signoInverso} {terminoSinSigno}",
       "suya": "{verboCap}: {otroLadoTexto} {signoMismo} {terminoSinSigno}",
-      "otra": "Dividiendo: {otroLadoTexto} ÷ {terminoSinSigno}",
-      "retroCorrecta": "¡Exacto! Lo que suma de un lado pasa restando al otro, y lo que resta pasa sumando. Es como quitar la misma pesa de los dos platillos.",
-      "retroSuya": "Así lo escribiste en el diagnóstico. Si el {terminoSinSigno} conserva su signo, la balanza se desequilibra. Prueba otra opción.",
-      "retroOtra": "Dividir deshace una multiplicación, pero el {terminoSinSigno} está {verbo}. Prueba otra opción."
+      "otra": "Desaparece: {otroLadoTexto}",
+      "retroCorrecta": "¡Exacto! Pasar {elTermino} al otro lado es {inversa} {terminoSinSigno} en los dos lados: la balanza sigue en equilibrio.",
+      "retroSuya": "Así quedó en ese renglón. Si {elTermino} conserva su signo, la balanza se desequilibra. Prueba otra opción.",
+      "retroOtra": "Si {elTermino} solo desaparece, un lado cambia y el otro no: la balanza se inclina. Prueba otra opción."
     },
     "INVERSA_EQUIVOCADA": {
       "texto": "{intro} El {coefNum} está multiplicando a la x: {coef} es {coefNum} veces x. ¿Qué operación lo deshace?",
@@ -255,87 +265,95 @@
       "otra": "Multiplicar los dos lados por {coefNum}",
       "retroCorrecta": "¡Eso es! Si tres cajas iguales pesan 15, cada caja pesa 15 ÷ 3. La división deshace la multiplicación.",
       "retroSuya": "Restar quita una cantidad suelta, pero aquí el {coefNum} no está suelto: está multiplicando. Prueba otra opción.",
-      "retroOtra": "Multiplicar otra vez lo hace más grande en lugar de deshacerlo. Prueba otra opción.",
+      "retroOtra": "Multiplicar otra vez repite la operación en lugar de deshacerla. Prueba otra opción.",
       "textoDivide": "{intro} La x está dividida entre {divisor}. ¿Qué operación deshace esa división?",
       "correctaDivide": "Multiplicar los dos lados por {divisor}",
       "suyaDivide": "Dividir otra vez entre {divisor}",
       "otraDivide": "Restar {divisor} en los dos lados",
       "retroCorrectaDivide": "¡Exacto! La multiplicación deshace la división: si la cuarta parte de un número es 3, el número es 3 · 4.",
-      "retroSuyaDivide": "Si vuelves a dividir, el número se hace todavía más chico. Prueba otra opción.",
+      "retroSuyaDivide": "Volver a dividir repite la operación en lugar de deshacerla. Prueba otra opción.",
       "retroOtraDivide": "Restar quita una cantidad suelta, pero aquí la x está dividida. Prueba otra opción.",
-      "textoAditivo": "{intro} El {terminoSinSigno} estaba {verbo}. ¿Qué operación lo quita del lado de la x?",
+      "textoAditivo": "{intro} {elTerminoCap} estaba {verbo}. ¿Qué operación lo quita del lado de la x?",
       "correctaAditivo": "{inversaCap} {terminoSinSigno} en los dos lados",
       "suyaAditivo": "Dividir entre {terminoSinSigno} en los dos lados",
       "otraAditivo": "Multiplicar por {terminoSinSigno} en los dos lados",
       "retroCorrectaAditivo": "¡Bien! Lo que suma se quita restando, y lo que resta se quita sumando.",
-      "retroSuyaAditivo": "Dividir deshace una multiplicación, pero el {terminoSinSigno} está {verbo}. Prueba otra opción.",
+      "retroSuyaAditivo": "Dividir deshace una multiplicación, pero {elTermino} está {verbo}. Prueba otra opción.",
       "retroOtraAditivo": "Multiplicar no quita un número que está sumando o restando. Prueba otra opción."
     },
     "ARITMETICA": {
       "texto": "{intro} El paso estaba bien pensado; solo falló una cuenta. ¿Cuánto es {cuenta}?",
-      "retroCorrecta": "¡Correcto! Tu método iba bien: cuando dudes de una cuenta, compruébala antes de seguir.",
-      "retroSuya": "Ese es el número que escribiste en el diagnóstico. Vuelve a hacer la cuenta despacio.",
+      "retroCorrecta": "¡Correcto! El método iba bien: cuando dudes de una cuenta, compruébala antes de seguir.",
+      "retroSuya": "Ese es el número que quedó en ese renglón. Vuelve a hacer la cuenta despacio.",
       "retroOtra": "Casi. Haz la cuenta despacio, en papel si te ayuda.",
-      "textoCopia": "{intro} Un número cambió al copiarlo al siguiente renglón. ¿Qué conviene hacer?",
-      "correctaCopia": "Revisar que cada número que no se mueve se copie igual",
+      "textoCopia": "{intro} En ese renglón hay {unNumero} que no sale del renglón anterior. ¿Qué conviene hacer?",
+      "correctaCopia": "Revisar cada número y cada cuenta antes de seguir",
       "suyaCopia": "Seguir: un número de diferencia no importa",
       "otraCopia": "Cambiar todos los números para que cuadre",
-      "retroCorrectaCopia": "¡Eso! Los términos que no mueves se copian tal cual.",
+      "retroCorrectaCopia": "¡Eso! Lo que no cambias se copia tal cual, y cada cuenta se revisa antes de seguir.",
       "retroSuyaCopia": "Un número de diferencia cambia toda la solución. Prueba otra opción.",
       "retroOtraCopia": "Si cambias números sin una operación, la ecuación ya es otra. Prueba otra opción."
     },
     "TERMINOS_NO_SEMEJANTES": {
-      "texto": "{intro} Juntaste {terminos} y quedó {resultado}. ¿Se pueden juntar así?",
+      "texto": "{intro} Ahí se juntó {terminos} y quedó {resultado}. ¿Se pueden juntar así?",
       "correcta": "No: las x y los números solos son distintos, se quedan aparte",
       "suya": "Sí: se suman todos los números que estén del mismo lado",
       "otra": "Sí, pero solo si la x va primero",
       "retroCorrecta": "¡Exacto! 3x + 5 no es 8x, igual que 3 cajas y 5 pesas no son 8 cajas.",
-      "retroSuya": "Es lo que pasó en tu diagnóstico. Una caja (x) y una pesa (número) no son lo mismo. Prueba otra opción.",
+      "retroSuya": "Eso fue lo que pasó en ese renglón. Una caja (x) y una pesa (número) no son lo mismo. Prueba otra opción.",
       "retroOtra": "El orden no cambia nada: x con número sigue sin poder juntarse. Prueba otra opción."
     },
     "UN_SOLO_LADO": {
-      "texto": "{intro} Quitaste el {terminoSinSigno} del lado {lado}. ¿Qué pasa con el lado {otroLado}?",
-      "correcta": "También se le quita {terminoSinSigno}",
-      "suya": "Se queda igual",
-      "otra": "Se le agrega {terminoSinSigno}",
+      "texto": "{intro} Ahí se quitó {elTermino} del lado {lado}; como estaba {verbo}, eso es {inversa} {terminoSinSigno}. ¿Qué le toca al lado {otroLado}?",
+      "correcta": "{inversaCap} {terminoSinSigno} también: {otroLadoTexto} {signoInverso} {terminoSinSigno}",
+      "suya": "Nada, se queda igual: {otroLadoTexto}",
+      "otra": "{directaCap} {terminoSinSigno}: {otroLadoTexto} {signoMismo} {terminoSinSigno}",
       "retroCorrecta": "¡Eso! La regla de oro: lo que haces de un lado del =, lo haces del otro.",
-      "retroSuya": "Así lo hiciste en el diagnóstico, y la balanza se cayó. Prueba otra opción.",
-      "retroOtra": "Si a un lado le quitas y al otro le agregas, la diferencia se hace más grande. Prueba otra opción.",
-      "textoDivide": "{intro} Dividiste entre {coefNum} un solo lado. ¿Qué pasa con el otro lado?",
+      "retroSuya": "Eso fue lo que pasó en ese renglón, y la balanza se inclinó. Prueba otra opción.",
+      "retroOtra": "Si de un lado haces una operación y del otro la contraria, la balanza se inclina. Prueba otra opción.",
+      "textoDivide": "{intro} Ahí se dividió entre {coefNum} un solo lado. ¿Qué pasa con el otro lado?",
       "correctaDivide": "También se divide entre {coefNum}",
       "suyaDivide": "Se queda igual",
       "otraDivide": "Se le resta {coefNum}",
       "retroCorrectaDivide": "¡Exacto! Si divides un lado, divides el otro: así la igualdad se conserva.",
-      "retroSuyaDivide": "Así lo hiciste en el diagnóstico. Si solo divides un lado, la igualdad se rompe. Prueba otra opción.",
-      "retroOtraDivide": "Restar no es la misma operación que dividir. Prueba otra opción."
+      "retroSuyaDivide": "Eso fue lo que pasó en ese renglón. Si solo divides un lado, la igualdad se rompe. Prueba otra opción.",
+      "retroOtraDivide": "Restar no es la misma operación que dividir. Prueba otra opción.",
+      "textoMultiplica": "{intro} Ahí se multiplicó por {divisor} un solo lado. ¿Qué pasa con el otro lado?",
+      "correctaMultiplica": "También se multiplica por {divisor}",
+      "suyaMultiplica": "Se queda igual",
+      "otraMultiplica": "Se le suma {divisor}",
+      "retroCorrectaMultiplica": "¡Exacto! Si multiplicas un lado, multiplicas el otro: así la igualdad se conserva.",
+      "retroSuyaMultiplica": "Eso fue lo que pasó en ese renglón. Si solo multiplicas un lado, la igualdad se rompe. Prueba otra opción.",
+      "retroOtraMultiplica": "Sumar no es la misma operación que multiplicar. Prueba otra opción."
     },
     "SIGNO_NEGATIVO": {
       "texto": "{intro} Sin hacer toda la cuenta: {b} entre {coefNum}, ¿da positivo o negativo?",
       "retroCorrecta": "¡Muy bien! Si los signos son distintos, el resultado es negativo; si son iguales, es positivo.",
-      "retroSuya": "Ese signo es el que quedó en tu diagnóstico. Fíjate en los dos signos: ¿son iguales o distintos?",
-      "retroOtra": "El tamaño de los números no decide el signo; deciden los signos. Prueba otra opción."
+      "retroSuya": "Ese signo es el que quedó en ese renglón. Fíjate en los dos signos: ¿son iguales o distintos?",
+      "retroOtra": "El tamaño de los números no decide el signo; deciden los signos. Prueba otra opción.",
+      "textoMultiplica": "{intro} Sin hacer toda la cuenta: {b} por {divisor}, ¿da positivo o negativo?"
     },
     "NO_CLASIFICADO": {
       "texto": "{intro} Antes de seguir, ¿cuál es la regla de oro para resolver una ecuación?",
       "correcta": "Lo que hago de un lado del =, lo hago del otro",
-      "suya": "Muevo los números como me convenga",
-      "otra": "Primero divido todo entre el número más grande",
+      "suya": "Hago la operación solo del lado donde está la x",
+      "otra": "Paso los números al otro lado sin cambiarles nada",
       "retroCorrecta": "¡Exacto! Con esa regla, cada renglón conserva la misma solución.",
-      "retroSuya": "Si mueves números sin hacer lo mismo del otro lado, la ecuación cambia. Prueba otra opción.",
-      "retroOtra": "Dividir todo puede servir, pero solo si divides los dos lados completos. Prueba otra opción."
+      "retroSuya": "Si la haces de un solo lado, la balanza se inclina y la ecuación cambia. Prueba otra opción.",
+      "retroOtra": "Si un número cambia de lado sin cambiar su operación, la ecuación cambia. Prueba otra opción."
     },
     "introDiagnostico": "En el ejercicio {ejercicio} pasaste de «{anterior}» a «{escrito}».",
     "introEjemplo": "Mira este procedimiento: de «{anterior}» alguien pasó a «{escrito}»."
   },
   "pistas": {
     "transponer_constante": [
-      "El {terminoSinSigno} está {verbo} del lado de la x. ¿Qué operación lo quita?",
-      "{inversaCap} {terminoSinSigno} en los dos lados del =. Así la balanza sigue en equilibrio.",
+      "{elTerminoCap} está {verbo} del lado de la x. ¿Qué operación lo quita?",
+      "{operacionesCap} en los dos lados del =. Así la balanza sigue en equilibrio.",
       "El siguiente renglón queda así: {siguiente}. ¿Cuánto da {cuenta}?"
     ],
     "transponer_x": [
       "Hay x en los dos lados. ¿Qué tienes que hacer para que todas las x queden juntas en un lado?",
-      "{inversaCap} {terminoSinSigno} en los dos lados del =.",
+      "{operacionesCap} en los dos lados del =.",
       "El siguiente renglón queda así: {siguiente}."
     ],
     "reducir": [
@@ -365,58 +383,73 @@
     ]
   },
   "pistasPorError": {
-    "SIGNO_TRANSPOSICION": "Ojo con los signos: cuando un término cambia de lado, cambia también su operación. ¿Qué le pasa al {terminoSinSigno} al cruzar el =?",
+    "SIGNO_TRANSPOSICION": "Ojo con los signos: un término que pasa al otro lado del = aparece con la operación contraria. ¿Qué le pasa {alTermino} al cruzar el =?",
     "INVERSA_EQUIVOCADA": "Antes de mover un número, pregúntate qué está haciendo: ¿suma, resta, multiplica o divide? Se quita con la operación contraria.",
     "ARITMETICA": "Tu método va bien. Antes de seguir, comprueba la cuenta de este paso con calma.",
     "TERMINOS_NO_SEMEJANTES": "Recuerda: las x van con las x y los números con los números. ¿Qué puedes juntar aquí?",
     "UN_SOLO_LADO": "Lo que hagas de un lado del =, hazlo también del otro. ¿Qué operación toca y en qué lados?",
-    "SIGNO_NEGATIVO": "Fíjate en los signos antes de dividir: si son distintos, el resultado es negativo.",
+    "SIGNO_NEGATIVO": "Fíjate en los dos signos: si son iguales, el resultado es positivo; si son distintos, es negativo.",
     "NO_CLASIFICADO": "Ve paso a paso: haz una sola operación por renglón y aplícala a los dos lados."
   },
   "tecu": {
     "nombre": "Tecu",
     "saludo": "¡Hola! Soy Tecu. Vamos a resolver ecuaciones paso por paso. Escribe cada renglón como lo harías en tu cuaderno.",
     "diagnosticoIntro": "Primero quiero ver cómo resuelves. Son 4 ecuaciones; escribe cada paso en un renglón. No te preocupes si te equivocas: así sé cómo ayudarte.",
-    "diagnosticoSiguiente": "Gracias. Ya lo guardé en tu cel. Vamos con la siguiente.",
+    "diagnosticoSiguiente": "Gracias. Ya lo guardé en este cel. Vamos con la siguiente.",
     "diagnosticoBien": "¡Muy bien! Llegaste a la respuesta y cada renglón conserva la solución.",
     "dormido": "Tecu se duerme. Este lo resuelves tú.",
     "despierto": "¡Ya desperté! ¿Cómo te fue?",
     "dominado": "¡Lo lograste sin ayuda! Este tema ya es tuyo.",
     "noDominado": "Casi. Repasemos un poco más y lo vuelves a intentar.",
-    "sinConexionDuda": "Guardé tu duda en tu cel. En cuanto vuelva la señal te contesto.",
+    "sinConexionDuda": "Guardé tu duda en este cel. En cuanto vuelva la señal, te contesto.",
     "dudaContestada": "Ya volvió la señal y te contesté {n} {dudas}.",
     "respuestas": [
       {
+        "id": "cambiar_de_lado",
         "claves": [
           "signo",
           "cambia",
           "otro lado",
-          "pasa",
+          "pasa restando",
+          "pasa sumando",
           "restando",
           "sumando",
           "transpon"
         ],
-        "texto": "Piensa en una balanza: si quitas 5 de un platillo, tienes que quitar 5 del otro para que siga en equilibrio. Por eso lo que suma de un lado aparece restando del otro. ¿Con qué número de tu ejercicio quieres probarlo?"
+        "texto": "Piensa en una balanza: si quitas 5 de un platillo, tienes que quitar 5 del otro para que siga en equilibrio. Por eso lo que suma de un lado aparece restando del otro. Ojo: eso es para números que suman o restan; el número pegado a la x la multiplica y se quita dividiendo. ¿Con qué número de tu ejercicio quieres probarlo?"
       },
       {
-        "claves": [
-          "divid",
-          "multiplic",
-          "coeficiente",
-          "veces",
-          "pegado"
-        ],
-        "texto": "El número pegado a la x está multiplicando: 3x es 3 veces x. Una multiplicación se deshace dividiendo, no restando. ¿Entre qué número dividirías los dos lados de tu ejercicio?"
-      },
-      {
+        "id": "signos",
         "claves": [
           "negativ",
           "menos",
           "signos"
         ],
-        "texto": "Al dividir, si los dos números tienen el mismo signo el resultado es positivo; si tienen signos distintos, es negativo. Por ejemplo, 8 ÷ (−2) da un número negativo. Cuando termines, sustituye tu respuesta para comprobarla."
+        "texto": "Al multiplicar o dividir dos números: si tienen el mismo signo, el resultado es positivo; si tienen signos distintos, es negativo. Por ejemplo, 8 ÷ (−2) da un número negativo. Cuando termines, sustituye tu respuesta para comprobarla."
       },
       {
+        "id": "dividir",
+        "claves": [
+          "divid",
+          "multiplic",
+          "coeficiente",
+          "veces",
+          "pegado",
+          "x/"
+        ],
+        "texto": "El número pegado a la x la multiplica: 3x es 3 veces x, y se deshace dividiendo los dos lados entre 3. Si la x está dividida, como en x/4, se deshace multiplicando los dos lados por 4. ¿Qué le pasa a la x en tu ejercicio?"
+      },
+      {
+        "id": "opuesto",
+        "claves": [
+          "−x",
+          "-x",
+          "opuesto"
+        ],
+        "texto": "−x es el opuesto de x. Si −x vale un número, x vale ese mismo número con el signo contrario: es como multiplicar los dos lados por −1. Cuando termines, sustituye tu respuesta para comprobarla."
+      },
+      {
+        "id": "juntar",
         "claves": [
           "juntar",
           "junto",
@@ -427,40 +460,55 @@
         "texto": "Las x y los números solos son como cajas y pesas: no se pueden juntar entre sí. 3x + 5 se queda como 3x + 5 hasta que pases el 5 al otro lado."
       },
       {
+        "id": "comprobar",
         "claves": [
           "comprob",
           "verific",
           "está bien",
-          "esta bien",
           "correcto"
         ],
         "texto": "Para saber si tu respuesta está bien, sustitúyela en la ecuación original. Si los dos lados dan lo mismo, está bien. ¿Quieres intentarlo con tu resultado?"
       },
       {
+        "id": "incognita",
         "claves": [
-          "qué es",
-          "que es",
+          "qué es la x",
+          "qué es una incógnita",
           "incógnita",
-          "incognita",
-          "para qué",
-          "para que"
+          "qué significa",
+          "para qué sirve"
         ],
         "texto": "La x es un número que todavía no conocemos. Resolver la ecuación es descubrir qué número hace que los dos lados del = valgan lo mismo, como una balanza en equilibrio."
       },
       {
+        "id": "atorado",
         "claves": [
           "no entiendo",
+          "no le entiendo",
           "ayuda",
           "difícil",
-          "dificil",
-          "no sé",
-          "no se",
+          "no sé cómo",
+          "no sé qué",
           "confund"
         ],
         "texto": "Vamos poquito a poco. Haz una sola operación por renglón y aplícala a los dos lados. Si te atoras, toca «Pista»: te doy una a la vez, sin decirte la respuesta."
+      },
+      {
+        "id": "respuesta",
+        "claves": [
+          "respuesta",
+          "cuánto vale",
+          "cuánto da",
+          "dime"
+        ],
+        "texto": "No te doy la respuesta, pero te ayudo a encontrarla. Toca «Pista» y vamos paso a paso."
       }
     ],
     "porDefecto": "Buena pregunta. Te propongo pensarlo con la balanza: lo que hagas de un lado del =, hazlo también del otro. Si quieres, pide una pista en tu ejercicio."
+  },
+  "llamadas": {
+    "inactivo": "No ha entrado en {dias} días. Pregúntale si tiene celular o datos esta semana; si no, dale el cuadernillo impreso de {tema}.",
+    "sin_diagnostico": "Todavía no hace el diagnóstico. En 15 minutos pueden resolver juntos las 4 ecuaciones del diagnóstico en papel y escribirlas después en la app."
   },
   "materias": [
     {

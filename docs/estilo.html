@@ -47,7 +47,6 @@
     .guia-marco { display: block; width: 100%; border: var(--borde-control) solid var(--color-borde); border-radius: var(--radio-grande); background: var(--color-superficie); }
     .guia-marco--telefono { width: 360px; max-width: 100%; height: 680px; border: 8px solid #15252d; border-radius: 2rem; }
     .guia-marco--ancho { height: 560px; }
-    .guia-tabla { overflow-x: auto; }
   </style>
 </head>
 <body>
@@ -425,7 +424,7 @@
       <!-- Diálogo ----------------------------------------------------------- -->
       <section class="guia-seccion" id="dialogo" aria-labelledby="t-dialogo">
         <h2 class="titulo-2" id="t-dialogo">Diálogo</h2>
-        <p class="guia-nota"><code>confirmar()</code> de <code>js/ui/dom.js</code> abre un <code>&lt;dialog class="dialogo"&gt;</code> modal con fondo oscuro; Escape cancela.</p>
+        <p class="guia-nota"><code>confirmar()</code> de <code>js/ui/dom.js</code> abre un <code>&lt;dialog class="dialogo"&gt;</code> modal con fondo oscuro; Escape cancela. <code>.dialogo--ancho</code> lo amplía a 52rem (ficha del panel docente).</p>
         <div class="fila">
           <button type="button" class="boton boton--secundario" data-abrir-dialogo>Abrir diálogo</button>
           <button type="button" class="boton boton--peligro" data-abrir-dialogo="peligro"><span data-icono="reiniciar"></span> Reiniciar demo</button>
@@ -490,7 +489,7 @@
           </div>
           <label class="fila"><input type="checkbox" checked> Recordarme en este celular</label>
         </div>
-        <div class="guia-tabla" tabindex="0" role="region" aria-label="Tabla de ejemplo (se desplaza a los lados)">
+        <div class="tabla-desplazable" tabindex="0" role="region" aria-label="Tabla de ejemplo (se desplaza a los lados)">
           <table>
             <caption>Grupo de ejemplo</caption>
             <thead><tr><th scope="col">Alumno</th><th scope="col">Error principal</th><th scope="col">Ruta</th><th scope="col">Estado</th></tr></thead>

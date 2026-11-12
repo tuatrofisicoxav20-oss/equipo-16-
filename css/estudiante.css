@@ -11,12 +11,8 @@
 /* Estructura                                                          */
 /* ------------------------------------------------------------------ */
 
-/* La barra y la navegación son fijas: lo enfocado no queda tapado (WCAG 2.4.11).
-   El JS ajusta estos valores a la altura real; esto es el respaldo. */
-html:has(.app--estudiante) {
-  scroll-padding-top: 8rem;
-  scroll-padding-bottom: 5.5rem;
-}
+/* Lo enfocado no queda tapado por las barras fijas (WCAG 2.4.11): el JS publica
+   --alto-barra-medida y --alto-nav-medida, y styles.css calcula el scroll-padding. */
 
 .app--estudiante .contenido {
   padding-bottom: var(--espacio-6, 2rem);
@@ -159,6 +155,23 @@ html:has(.app--estudiante) {
 .est-barra__nota .icono {
   width: 1.125rem;
   height: 1.125rem;
+}
+
+/* Texto grande en pantalla angosta: la barra fija no debe comerse la pantalla.
+   Se queda Tecu con el nombre, la insignia y la conexión (sin iconos). */
+@media (max-width: 400px) {
+  html:is([data-texto='grande'], [data-texto='muy-grande']) .est-barra__app {
+    display: none;
+  }
+
+  html:is([data-texto='grande'], [data-texto='muy-grande']) .est-barra__alumno {
+    color: var(--color-texto, #15252d);
+    font-size: var(--texto-base, 1rem);
+  }
+
+  html[data-texto='muy-grande'] .est-conexion .icono {
+    display: none;
+  }
 }
 
 /* Girar (sincronizando, buscando actualización). El kit lo apaga con movimiento reducido. */
@@ -418,11 +431,6 @@ html:has(.app--estudiante) {
 
 .est-no-se {
   font-weight: 700;
-}
-
-/* Procedimiento revisado (solo lectura): el cuaderno sin entrada ni botones */
-.est-proc .cuaderno__fila {
-  grid-template-columns: 1.75rem minmax(0, 1fr);
 }
 
 /* Caja de lo que dice Tecu después de revisar */
@@ -987,6 +995,10 @@ html.reducir-movimiento .est-girando {
 
 .est-segmentado-texto .est-nombre-texto {
   grid-area: nombre;
+}
+
+.est-ajustes .math {
+  white-space: nowrap;
 }
 
 .est-muestra-texto {

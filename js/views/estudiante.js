@@ -21,7 +21,7 @@
  * Después de cada render responde a window.parent con
  *   { tecu: 'estado', alumno, pantalla, pendientes, ruta, actividad, enLinea, dominado, ejercicio }.
  */
-import { TIPOS, analizarProcedimiento, bonito, ecuacion, pasosSolucion } from '../core/engine.js';
+import { TIPOS, analizarProcedimiento, ecuacion, pasosSolucion } from '../core/engine.js';
 import { explicarError, nombreError, pistasPara, preguntaOrientadora, rellenar, respuestaTecu } from '../core/textos.js';
 import { ACTIVIDADES, construirRuta, otraComprobacion, resumirDiagnostico } from '../core/ruta.js';
 import {
@@ -38,7 +38,7 @@ import {
 } from '../ui/dom.js';
 import { tecuSVG } from '../ui/tecu.js';
 import { montarBalanza } from '../ui/balanza.js';
-import { montarCuaderno } from '../ui/cuaderno.js';
+import { formatearEcuacion, htmlEcuacion, leerEcuacion, montarCuaderno } from '../ui/cuaderno.js';
 import * as Iconos from '../ui/iconos.js';
 import { crearStore } from '../data/store.js';
 import * as Paquete from '../data/paquete.js';
@@ -184,39 +184,6 @@ function tecuDice(estado, contenido, { tamano = 64, clase = '' } = {}) {
 }
 
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
-
-/** Ecuación con − tipográfico (igual que el cuaderno). */
-function formatear(texto) {
-  return bonito(
-    String(texto ?? '')
-      .replace(/[−‐-―﹣]/g, '-')
-      .replace(/X/g, 'x'),
-  );
-}
-
-/** Versión hablada para lectores de pantalla ("25/3" se leería "25 barra 3"). */
-function paraLector(texto) {
-  return formatear(texto)
-    .replace(/x/g, ' equis ')
-    .replace(/=/g, ' igual a ')
-    .replace(/\+/g, ' más ')
-    .replace(/−/g, ' menos ')
-    .replace(/[/÷]/g, ' entre ')
-    .replace(/[·×]/g, ' por ')
-    .replace(/\(/g, ' abre paréntesis ')
-    .replace(/\)/g, ' cierra paréntesis ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/** Si no cabe en una línea se parte antes de un "=", nunca a media expresión (como el cuaderno). */
-function matematica(texto) {
-  const visible = formatear(texto)
-    .split(' = ')
-    .map((lado) => lado.replace(/ /g, '\u00a0'))
-    .join(' = ');
-  return html`<span class="math cuaderno__texto" aria-hidden="true">${visible}</span><span class="solo-lector">${paraLector(texto)}</span>`;
-}
 const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
 const idMensaje = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -737,8 +704,10 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   function desplazarA(el, donde = 'inicio') {
     if (!el) return;
     const caja = el.getBoundingClientRect();
-    const arriba = barra.getBoundingClientRect().height + 8;
-    const abajo = nav.getBoundingClientRect().height + 8;
+    // Con letra grande en pantallas bajas el kit deja la barra superior en su lugar (no fija).
+    const fija = (e) => ['sticky', 'fixed'].includes(getComputedStyle(e).position);
+    const arriba = (fija(barra) ? barra.getBoundingClientRect().height : 0) + 8;
+    const abajo = (fija(nav) ? nav.getBoundingClientRect().height : 0) + 8;
     let y = window.scrollY;
     if (donde === 'final') y += caja.bottom - (window.innerHeight - abajo);
     else y += caja.top - arriba;
@@ -973,7 +942,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   }
 
   function describirEvento(e) {
-    const ej = e.ejercicio ? bonito(e.ejercicio) : '';
+    const ej = e.ejercicio ? formatearEcuacion(e.ejercicio) : '';
     switch (e.tipo) {
       case 'diagnostico':
         return `Diagnóstico: ${ej}`;
@@ -1252,10 +1221,11 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
    */
   function vistaProcedimiento(analisis, nivel = 2) {
     const filas = analisis.renglones || [];
+    const para = html`<span class="solo-lector"> para ${leerEcuacion(filas[0]?.texto || '')}</span>`;
     const titulo =
       nivel === 2
-        ? html`<h2 class="cuaderno__titulo titulo-3" id="est-proc-titulo">Tu procedimiento</h2>`
-        : html`<h3 class="cuaderno__titulo titulo-3" id="est-proc-titulo">Tu procedimiento</h3>`;
+        ? html`<h2 class="cuaderno__titulo titulo-3" id="est-proc-titulo">Tu procedimiento${para}</h2>`
+        : html`<h3 class="cuaderno__titulo titulo-3" id="est-proc-titulo">Tu procedimiento${para}</h3>`;
     return html`<section class="cuaderno-panel est-proc" data-modo="lectura" aria-labelledby="est-proc-titulo">
       ${titulo}
       <div class="cuaderno">
@@ -1264,7 +1234,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
             <span class="cuaderno__etiqueta">Ecuación<span class="solo-lector"> (renglón 1):</span></span>
             <span class="cuaderno__fila">
               <span class="cuaderno__num" aria-hidden="true">1</span>
-              <span class="cuaderno__contenido">${matematica(filas[0]?.texto || '')}</span>
+              <span class="cuaderno__contenido">${htmlEcuacion(filas[0]?.texto || '')}</span>
             </span>
           </p>
         </div>
@@ -1275,7 +1245,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
             return html`<li class="cuaderno__renglon" data-estado="${marca.estado}">
               <div class="cuaderno__fila">
                 <span class="cuaderno__num" aria-hidden="true">${n}</span>
-                <div class="cuaderno__contenido"><span class="solo-lector">Renglón ${n}: </span>${matematica(r.texto)}</div>
+                <div class="cuaderno__contenido"><span class="solo-lector">Renglón ${n}: </span>${htmlEcuacion(r.texto)}</div>
                 ${marca.texto ? html`<span class="cuaderno__estado">${marca.texto}</span>` : ''}
               </div>
             </li>`;
@@ -1466,7 +1436,8 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         estado = html`${ico('alerta')}<span>${nombreError(a.error.tipo, pack, true)} · renglón ${a.error.renglon}</span>`;
       } else estado = html`${ico('info')}<span>Sin terminar</span>`;
       return html`<li data-estado="${a.estado}"><span class="est-resumen__n">${k + 1}.</span>
-        <span class="math">${bonito(it.ejercicio)}</span><span class="est-resumen__estado">${estado}</span></li>`;
+        <span class="math" aria-hidden="true">${formatearEcuacion(it.ejercicio)}</span>
+        <span class="solo-lector">${leerEcuacion(it.ejercicio)}</span><span class="est-resumen__estado">${estado}</span></li>`;
     });
 
     return {
@@ -2621,10 +2592,11 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   });
 
   // La barra y la navegación son fijas: el foco nunca debe quedar tapado (WCAG 2.4.11).
+  // styles.css calcula scroll-padding con estas medidas (y lo apaga cuando las barras no son fijas).
   const ajustarMargenes = () => {
     const raizDoc = document.documentElement;
-    raizDoc.style.scrollPaddingTop = `${Math.ceil(barra.getBoundingClientRect().height) + 8}px`;
-    raizDoc.style.scrollPaddingBottom = `${Math.ceil(nav.getBoundingClientRect().height) + 8}px`;
+    raizDoc.style.setProperty('--alto-barra-medida', `${Math.ceil(barra.getBoundingClientRect().height)}px`);
+    raizDoc.style.setProperty('--alto-nav-medida', `${Math.ceil(nav.getBoundingClientRect().height)}px`);
   };
   if (typeof ResizeObserver === 'function') {
     const observador = new ResizeObserver(ajustarMargenes);
