@@ -323,10 +323,15 @@ iframe del modo pitch.
 ### `js/ui/ficha.js` y `js/ui/cuadernillo.js`
 
 ```js
-abrirFicha(resumenAlumno, pack) → void        // <dialog> modal accesible: procedimiento con el renglón roto
+abrirFicha(resumenAlumno, pack, { onImprimir, onCerrar, ahora } = {}) → HTMLDialogElement | null
+                                              // <dialog> modal accesible: procedimiento con el renglón roto
                                               // resaltado y explicado (explicarError 'docente'), ruta, pistas,
-                                              // solución pedida, comprobación sin ayuda, dudas, historial
-imprimirCuadernillo({ titulo, alumnos, tipo, ejercicios }, pack) → void   // arma la hoja y llama window.print()
+                                              // solución pedida, comprobación sin ayuda, dudas, historial.
+                                              // Una sola ficha a la vez; con el mismo estudiante se actualiza en
+                                              // su lugar (conserva foco y scroll). Si falta `detalle`, lo recalcula.
+cerrarFicha() → void ; fichaAbierta() → string | null   // id del estudiante con la ficha abierta
+imprimirCuadernillo({ titulo, alumnos, tipo, ejercicios, semilla }, pack, { imprimir = true }) → HTMLElement
+                                              // arma un juego por estudiante + clave para el docente y llama window.print()
 ```
 
 ## Fase 3 — Sin conexión de verdad (lo que ya existe y lo que falta)

@@ -51,17 +51,8 @@ test('todo archivo de la app está en PRECACHE (si no, se rompe el modo avión)'
  * VACÍA al terminar el proyecto.
  */
 const EN_CONSTRUCCION = new Set([
-  'css/docente.css',
-  'css/ficha.css',
-  'css/impresion.css',
   'css/pitch.css',
-  'js/data/grupo.js',
-  'js/data/analitica.js',
-  'js/ui/ficha.js',
-  'js/ui/cuadernillo.js',
-  'js/views/docente.js',
   'js/views/pitch.js',
-  // Fases 3 y 5
   'css/libre.css',
   'css/diapositiva.css',
   'js/ui/cola.js',
