@@ -430,11 +430,9 @@ function cuantosHizo(rng, donde, total) {
 
 /** Un error de otro tipo (clasificado) en uno de los ejercicios que le salieron bien. */
 function errorSecundario(ctx, dominante, libres, rng) {
+  const otros = TIPOS_DIAGNOSTICABLES.filter((tipo) => tipo !== dominante);
   const opciones = libres.flatMap((i) =>
-    TIPOS_DIAGNOSTICABLES.filter((t) => t !== dominante && escribirConError(ctx, ctx.ecuaciones[i], t)).map((tipo) => ({
-      i,
-      tipo,
-    })),
+    otros.filter((tipo) => escribirConError(ctx, ctx.ecuaciones[i], tipo)).map((tipo) => ({ i, tipo })),
   );
   return opciones.length ? rng.pick(opciones) : null;
 }
@@ -625,16 +623,42 @@ function eventoVisual(ctx, ruta, rng) {
   const v = (ctx.pack.errores?.[ruta.tipo] ?? ctx.pack.errores?.[TIPOS.NO_CLASIFICADO])?.ruta?.visual ?? {};
   const modo = v.modo ?? null;
   const ecuacionBalanza = v.ecuacion ?? null;
-  const resumen = { modo, ecuacion: ecuacionBalanza, acciones: rng.int(3, 12), intentos: rng.int(1, 3), ms: rng.int(40, 110) * SEGUNDO };
-  return { tipo: 'visual', ruta: ruta.tipo, aprobado: true, datos: { modo, ecuacion: ecuacionBalanza, resumen, omitida: false } };
+  // Como el `resumen` de onCompletar de la balanza (sin los campos propios de cada modo).
+  const resumen = {
+    modo,
+    ecuacion: ecuacionBalanza,
+    acciones: rng.int(3, 12),
+    intentos: rng.int(1, 3),
+    ms: rng.int(40, 110) * SEGUNDO,
+  };
+  return {
+    tipo: 'visual',
+    ruta: ruta.tipo,
+    aprobado: true,
+    datos: { modo, ecuacion: ecuacionBalanza, resumen, omitida: false },
+  };
 }
 
 function eventoPractica(ctx, ruta, ej, renglones, pistasUsadas, pidioSolucion, datos) {
-  return { tipo: 'practica', ruta: ruta.tipo, ...revisado(ctx, ej.ecuacion, renglones), pistasUsadas, pidioSolucion, datos: { ...datos } };
+  return {
+    tipo: 'practica',
+    ruta: ruta.tipo,
+    ...revisado(ctx, ej.ecuacion, renglones),
+    pistasUsadas,
+    pidioSolucion,
+    datos: { ...datos },
+  };
 }
 
 function eventoSolucion(ruta, ej, pistasUsadas, { nivel, numero }) {
-  return { tipo: 'solucion', ruta: ruta.tipo, ejercicio: ej.ecuacion, pidioSolucion: true, pistasUsadas, datos: { nivel, numero } };
+  return {
+    tipo: 'solucion',
+    ruta: ruta.tipo,
+    ejercicio: ej.ecuacion,
+    pidioSolucion: true,
+    pistasUsadas,
+    datos: { nivel, numero },
+  };
 }
 
 function eventoComprobacion(ctx, ruta, intento, renglones) {

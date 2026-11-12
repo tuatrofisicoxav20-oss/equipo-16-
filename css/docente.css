@@ -899,6 +899,7 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
   .docente-nav {
     order: 1;
     flex-basis: 100%;
+    min-width: 0;
     margin-inline: calc(-1 * var(--espacio-3));
   }
 
@@ -940,14 +941,25 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
   font-size: 0.9375rem;
 }
 
+/* Barra de una sola línea: título + "En vivo" */
 .docente-compacto .barra-superior {
   min-height: 0;
   padding-block: var(--espacio-2);
+  gap: var(--espacio-1) var(--espacio-3);
 }
 
 .docente-titulo {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.docente-compacto .barra-superior .docente-titulo {
+  font-size: var(--texto-base);
+}
+
+.docente-compacto .docente-vivo {
+  margin-inline-start: 0;
+  font-size: 0.8125rem;
 }
 
 .docente-compacto .contenido {
@@ -958,6 +970,10 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
   gap: var(--espacio-4);
 }
 
+.docente-compacto .docente-nota {
+  font-size: 0.8125rem;
+}
+
 .docente-compacto .docente-seccion {
   gap: var(--espacio-2);
 }
@@ -966,6 +982,11 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
   font-size: var(--titulo-3);
 }
 
+.docente-compacto .docente-seccion__nota {
+  font-size: var(--texto-chico);
+}
+
+/* Lo que más se repite */
 .docente-compacto .docente-repetido {
   padding: var(--espacio-3);
 }
@@ -973,6 +994,10 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
 .docente-compacto .docente-principal {
   gap: var(--espacio-2);
   padding: var(--espacio-3);
+}
+
+.docente-compacto .docente-principal__cabeza {
+  align-items: center;
 }
 
 .docente-compacto .docente-principal__icono {
@@ -990,10 +1015,24 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
 }
 
 .docente-compacto .docente-siguientes > li {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   padding-block: var(--espacio-1);
   font-size: var(--texto-chico);
 }
 
+.docente-compacto .docente-siguientes .docente-dato {
+  flex-wrap: nowrap;
+}
+
+.docente-compacto .docente-siguientes .docente-dato__barra {
+  flex-basis: 4rem;
+}
+
+.docente-compacto .docente-siguientes .docente-dato__texto {
+  white-space: nowrap;
+}
+
+/* A quién llamar */
 .docente-compacto .docente-llamadas {
   gap: var(--espacio-2);
 }
@@ -1008,18 +1047,38 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
   padding: var(--espacio-2);
 }
 
+/* Mapa: encabezados de los errores en vertical para que quepan las 7 columnas */
 .docente-compacto .docente-mapa caption {
   padding: var(--espacio-2) var(--espacio-3);
 }
 
 .docente-compacto .docente-celda {
-  min-width: 3.5rem;
+  min-width: 2.75rem;
+  padding-inline: var(--espacio-1);
 }
 
 .docente-compacto .docente-celda-nombre {
-  min-width: 8.5rem;
+  min-width: 7rem;
 }
 
+.docente-compacto .docente-celda-estado .chip {
+  min-height: 1.5rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+}
+
+.docente-compacto .docente-th--error .docente-orden {
+  min-width: var(--objetivo);
+  padding: var(--espacio-2) var(--espacio-1);
+}
+
+.docente-compacto .docente-th--error .docente-orden__texto {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+}
+
+/* Grupos de refuerzo */
 .docente-compacto .docente-grupos {
   gap: var(--espacio-2);
 }
