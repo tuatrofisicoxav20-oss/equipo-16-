@@ -1,5 +1,5 @@
 /* =========================================================
-   Estudiando Ando · núcleo
+   Tecu Aprende · núcleo
    Utilidades compartidas: plantillas seguras, iconos, mascota,
    almacenamiento, avisos, diálogo modal y lectura en voz alta.
    Todos los módulos cuelgan del espacio de nombres global `TA`.
@@ -120,7 +120,7 @@
   );
 
   /* ---------------------------------------------------------
-     Mascota: el tecolote tutor de Estudiando Ando (ilustración decorativa)
+     Mascota: Tecu, el tecolote tutor (ilustración decorativa)
      --------------------------------------------------------- */
   function mascot({ mood = 'happy', size = 96, face = false, local = false, float = false } = {}) {
     const D = '#0B2F45';
@@ -159,7 +159,7 @@
      Almacenamiento local (puede no estar disponible:
      navegación privada, permisos bloqueados…)
      --------------------------------------------------------- */
-  const PREFIX = 'estudiando-ando:';
+  const PREFIX = 'tecu:';
   TA.store = {
     get(key, fallback) {
       try {

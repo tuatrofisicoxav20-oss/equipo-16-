@@ -1,6 +1,6 @@
 {
-  "name": "Estudiando Ando",
-  "short_name": "Estudiando Ando",
+  "name": "Tecu Aprende",
+  "short_name": "Tecu",
   "description": "Aprendizaje adaptativo con un tutor de IA que guía sin dar respuestas y funciona con conectividad limitada.",
   "lang": "es-MX",
   "start_url": "./index.html",

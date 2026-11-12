@@ -1,5 +1,5 @@
 /* =========================================================
-   Estudiando Ando · datos de la demostración
+   Tecu Aprende · datos de la demostración
    Alcance del prototipo: Matemáticas de 1.º de secundaria,
    ecuaciones lineales con una incógnita.
    Todos los nombres y datos de estudiantes son ficticios.
@@ -115,9 +115,9 @@
       },
       chat: [
         { from: 'me', text: 'No entiendo cómo resolver 3x + 5 = 20' },
-        { from: 'tutor', text: 'Vamos paso a paso; no te daré el resultado todavía. ¿Qué quieres dejar solo de un lado de la igualdad?' },
+        { from: 'tecu', text: 'Vamos paso a paso; no te daré el resultado todavía. ¿Qué quieres dejar solo de un lado de la igualdad?' },
         { from: 'me', text: 'La x' },
-        { from: 'tutor', text: '¡Exacto! Para dejar 3x solo, ¿qué número tienes que quitar de los dos lados? Si dudas, pide una pista.' }
+        { from: 'tecu', text: '¡Exacto! Para dejar 3x solo, ¿qué número tienes que quitar de los dos lados? Si dudas, pide una pista.' }
       ]
     },
     d: {
@@ -149,9 +149,9 @@
       },
       chat: [
         { from: 'me', text: 'Si a un número le sumo 5 me da 20. No sé por dónde empezar' },
-        { from: 'tutor', text: 'Leamos con calma. ¿Qué es lo que te piden encontrar?' },
+        { from: 'tecu', text: 'Leamos con calma. ¿Qué es lo que te piden encontrar?' },
         { from: 'me', text: 'El número' },
-        { from: 'tutor', text: '¡Eso es! A ese número desconocido lo llamamos x. ¿Cómo escribirías «le sumo 5 y obtengo 20»? Si dudas, pide una pista.' }
+        { from: 'tecu', text: '¡Eso es! A ese número desconocido lo llamamos x. ¿Cómo escribirías «le sumo 5 y obtengo 20»? Si dudas, pide una pista.' }
       ]
     }
   };

@@ -1,5 +1,5 @@
 /* =========================================================
-   Estudiando Ando · aplicación
+   Tecu Aprende · aplicación
    Estado, persistencia, conexión, enrutador por hash,
    estructura de la página, ajustes de accesibilidad y
    delegación de eventos.
@@ -175,7 +175,7 @@
       }
       const p = TA.student.progress();
       const q = p.chat.filter((m) => m.status === 'queued').length;
-      if (q) items.push({ n: q, icon: 'chat', label: `${TA.util.plural(q, 'pregunta', 'preguntas')} para Estudiando Ando` });
+      if (q) items.push({ n: q, icon: 'chat', label: `${TA.util.plural(q, 'pregunta', 'preguntas')} para Tecu` });
       if (p.pendingSync) items.push({ n: p.pendingSync, icon: 'check', label: `${TA.util.plural(p.pendingSync, 'resultado guardado', 'resultados guardados')} en tu equipo` });
       return items;
     },
@@ -188,7 +188,7 @@
       TA.save();
       TA.render();
       const parts = [];
-      if (answered) parts.push(`Estudiando Ando respondió ${TA.util.plural(answered, 'pregunta guardada', 'preguntas guardadas')}`);
+      if (answered) parts.push(`Tecu respondió ${TA.util.plural(answered, 'pregunta guardada', 'preguntas guardadas')}`);
       if (sent) parts.push(`se ${sent === 1 ? 'envió' : 'enviaron'} ${TA.util.plural(sent, 'mensaje', 'mensajes')}`);
       if (parts.length) TA.toast(`Sincronizado: ${parts.join(' y ')}.`, { tone: 'ok' });
       else if (!auto) TA.toast('Todo está sincronizado.', { tone: 'ok' });
@@ -219,7 +219,7 @@
     '/inicio': { role: 'student', nav: 'inicio', title: 'Inicio', view: () => TA.student.views.home() },
     '/aprender': { role: 'student', nav: 'aprender', title: 'Aprender', view: () => TA.student.views.learn() },
     '/diagnostico': { role: 'student', nav: 'aprender', title: 'Evaluación diagnóstica', view: () => TA.student.views.diagnostic() },
-    '/tutor': { role: 'student', nav: 'tutor', title: 'Tu tutor', view: () => TA.student.views.tutor() },
+    '/tutor': { role: 'student', nav: 'tutor', title: 'Tecu, tu tutor', view: () => TA.student.views.tutor() },
     '/comprobar': { role: 'student', nav: 'aprender', title: 'Comprueba lo aprendido', view: () => TA.student.views.check() },
     '/progreso': { role: 'student', nav: 'progreso', title: 'Mi progreso', view: () => TA.student.views.progress() },
     '/descargas': { role: 'student', nav: 'descargas', title: 'Descargas y modo local', view: () => TA.student.views.downloads() },
@@ -237,7 +237,7 @@
     student: [
       { id: 'inicio', href: '#/inicio', icon: 'home', label: 'Inicio' },
       { id: 'aprender', href: '#/aprender', icon: 'book', label: 'Aprender' },
-      { id: 'tutor', href: '#/tutor', icon: 'chat', label: 'Tutor' },
+      { id: 'tutor', href: '#/tutor', icon: 'chat', label: 'Tecu' },
       { id: 'progreso', href: '#/progreso', icon: 'chart', label: 'Progreso' },
       { id: 'descargas', href: '#/descargas', icon: 'download', label: 'Descargas' }
     ],
@@ -281,7 +281,7 @@
     return html`<header class="topbar" role="banner">
       <a class="brand" href="#${HOME[TA.state.role]}">
         <span class="brand__mark">${mascot({ size: 30, face: true })}</span>
-        <span class="brand__text">Estudiando Ando<span class="brand__sub">${isT ? 'Módulo docente' : 'Módulo del estudiante'}</span></span>
+        <span class="brand__text">Tecu Aprende<span class="brand__sub">${isT ? 'Módulo docente' : 'Módulo del estudiante'}</span></span>
       </a>
       <div class="topbar__actions">
         ${ui.netButton()}
@@ -335,7 +335,7 @@
 
   function footer() {
     return html`<footer class="footer">
-      <p>Estudiando Ando · prototipo del Equipo 16 · Los datos son ficticios.</p>
+      <p>Tecu Aprende · prototipo del Equipo 16 · Los datos son ficticios.</p>
       <ul class="footer__links">
         <li><a class="link" href="#/acerca">Acerca del proyecto</a></li>
         <li><button type="button" class="link-btn" data-action="open-a11y" data-fk="footer-a11y" aria-haspopup="dialog">Ajustes de accesibilidad</button></li>
@@ -365,7 +365,7 @@
         <main id="contenido" class="main" tabindex="-1">${route.render()}</main>
       </div>
       ${footer()}`);
-    document.title = `${route.title} · Estudiando Ando`;
+    document.title = `${route.title} · Tecu Aprende`;
     if (key) TA.focus.restore(key, app);
   };
 
@@ -375,8 +375,8 @@
     return html`
       <h1 id="page-title" class="stage__title">${phone ? 'Vista móvil' : 'Vista de escritorio'}</h1>
       <p>${phone
-        ? 'Así se ve Estudiando Ando en un teléfono de 390 × 844 px. Úsala con normalidad: dentro del marco puedes navegar, responder y escribir.'
-        : `Así se ve Estudiando Ando en una pantalla de computadora de ${DESKTOP_WIDTH} px de ancho, reducida para que quepa en tu ventana.`}</p>
+        ? 'Así se ve Tecu Aprende en un teléfono de 390 × 844 px. Úsala con normalidad: dentro del marco puedes navegar, responder y escribir.'
+        : `Así se ve Tecu Aprende en una pantalla de computadora de ${DESKTOP_WIDTH} px de ancho, reducida para que quepa en tu ventana.`}</p>
       ${viewControl()}
       <p class="stage__note">${icon('info', 18)}<span>Tus respuestas y ajustes se comparten entre las vistas. Elige «Automática» para volver a la vista que corresponde a tu pantalla.</span></p>`;
   }
@@ -403,7 +403,7 @@
           <header class="topbar" role="banner">
             <span class="brand">
               <span class="brand__mark">${mascot({ size: 30, face: true })}</span>
-              <span class="brand__text">Estudiando Ando<span class="brand__sub">Demostración · ${label}</span></span>
+              <span class="brand__text">Tecu Aprende<span class="brand__sub">Demostración · ${label}</span></span>
             </span>
             <div class="topbar__actions">
               <button type="button" class="btn btn--ghost-inverse btn--icon-label" data-action="open-a11y" aria-haspopup="dialog">${icon('access', 20)}<span class="hide-sm">Accesibilidad</span><span class="sr-only show-sm">Accesibilidad</span></button>
@@ -412,11 +412,11 @@
           <main id="contenido" class="stage__main" tabindex="-1">
             <div class="stage__intro" id="stage-intro">${stageIntro(mode)}</div>
             <div class="device device--${mode}">
-              <iframe id="device-frame" class="device__frame" src="${src}" title="Estudiando Ando en ${label}"></iframe>
+              <iframe id="device-frame" class="device__frame" src="${src}" title="Tecu Aprende en ${label}"></iframe>
             </div>
           </main>
         </div>`);
-      document.title = `${mode === 'phone' ? 'Vista móvil' : 'Vista de escritorio'} · Estudiando Ando`;
+      document.title = `${mode === 'phone' ? 'Vista móvil' : 'Vista de escritorio'} · Tecu Aprende`;
       if (stageObserver) {
         stageObserver.disconnect();
         if (mode === 'desktop') stageObserver.observe(app.querySelector('.device'));
@@ -439,7 +439,7 @@
     if (viewMode() !== 'app') {
       // La dirección cambió fuera del marco (por ejemplo, a mano): el marco la sigue.
       const frame = document.getElementById('device-frame');
-      if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'estudiando-ando:go', hash: window.location.hash }, msgOrigin());
+      if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'tecu:go', hash: window.location.hash }, msgOrigin());
       TA.render();
       TA.state.ui.firstRender = false;
       return;
@@ -447,7 +447,7 @@
     TA.render();
     if (EMBEDDED) {
       // Dentro del marco: se informa la pantalla actual para conservarla al cambiar de vista.
-      window.parent.postMessage({ type: 'estudiando-ando:route', hash: window.location.hash, title: document.title }, msgOrigin());
+      window.parent.postMessage({ type: 'tecu:route', hash: window.location.hash, title: document.title }, msgOrigin());
     }
     const first = TA.state.ui.firstRender;
     TA.state.ui.firstRender = false;
@@ -505,7 +505,7 @@
     return html`<div class="stack" id="conn-panel">
       <div class="banner banner--${n.tone}" role="note">${icon(n.icon, 22)}<div>
         <p class="banner__title">${n.label}</p>
-        <p>${status === 'online' ? 'Todo funciona: Estudiando Ando conversa contigo y tu avance se sincroniza al momento.'
+        <p>${status === 'online' ? 'Todo funciona: Tecu conversa contigo y tu avance se sincroniza al momento.'
           : status === 'local' ? 'Elegiste no usar datos. Funciona lo descargado; lo demás espera.'
             : 'No hay conexión. Funciona lo descargado; lo demás se enviará después.'}</p>
       </div></div>
@@ -752,12 +752,12 @@
   window.addEventListener('message', (e) => {
     const msg = e.data;
     if (!msg || typeof msg !== 'object' || typeof msg.hash !== 'string' || !msg.hash.startsWith('#/') || msg.hash.length > 200) return;
-    if (msg.type === 'estudiando-ando:route') {
+    if (msg.type === 'tecu:route') {
       const frame = document.getElementById('device-frame');
       if (!frame || e.source !== frame.contentWindow) return;
       window.history.replaceState(null, '', msg.hash);
       if (typeof msg.title === 'string') document.title = `${msg.title.slice(0, 120)} (${viewMode() === 'phone' ? 'vista móvil' : 'vista de escritorio'})`;
-    } else if (msg.type === 'estudiando-ando:go' && EMBEDDED && e.source === window.parent && window.location.hash !== msg.hash) {
+    } else if (msg.type === 'tecu:go' && EMBEDDED && e.source === window.parent && window.location.hash !== msg.hash) {
       window.location.hash = msg.hash;
     }
   });

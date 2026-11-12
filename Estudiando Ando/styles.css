@@ -1,5 +1,5 @@
 /* =========================================================
-   Estudiando Ando · estilos
+   Tecu Aprende · estilos
    ---------------------------------------------------------
    1. Tokens (claro, oscuro, alto contraste)
    2. Ajustes de accesibilidad del usuario
@@ -951,11 +951,11 @@ input:hover, select:hover, textarea:hover { border-color: var(--ink-2); }
   position: relative;
 }
 .msg { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
-.msg--tutor { flex-direction: row; align-items: flex-end; gap: 0.5rem; }
+.msg--tecu { flex-direction: row; align-items: flex-end; gap: 0.5rem; }
 .msg__body { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; max-width: 86%; }
 .msg__bubble { padding: 0.625rem 0.875rem; border-radius: 1rem; max-width: 86%; }
 .msg--me .msg__bubble { background: var(--brand); color: var(--on-brand); border-bottom-right-radius: 0.25rem; }
-.msg--tutor .msg__bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 0.25rem; max-width: 100%; }
+.msg--tecu .msg__bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 0.25rem; max-width: 100%; }
 .msg__bubble--typing { color: var(--muted); font-style: italic; }
 .msg__status { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8125rem; color: var(--warn); font-weight: 700; }
 .quick { display: flex; flex-wrap: wrap; gap: 0.5rem; }

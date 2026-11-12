@@ -1,11 +1,11 @@
 /* =========================================================
-   Estudiando Ando · Service worker
+   Tecu Aprende · Service worker
    Guarda la aplicación en el dispositivo para usarla sin
    internet (requiere servirse por http/https, no file://).
    ========================================================= */
 'use strict';
 
-const CACHE = 'estudiando-ando-v1';
+const CACHE = 'tecu-v2';
 const SHELL = [
   './',
   './index.html',
