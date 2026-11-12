@@ -99,10 +99,13 @@ export function fmtEcuacion(eq) {
  * Convierte un texto escrito por el estudiante a formato de pantalla (− en vez de -).
  * Acepta también el − tipográfico (U+2212) y los demás guiones que entiende normalizar():
  * "3x−5=20" queda "3x − 5 = 20" igual que "3x-5=20". Aplicarla dos veces no cambia nada.
+ * Los "=" repetidos se juntan ("3x == 25" → "3x = 25"), igual que en normalizar(): el motor
+ * los lee como uno solo y así se citan.
  */
 export function bonito(texto) {
   return String(texto ?? '')
     .replace(/[−‐-―﹣˗➖]/g, '-')
+    .replace(/=(?:\s*=)+/g, '=')
     .replace(/\s*([=+])\s*/g, ' $1 ')
     .replace(/([\dxX)\]])\s*-\s*/g, `$1 ${MENOS} `) // resta: después de número, x o paréntesis
     .replace(/-\s*/g, MENOS) // signo de un negativo: −3 (sin espacio)
@@ -118,7 +121,8 @@ export function bonito(texto) {
 const MENSAJES = {
   vacio: () => 'El renglón está vacío.',
   simbolo: (c) => `No reconozco «${c}». Usa números, x, +, −, ×, ÷, paréntesis y =.`,
-  letra: (c) => `Escribiste «${c}». Usa solo la letra x, sin palabras ni unidades (por ejemplo: x = 5).`,
+  // Sin ejemplo numérico: «x = 5» era justo la respuesta del primer ejercicio del diagnóstico.
+  letra: (c) => `Escribiste «${c}». Usa solo números, signos y la letra x, sin palabras ni unidades.`,
   x_numero: (frag) =>
     `En «${frag}» hay un número justo después de la x. Para multiplicar usa · o paréntesis, como 3·5 o 3(5); si es la incógnita, el número va antes: 2x.`,
   largo: () => 'Ese renglón es muy largo. Escribe la ecuación con menos términos.',
@@ -164,7 +168,9 @@ export function normalizar(raw) {
   s = s.replace(/(\d)\s*,\s*(?=\d)/g, '$1.');
   s = s.replace(/([\dx)])\s*:\s*(?=[\dx(+-])/g, '$1/');
   s = s.replace(/\s+/g, '');
-  s = s.replace(/\.+$/, ''); // punto final de oración: "15 = 3x."
+  // Al final del renglón: punto de oración ("15 = 3x."), el ";" o la "," que pone el
+  // autocorrector del celular y la palomita de la comprobación ("x = 5 ✓").
+  s = s.replace(/[.;,✓✔✅☑]+$/, '');
   s = s.replace(/={2,}/g, '=');
   return s;
 }
@@ -172,7 +178,23 @@ export function normalizar(raw) {
 /** ≈ 30 términos: de sobra para 1.º de secundaria y evita que un renglón pegado congele el celular. */
 const MAX_TOKENS = 60;
 
-function tokenizar(s) {
+/**
+ * Lo que el estudiante escribió con letras, para citarlo completo («no se», «cm», «cinco») y no
+ * solo su primera letra: la primera palabra que no es la x y las palabras que le siguen.
+ */
+function palabrasEscritas(crudo) {
+  const texto = String(crudo ?? '').normalize('NFKC');
+  const palabras = [...texto.matchAll(/[\p{L}\p{M}]+/gu)];
+  const k = palabras.findIndex((m) => /[^xX]/.test(m[0]));
+  if (k < 0) return null;
+  const fin = (m) => m.index + m[0].length;
+  let u = k;
+  while (u + 1 < palabras.length && /^\s+$/.test(texto.slice(fin(palabras[u]), palabras[u + 1].index)) && /[^xX]/.test(palabras[u + 1][0])) u++;
+  const cita = texto.slice(palabras[k].index, fin(palabras[u])).replace(/\s+/g, ' ');
+  return cita.length > 30 ? `${cita.slice(0, 29)}…` : cita;
+}
+
+function tokenizar(s, crudo = s) {
   const out = [];
   for (let i = 0; i < s.length; ) {
     const c = s[i];
@@ -204,7 +226,8 @@ function tokenizar(s) {
       i++;
     } else {
       const cp = String.fromCodePoint(s.codePointAt(i)); // emoji completo, no medio par sustituto
-      throw new ParseError(/\p{L}/u.test(cp) ? 'letra' : 'simbolo', cp);
+      if (/\p{L}/u.test(cp)) throw new ParseError('letra', palabrasEscritas(crudo) ?? cp);
+      throw new ParseError('simbolo', cp);
     }
     if (out.length > MAX_TOKENS) throw new ParseError('largo');
   }
@@ -376,7 +399,7 @@ export function parsearRenglon(raw) {
   try {
     const src = normalizar(raw);
     if (!src) throw new ParseError('vacio');
-    const tokens = tokenizar(src);
+    const tokens = tokenizar(src, raw);
     const grupos = [[]];
     for (const tok of tokens) {
       if (tok.t === '=') grupos.push([]);
@@ -733,9 +756,12 @@ function divisiones(base) {
 
   const comun = { coef: fmtCoefX(a), coefNum: fmtNum(a), b: fmtNum(b), correcto: fmtNum(correcto) };
   const variantes = [];
+  // Con −x el coeficiente (−1) no está escrito: "restó el −1" o "sumó el −1" solo dice que la
+  // respuesta se pasó por uno. Es una explicación posible, nunca segura (`incierto` ⇒ confianza media).
+  const sinCoeficienteEscrito = a.eq(-1);
   if (a.isInt()) {
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', opSegura(b, 'sub', a)]);
-    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', opSegura(b, 'add', a)]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', opSegura(b, 'sub', a), sinCoeficienteEscrito]);
+    variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', opSegura(b, 'add', a), sinCoeficienteEscrito]);
     variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'multiplica', opSegura(b, 'mul', a)]);
     if (!b.isZero()) variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'invierte', opSegura(a, 'div', b)]);
   } else if (Math.abs(a.n) === 1) {
@@ -753,7 +779,7 @@ function divisiones(base) {
   if (conNegativos) variantes.push([TIPOS.SIGNO_NEGATIVO, 'pierde_signo', correcto.neg()]);
   variantes.push([TIPOS.UN_SOLO_LADO, 'divide_solo_x', b]);
 
-  for (const [tipo, variante, valor] of variantes) {
+  for (const [tipo, variante, valor, incierto = false] of variantes) {
     if (!valor || valor.eq(correcto)) continue;
     // −2x = −4 → x = −2: con negativos, "el resultado con el signo cambiado" es perder el
     // signo (SIGNO_NEGATIVO), no "restaste el −2" (b − a coincide con −b/a por casualidad).
@@ -764,11 +790,14 @@ function divisiones(base) {
       ops,
       fantasma,
       final: true,
+      incierto,
     });
   }
   // Divide (o multiplica) solo el lado de los números: 3x = 15 -> 3x = 5
-  // (el número que queda es el mismo `correcto`, b/a: no hace falta recalcularlo)
-  if (!correcto.eq(b)) {
+  // (el número que queda es el mismo `correcto`, b/a: no hace falta recalcularlo).
+  // Con −x no aplica: "dividir entre −1 solo el número" es cambiarle el signo, y eso es el
+  // desliz de cuenta más común (12 − x = 5 → −x = 7 es 5 − 12 mal hecho), no dividir un lado.
+  if (!correcto.eq(b) && !a.eq(-1)) {
     const X = [{ c: a, x: true }];
     const N = [{ c: correcto, x: false }];
     out.push({
@@ -1074,8 +1103,8 @@ function buscarAritmetica(vS, correctos, escrita) {
 /**
  * El candidato que mejor explica el renglón: menos pasos; a igualdad, el que coincide término
  * a término con lo escrito (`esLiteral`) y luego el de mayor prioridad.
- * `empate`: otra regla de OTRO tipo lo explica con los mismos pasos e igual de literal
- * (la prioridad decidió, no la evidencia).
+ * `dudoso`: otra regla de OTRO tipo lo explica con los mismos pasos e igual de literal
+ * (la prioridad decidió, no la evidencia), o la regla elegida es solo una posibilidad.
  */
 function elegir(lista, esLiteral = () => false) {
   const lit = new Map(lista.map((c) => [c, esLiteral(c) ? 0 : 1]));
@@ -1086,7 +1115,8 @@ function elegir(lista, esLiteral = () => false) {
   const alternativas = [...new Set(orden.map((c) => c.mal.tipo))].filter((t) => t !== mejor.mal.tipo);
   const empate = orden.some((c) => c.ops === mejor.ops && lit.get(c) === lit.get(mejor) && c.mal.tipo !== mejor.mal.tipo);
   // Copia: los candidatos viven en la memoria de clasificar() y no se deben poder modificar desde fuera.
-  return { tipo: mejor.mal.tipo, detalle: { ...mejor.mal.detalle }, ops: mejor.ops, alternativas, empate };
+  // `dudoso`: la prioridad decidió un empate, o la regla misma es solo una posibilidad (`incierto`).
+  return { tipo: mejor.mal.tipo, detalle: { ...mejor.mal.detalle }, ops: mejor.ops, alternativas, dudoso: empate || Boolean(mejor.incierto) };
 }
 
 /**
@@ -1151,8 +1181,8 @@ export function clasificar(previa, escrita) {
   return sinDesborde(() => clasificarExacto(previa, escrita), null) ?? noClasificado();
 }
 
-/** Resultado de elegir() sin la marca interna de empate. */
-function sinEmpate({ empate, ...elegido }) {
+/** Resultado de elegir() sin la marca interna de duda. */
+function sinMarcas({ dudoso, ...elegido }) {
   return elegido;
 }
 
@@ -1176,7 +1206,7 @@ function clasificarExacto(previa, escrita) {
     const elegido = elegir(exactos, (c) => escritoTalCual(escrita, c));
     // Una explicación que necesita 3 operaciones seguidas es posible, no segura; tampoco
     // cuando otra regla, de otro tipo, explica el renglón con los mismos pasos.
-    return { ...sinEmpate(elegido), confianza: elegido.ops >= 3 || elegido.empate ? 'media' : 'alta' };
+    return { ...sinMarcas(elegido), confianza: elegido.ops >= 3 || elegido.dudoso ? 'media' : 'alta' };
   }
 
   const arit = buscarAritmetica(vS, correctos, escrita);
@@ -1197,7 +1227,7 @@ function clasificarExacto(previa, escrita) {
       return c.sol !== null && mismaSolucion(c.sol, solS);
     });
     tipos = [...new Set(equivalentes.map((c) => c.mal.tipo))];
-    if (tipos.length === 1) return { ...sinEmpate(elegir(equivalentes)), confianza: 'media' };
+    if (tipos.length === 1) return { ...sinMarcas(elegir(equivalentes)), confianza: 'media' };
   }
 
   return noClasificado(tipos);
@@ -1345,7 +1375,9 @@ function clasificarSeguro(previa, escrita) {
 
 function analizarSinRed(renglones, avance = { renglon: 1, info: [] }) {
   // Conserva el número de renglón original aunque haya renglones vacíos en medio.
-  const textos = (renglones || []).map((r, idx) => ({ n: idx + 1, texto: String(r ?? '').trim() })).filter((r) => r.texto);
+  // Un texto suelto se toma como sus renglones (uno por línea); cualquier otra cosa, como nada escrito.
+  const lista = Array.isArray(renglones) ? renglones : typeof renglones === 'string' ? renglones.split(/\r?\n/) : [];
+  const textos = lista.map((r, idx) => ({ n: idx + 1, texto: String(r ?? '').trim() })).filter((r) => r.texto);
   if (!textos.length) return { estado: 'vacio', renglones: [] };
 
   const info = textos.map(({ n, texto }) => ({ n, texto, ...parsearRenglon(texto) }));
@@ -1485,6 +1517,7 @@ function elegirLadoX(eq) {
  * única o si los números no caben en la aritmética exacta.
  */
 export function pasosSolucion(eqInicial) {
+  if (!Array.isArray(eqInicial?.L) || !Array.isArray(eqInicial?.R)) return []; // no es una ecuación del motor
   return sinDesborde(() => pasosExactos(eqInicial), []);
 }
 
@@ -1667,7 +1700,9 @@ export const PLAN_EJERCICIOS = {
  */
 export function generarEjercicio(tipo, nivel, rng, evitar = []) {
   const plan = PLAN_EJERCICIOS[tipo] || PLAN_EJERCICIOS.NO_CLASIFICADO;
-  const formaId = plan[Math.min(Math.max(nivel, 1), 3) - 1];
+  // Un nivel que no es un número (undefined, 'x') se toma como 1: antes tronaba con FORMAS[undefined].
+  const n = Math.round(Number(nivel));
+  const formaId = plan[Math.min(Math.max(Number.isFinite(n) ? n : 1, 1), 3) - 1];
   const usados = new Set(evitar);
   let ultimo = null;
   for (let intento = 0; intento < 40; intento++) {

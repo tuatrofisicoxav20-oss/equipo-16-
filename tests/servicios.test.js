@@ -7,6 +7,7 @@ import {
   leerPreferencias,
   guardarPreferencias,
   aplicarPreferencias,
+  restablecerPreferencias,
   alCambiarPreferencias,
 } from '../js/services/preferencias.js';
 import { crearRed } from '../js/services/red.js';
@@ -65,15 +66,50 @@ function crearNavegador() {
   return { datos, abrirPestana };
 }
 
-/** `document` mínimo: atributos y classList de <html>. */
-function crearDocumento() {
+/** Consulta de medios falsa: `matches` se puede cambiar y avisa a quien escucha 'change'. */
+function crearConsulta(inicial = false) {
+  const escuchas = new Set();
+  let valor = inicial;
+  return {
+    get matches() {
+      return valor;
+    },
+    addEventListener: (tipo, fn) => tipo === 'change' && escuchas.add(fn),
+    removeEventListener: (tipo, fn) => escuchas.delete(fn),
+    cambiar(nuevo) {
+      valor = nuevo;
+      for (const fn of escuchas) fn({ matches: nuevo });
+    },
+  };
+}
+
+/**
+ * `document` mínimo: atributos, dataset y classList de <html>, y el meta theme-color.
+ * `oscuro` = el sistema está en modo oscuro (prefers-color-scheme).
+ */
+function crearDocumento({ oscuro = false, conMeta = true } = {}) {
   const atributos = new Map();
   const clases = new Set();
+  const kebab = (nombre) => `data-${String(nombre).replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`;
+  const meta = { content: '#000000', setAttribute: (n, v) => n === 'content' && (meta.content = String(v)), getAttribute: (n) => (n === 'content' ? meta.content : null) };
+  const sistema = crearConsulta(oscuro);
   const documentElement = {
     setAttribute: (nombre, valor) => atributos.set(nombre, String(valor)),
     removeAttribute: (nombre) => atributos.delete(nombre),
     getAttribute: (nombre) => atributos.get(nombre) ?? null,
     hasAttribute: (nombre) => atributos.has(nombre),
+    dataset: new Proxy({}, {
+      get: (_, nombre) => atributos.get(kebab(nombre)),
+      set: (_, nombre, valor) => (atributos.set(kebab(nombre), String(valor)), true),
+      deleteProperty: (_, nombre) => (atributos.delete(kebab(nombre)), true),
+    }),
+    get className() {
+      return [...clases].join(' ');
+    },
+    set className(valor) {
+      clases.clear();
+      for (const c of String(valor).split(/\s+/).filter(Boolean)) clases.add(c);
+    },
     classList: {
       add: (...c) => c.forEach((x) => clases.add(x)),
       remove: (...c) => c.forEach((x) => clases.delete(x)),
@@ -88,8 +124,22 @@ function crearDocumento() {
   };
   return {
     documentElement,
+    querySelector: (selector) => (conMeta && /meta\[name=["']?theme-color["']?\]/.test(selector) ? meta : null),
+    defaultView: { matchMedia: (consulta) => (/prefers-color-scheme:\s*dark/.test(consulta) ? sistema : crearConsulta(false)) },
+    sistema,
     /** Foto de lo que importa para el CSS. */
-    estado: () => ({ texto: atributos.get('data-texto') ?? null, clases: [...clases].sort() }),
+    estado: () => ({
+      tema: atributos.get('data-theme') ?? null,
+      tamano: atributos.get('data-text') ?? null,
+      espaciado: atributos.get('data-spacing') ?? null,
+      movimiento: atributos.get('data-motion') ?? null,
+      simple: atributos.get('data-simple') ?? null,
+      texto: atributos.get('data-texto') ?? null,
+      clases: [...clases].sort(),
+      color: conMeta ? meta.content : null,
+    }),
+    /** Solo el contrato anterior (data-texto y clases). */
+    anterior: () => ({ texto: atributos.get('data-texto') ?? null, clases: [...clases].sort() }),
   };
 }
 
@@ -119,47 +169,264 @@ function silenciar(metodo, fn) {
 
 // ---------------------------------------------------------------------------
 
+/** Lo que devuelve leerPreferencias() sin nada guardado: el modelo más los dos derivados. */
+const POR_DEFECTO = { ...PREFS_POR_DEFECTO, texto: 'normal', contraste: false };
+const CLARO = '#0B2F45';
+const OSCURO = '#08141A';
+
+/** Un almacenamiento que siempre falla (cada prueba el suyo: el módulo recuerda la sesión por almacenamiento). */
+const crearRoto = () => ({ ...roto });
+
+/**
+ * Fragmento canónico para index.html: aplica lo guardado antes del primer pintado.
+ * Debe ir en <head>, después de <meta name="theme-color"> y antes de las hojas de estilo.
+ */
+const SCRIPT_EN_LINEA = `
+    // Aplica las preferencias guardadas antes del primer pintado (sin parpadeo).
+    // Hace lo mismo que aplicarPreferencias() de js/services/preferencias.js (lo comprueba tests/servicios.test.js).
+    (function () {
+      var h = document.documentElement, p = {};
+      try { p = JSON.parse(localStorage.getItem('tecu:prefs')) || {}; } catch (e) { /* sin almacenamiento o dañado: valores por defecto */ }
+      var uno = function (v, lista) { return lista.indexOf(v) >= 0 ? v : lista[0]; };
+      var tema = uno(p.tema, ['sistema', 'claro', 'oscuro', 'contraste']);
+      var tam = uno(p.tamano, ['md', 'lg', 'xl', 'xxl']);
+      // Modelo anterior ({ texto, contraste }): si contradice al nuevo, manda el anterior.
+      var texto = { md: 'normal', lg: 'grande', xl: 'muy-grande', xxl: 'muy-grande' };
+      if (['normal', 'grande', 'muy-grande'].indexOf(p.texto) >= 0 && p.texto !== texto[tam]) tam = { normal: 'md', grande: 'lg' }[p.texto] || 'xl';
+      if (typeof p.contraste === 'boolean' && p.contraste !== (tema === 'contraste')) tema = p.contraste ? 'contraste' : 'sistema';
+      var reducir = p.movimiento === 'reducido';
+      h.setAttribute('data-theme', { sistema: 'system', claro: 'light', oscuro: 'dark', contraste: 'contrast' }[tema]);
+      h.setAttribute('data-text', tam);
+      h.setAttribute('data-spacing', p.espaciado === true ? 'wide' : 'normal');
+      h.setAttribute('data-motion', reducir ? 'reduce' : 'system');
+      h.setAttribute('data-simple', p.simple === true ? 'on' : 'off');
+      if (tam !== 'md') h.setAttribute('data-texto', texto[tam]);
+      if (tema === 'contraste') h.classList.add('alto-contraste');
+      if (reducir) h.classList.add('reducir-movimiento');
+      var oscuro = tema === 'oscuro' || (tema === 'sistema' && typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', oscuro ? '#08141A' : '#0B2F45');
+    })();
+`;
+
+/** Corre un script en línea como lo haría el navegador al cargar la página. */
+function alCargar(script, almacenamiento, { oscuro = false } = {}) {
+  const documento = crearDocumento({ oscuro });
+  const global = {
+    document: documento,
+    localStorage: almacenamiento,
+    matchMedia: documento.defaultView.matchMedia,
+    location: { search: '', hash: '', pathname: '/', href: 'http://localhost/' },
+    navigator: { onLine: true, userAgent: 'prueba' },
+    URLSearchParams,
+    console,
+  };
+  global.window = global;
+  global.self = global;
+  vm.runInNewContext(script, global);
+  return documento;
+}
+
+/** Todas las combinaciones de lo que se ve en <html>. */
+function combinaciones() {
+  const lista = [];
+  for (const tema of ['sistema', 'claro', 'oscuro', 'contraste']) {
+    for (const tamano of ['md', 'lg', 'xl', 'xxl']) {
+      for (const espaciado of [false, true]) {
+        for (const movimiento of ['auto', 'reducido']) {
+          for (const simple of [false, true]) lista.push({ tema, tamano, espaciado, movimiento, simple });
+        }
+      }
+    }
+  }
+  return lista;
+}
+
 describe('Preferencias', () => {
   test('PREFS_POR_DEFECTO coincide con el contrato y no se puede modificar', () => {
-    assert.deepEqual(PREFS_POR_DEFECTO, { texto: 'normal', contraste: false, movimiento: 'auto', voz: false });
+    assert.deepEqual(PREFS_POR_DEFECTO, {
+      tema: 'sistema',
+      tamano: 'md',
+      espaciado: false,
+      movimiento: 'auto',
+      simple: false,
+      voz: false,
+      ahorro: true,
+      soloWifi: true,
+      dispositivo: 'auto',
+    });
     assert.ok(Object.isFrozen(PREFS_POR_DEFECTO));
   });
 
-  test('leerPreferencias da los valores por defecto si no hay nada, si el JSON está dañado o si el almacenamiento truena', () => {
-    assert.deepEqual(leerPreferencias({ almacenamiento: crearStorage() }), PREFS_POR_DEFECTO);
+  test('leerPreferencias da los valores por defecto (más los derivados texto y contraste) si no hay nada, si el JSON está dañado o si el almacenamiento truena', () => {
+    assert.deepEqual(leerPreferencias({ almacenamiento: crearStorage() }), POR_DEFECTO);
     const danado = crearStorage();
     danado.setItem('tecu:prefs', '{roto');
-    assert.deepEqual(leerPreferencias({ almacenamiento: danado }), PREFS_POR_DEFECTO);
-    const lista = crearStorage();
-    lista.setItem('tecu:prefs', '[1,2]');
-    assert.deepEqual(leerPreferencias({ almacenamiento: lista }), PREFS_POR_DEFECTO);
-    assert.deepEqual(leerPreferencias({ almacenamiento: roto }), PREFS_POR_DEFECTO);
-    assert.deepEqual(leerPreferencias({ almacenamiento: null }), PREFS_POR_DEFECTO);
-    assert.deepEqual(leerPreferencias(), PREFS_POR_DEFECTO, 'sin localStorage (Node)');
+    assert.deepEqual(leerPreferencias({ almacenamiento: danado }), POR_DEFECTO);
+    for (const raro of ['[1,2]', '"texto"', '7', 'null', 'true']) {
+      const almacenamiento = crearStorage();
+      almacenamiento.setItem('tecu:prefs', raro);
+      assert.deepEqual(leerPreferencias({ almacenamiento }), POR_DEFECTO, raro);
+    }
+    assert.deepEqual(leerPreferencias({ almacenamiento: crearRoto() }), POR_DEFECTO);
+    assert.deepEqual(leerPreferencias({ almacenamiento: null }), POR_DEFECTO);
+    assert.deepEqual(leerPreferencias(), POR_DEFECTO, 'sin localStorage (Node)');
   });
 
   test('leerPreferencias corrige valores inválidos y conserva claves extra', () => {
     const almacenamiento = crearStorage();
-    almacenamiento.setItem('tecu:prefs', JSON.stringify({ texto: 'enorme', contraste: 'si', movimiento: 'reducido', voz: true, tema: 'x' }));
+    almacenamiento.setItem(
+      'tecu:prefs',
+      JSON.stringify({ tema: 'rosa', tamano: 'xxxl', espaciado: 'si', movimiento: 'reducido', simple: 1, voz: true, ahorro: null, soloWifi: false, dispositivo: 'tableta', futuro: 'x' }),
+    );
     assert.deepEqual(leerPreferencias({ almacenamiento }), {
-      texto: 'normal',
-      contraste: false,
+      ...POR_DEFECTO,
       movimiento: 'reducido',
       voz: true,
-      tema: 'x',
+      soloWifi: false,
+      futuro: 'x',
     });
   });
 
-  test('aplicarPreferencias pone data-texto y las clases en <html>; "normal" quita el atributo', () => {
+  test('lo guardado con el modelo anterior se migra al leer: texto → tamano y contraste → tema', () => {
+    const leer = (guardado) => {
+      const almacenamiento = crearStorage();
+      almacenamiento.setItem('tecu:prefs', JSON.stringify(guardado));
+      return leerPreferencias({ almacenamiento });
+    };
+    assert.deepEqual(leer({ texto: 'grande', contraste: true, movimiento: 'reducido', voz: true }), {
+      ...PREFS_POR_DEFECTO,
+      tema: 'contraste',
+      tamano: 'lg',
+      movimiento: 'reducido',
+      voz: true,
+      texto: 'grande',
+      contraste: true,
+    });
+    assert.equal(leer({ texto: 'muy-grande' }).tamano, 'xl');
+    assert.equal(leer({ texto: 'normal', contraste: false }).tamano, 'md');
+    assert.equal(leer({ contraste: false }).tema, 'sistema');
+    assert.equal(leer({ contraste: true }).tema, 'contraste', 'lo que escribe tests/e2e/accesibilidad.mjs');
+    // Valores inválidos del modelo anterior: como si no estuvieran.
+    assert.deepEqual(leer({ texto: 'enorme', contraste: 'si' }), POR_DEFECTO);
+  });
+
+  test('texto y contraste son derivados: salen de tamano y de tema', () => {
+    const almacenamiento = crearStorage();
+    const derivados = (parciales) => {
+      const { texto, contraste } = guardarPreferencias(parciales, { almacenamiento, doc: null, ventana: null });
+      return { texto, contraste };
+    };
+    assert.deepEqual(derivados({ tamano: 'md', tema: 'claro' }), { texto: 'normal', contraste: false });
+    assert.deepEqual(derivados({ tamano: 'lg', tema: 'oscuro' }), { texto: 'grande', contraste: false });
+    assert.deepEqual(derivados({ tamano: 'xl', tema: 'contraste' }), { texto: 'muy-grande', contraste: true });
+    assert.deepEqual(derivados({ tamano: 'xxl', tema: 'sistema' }), { texto: 'muy-grande', contraste: false });
+    // Lo guardado trae los dos vocabularios coherentes (una versión anterior abierta en otra pestaña lee lo mismo).
+    const guardado = JSON.parse(almacenamiento.getItem('tecu:prefs'));
+    assert.equal(guardado.tamano, 'xxl');
+    assert.equal(guardado.texto, 'muy-grande');
+    assert.equal(guardado.contraste, false);
+    assert.equal(leerPreferencias({ almacenamiento }).tamano, 'xxl', '«muy-grande» guardado junto a xxl no lo baja a xl');
+  });
+
+  test('si una versión anterior (otra pestaña) cambió texto o contraste en lo guardado, manda ese cambio', () => {
+    const almacenamiento = crearStorage();
+    guardarPreferencias({ tema: 'oscuro', tamano: 'xxl' }, { almacenamiento, doc: null, ventana: null });
+    // El módulo anterior mezcla sobre lo guardado y solo conoce texto/contraste/movimiento/voz.
+    const viejo = (cambios) => almacenamiento.setItem('tecu:prefs', JSON.stringify({ ...JSON.parse(almacenamiento.getItem('tecu:prefs')), ...cambios }));
+    viejo({ voz: true });
+    assert.deepEqual(
+      (({ tema, tamano, voz }) => ({ tema, tamano, voz }))(leerPreferencias({ almacenamiento })),
+      { tema: 'oscuro', tamano: 'xxl', voz: true },
+      'un cambio que no toca texto ni contraste no altera tema ni tamaño',
+    );
+    viejo({ contraste: true });
+    assert.equal(leerPreferencias({ almacenamiento }).tema, 'contraste');
+    viejo({ contraste: false });
+    assert.equal(leerPreferencias({ almacenamiento }).tema, 'oscuro', 'al quitar el contraste vuelve el tema que estaba');
+    viejo({ texto: 'grande' });
+    assert.equal(leerPreferencias({ almacenamiento }).tamano, 'lg');
+  });
+
+  test('aplicarPreferencias pone los atributos del diseño unificado y los de antes en <html>', () => {
+    const doc = crearDocumento();
+    aplicarPreferencias({ tema: 'contraste', tamano: 'lg', espaciado: true, movimiento: 'reducido', simple: true }, doc);
+    assert.deepEqual(doc.estado(), {
+      tema: 'contrast',
+      tamano: 'lg',
+      espaciado: 'wide',
+      movimiento: 'reduce',
+      simple: 'on',
+      texto: 'grande',
+      clases: ['alto-contraste', 'reducir-movimiento'],
+      color: CLARO,
+    });
+    aplicarPreferencias({ tema: 'oscuro', tamano: 'xxl' }, doc);
+    assert.deepEqual(doc.estado(), {
+      tema: 'dark',
+      tamano: 'xxl',
+      espaciado: 'normal',
+      movimiento: 'system',
+      simple: 'off',
+      texto: 'muy-grande',
+      clases: [],
+      color: OSCURO,
+    });
+    aplicarPreferencias({ tema: 'claro', tamano: 'xl' }, doc);
+    assert.equal(doc.estado().tema, 'light');
+    assert.equal(doc.estado().texto, 'muy-grande');
+    aplicarPreferencias(PREFS_POR_DEFECTO, doc);
+    assert.deepEqual(doc.estado(), {
+      tema: 'system',
+      tamano: 'md',
+      espaciado: 'normal',
+      movimiento: 'system',
+      simple: 'off',
+      texto: null,
+      clases: [],
+      color: CLARO,
+    });
+    assert.doesNotThrow(() => aplicarPreferencias(PREFS_POR_DEFECTO), 'sin document (Node) no hace nada');
+    assert.doesNotThrow(() => aplicarPreferencias(PREFS_POR_DEFECTO, null));
+    assert.doesNotThrow(() => aplicarPreferencias(null, doc));
+    assert.doesNotThrow(() => aplicarPreferencias(PREFS_POR_DEFECTO, crearDocumento({ conMeta: false })), 'sin meta theme-color');
+  });
+
+  test('aplicarPreferencias acepta el vocabulario anterior: data-texto y las clases como antes; "normal" quita el atributo', () => {
     const doc = crearDocumento();
     aplicarPreferencias({ texto: 'grande', contraste: true, movimiento: 'reducido', voz: false }, doc);
-    assert.deepEqual(doc.estado(), { texto: 'grande', clases: ['alto-contraste', 'reducir-movimiento'] });
+    assert.deepEqual(doc.anterior(), { texto: 'grande', clases: ['alto-contraste', 'reducir-movimiento'] });
+    assert.equal(doc.estado().tema, 'contrast');
+    assert.equal(doc.estado().tamano, 'lg');
     aplicarPreferencias({ texto: 'muy-grande', contraste: false, movimiento: 'auto', voz: false }, doc);
-    assert.deepEqual(doc.estado(), { texto: 'muy-grande', clases: [] });
-    aplicarPreferencias(PREFS_POR_DEFECTO, doc);
-    assert.deepEqual(doc.estado(), { texto: null, clases: [] });
-    assert.doesNotThrow(() => aplicarPreferencias(PREFS_POR_DEFECTO), 'sin document (Node) no hace nada');
-    assert.doesNotThrow(() => aplicarPreferencias(null, doc));
+    assert.deepEqual(doc.anterior(), { texto: 'muy-grande', clases: [] });
+    assert.equal(doc.estado().tamano, 'xl');
+    aplicarPreferencias({ texto: 'normal', contraste: false, movimiento: 'auto', voz: false }, doc);
+    assert.deepEqual(doc.anterior(), { texto: null, clases: [] });
+  });
+
+  test('el color de la barra del navegador (theme-color) sigue al tema; con «sistema», al modo oscuro del sistema', () => {
+    const claro = crearDocumento({ oscuro: false });
+    const oscuro = crearDocumento({ oscuro: true });
+    const esperado = { sistema: [CLARO, OSCURO], claro: [CLARO, CLARO], oscuro: [OSCURO, OSCURO], contraste: [CLARO, CLARO] };
+    for (const [tema, [enClaro, enOscuro]] of Object.entries(esperado)) {
+      aplicarPreferencias({ tema }, claro);
+      aplicarPreferencias({ tema }, oscuro);
+      assert.equal(claro.estado().color, enClaro, `${tema} con el sistema en claro`);
+      assert.equal(oscuro.estado().color, enOscuro, `${tema} con el sistema en oscuro`);
+    }
+    // El sistema cambia a oscuro mientras la app está abierta.
+    aplicarPreferencias({ tema: 'sistema' }, claro);
+    claro.sistema.cambiar(true);
+    assert.equal(claro.estado().color, OSCURO);
+    aplicarPreferencias({ tema: 'claro' }, claro);
+    claro.sistema.cambiar(false);
+    claro.sistema.cambiar(true);
+    assert.equal(claro.estado().color, CLARO, 'con un tema elegido, el sistema ya no manda');
+    // Se puede inyectar la ventana (tercer argumento).
+    const doc = crearDocumento({ oscuro: false });
+    aplicarPreferencias({ tema: 'sistema' }, doc, { ventana: { matchMedia: () => crearConsulta(true) } });
+    assert.equal(doc.estado().color, OSCURO);
   });
 
   test('guardarPreferencias mezcla, guarda, aplica, avisa en la misma página y devuelve las prefs completas', () => {
@@ -169,32 +436,132 @@ describe('Preferencias', () => {
     const avisos = [];
     alCambiarPreferencias((p) => avisos.push(p), { ventana });
 
-    guardarPreferencias({ texto: 'grande' }, { almacenamiento, doc, ventana });
-    const prefs = guardarPreferencias({ contraste: true }, { almacenamiento, doc, ventana });
+    guardarPreferencias({ tamano: 'lg' }, { almacenamiento, doc, ventana });
+    const prefs = guardarPreferencias({ tema: 'contraste', simple: true }, { almacenamiento, doc, ventana });
 
-    const esperado = { texto: 'grande', contraste: true, movimiento: 'auto', voz: false };
+    const esperado = { ...POR_DEFECTO, tamano: 'lg', texto: 'grande', tema: 'contraste', contraste: true, simple: true };
     assert.deepEqual(prefs, esperado);
     assert.deepEqual(JSON.parse(almacenamiento.getItem('tecu:prefs')), esperado);
-    assert.deepEqual(doc.estado(), { texto: 'grande', clases: ['alto-contraste'] });
-    assert.deepEqual(avisos, [{ ...esperado, contraste: false }, esperado]);
+    assert.deepEqual(leerPreferencias({ almacenamiento }), esperado);
+    assert.deepEqual(doc.estado(), {
+      tema: 'contrast',
+      tamano: 'lg',
+      espaciado: 'normal',
+      movimiento: 'system',
+      simple: 'on',
+      texto: 'grande',
+      clases: ['alto-contraste'],
+      color: CLARO,
+    });
+    assert.deepEqual(avisos, [{ ...POR_DEFECTO, tamano: 'lg', texto: 'grande' }, esperado]);
+  });
+
+  test('guardarPreferencias acepta los dos vocabularios (las vistas anteriores siguen funcionando)', () => {
+    const almacenamiento = crearStorage();
+    const doc = crearDocumento();
+    const guardar = (parciales) => guardarPreferencias(parciales, { almacenamiento, doc, ventana: null });
+
+    // Lo que hace hoy la pantalla de Ajustes del estudiante.
+    let prefs = guardar({ texto: 'grande' });
+    assert.equal(prefs.tamano, 'lg');
+    assert.equal(prefs.texto, 'grande');
+    assert.equal(doc.estado().texto, 'grande');
+    assert.equal(doc.estado().tamano, 'lg');
+    prefs = guardar({ contraste: true });
+    assert.equal(prefs.tema, 'contraste');
+    assert.equal(prefs.contraste, true);
+    assert.ok(doc.estado().clases.includes('alto-contraste'));
+    prefs = guardar({ movimiento: 'reducido' });
+    assert.deepEqual(doc.anterior(), { texto: 'grande', clases: ['alto-contraste', 'reducir-movimiento'] });
+    prefs = guardar({ contraste: false });
+    assert.equal(prefs.tema, 'sistema');
+    prefs = guardar({ texto: 'muy-grande' });
+    assert.equal(prefs.tamano, 'xl');
+    prefs = guardar({ texto: 'normal' });
+    assert.equal(prefs.tamano, 'md');
+    assert.equal(doc.estado().texto, null);
+
+    // «muy-grande» no baja de xxl a xl, y quitar el contraste no toca un tema que no es contraste.
+    guardar({ tamano: 'xxl', tema: 'oscuro' });
+    prefs = guardar({ texto: 'muy-grande', contraste: false });
+    assert.equal(prefs.tamano, 'xxl');
+    assert.equal(prefs.tema, 'oscuro');
+  });
+
+  test('si llegan los dos vocabularios juntos, cuenta el que cambió (y si cambiaron los dos, el nuevo)', () => {
+    const almacenamiento = crearStorage();
+    const guardar = (parciales) => guardarPreferencias(parciales, { almacenamiento, doc: null, ventana: null });
+    const base = guardar({});
+    assert.equal(guardar({ ...base, texto: 'grande' }).tamano, 'lg', '{ ...prefs, texto } cambia el tamaño');
+    assert.equal(guardar({ ...guardar({}), tamano: 'xl' }).tamano, 'xl', '{ ...prefs, tamano } no lo pisa el texto derivado');
+    assert.equal(guardar({ ...guardar({}), contraste: true }).tema, 'contraste');
+    assert.equal(guardar({ ...guardar({}), tema: 'oscuro' }).tema, 'oscuro', '{ ...prefs, tema } no lo pisa el contraste derivado');
+    assert.equal(guardar({ tema: 'claro', contraste: true }).tema, 'claro');
+    assert.equal(guardar({ tamano: 'md', texto: 'grande' }).tamano, 'md');
   });
 
   test('guardarPreferencias ignora valores inválidos (se queda lo que había)', () => {
     const almacenamiento = crearStorage();
-    guardarPreferencias({ texto: 'muy-grande', movimiento: 'reducido' }, { almacenamiento, doc: null, ventana: null });
-    const prefs = guardarPreferencias({ texto: 'gigante', movimiento: 3, voz: 'si' }, { almacenamiento, doc: null, ventana: null });
-    assert.deepEqual(prefs, { texto: 'muy-grande', contraste: false, movimiento: 'reducido', voz: false });
+    guardarPreferencias({ tamano: 'xxl', movimiento: 'reducido', dispositivo: 'movil' }, { almacenamiento, doc: null, ventana: null });
+    const prefs = guardarPreferencias(
+      { tamano: 'gigante', texto: 'gigante', tema: 7, contraste: 'si', movimiento: 3, voz: 'si', espaciado: 1, dispositivo: 'reloj' },
+      { almacenamiento, doc: null, ventana: null },
+    );
+    assert.deepEqual(prefs, { ...POR_DEFECTO, tamano: 'xxl', texto: 'muy-grande', movimiento: 'reducido', dispositivo: 'movil' });
+    for (const raro of [null, undefined, 'x', 5, [1]]) {
+      assert.deepEqual(guardarPreferencias(raro, { almacenamiento, doc: null, ventana: null }), prefs);
+    }
   });
 
-  test('si no se puede guardar, igual aplica y avisa (la sesión sigue con el ajuste)', () => {
+  test('si no se puede guardar, igual aplica y avisa, y la sesión recuerda lo elegido', () => {
+    for (const almacenamiento of [crearRoto(), null]) {
+      const doc = crearDocumento();
+      const ventana = new EventTarget();
+      const avisos = [];
+      alCambiarPreferencias((p) => avisos.push(p.tamano), { ventana });
+      const prefs = silenciar('warn', () => guardarPreferencias({ tamano: 'lg' }, { almacenamiento, doc, ventana }));
+      assert.equal(prefs.tamano, 'lg');
+      assert.equal(doc.estado().tamano, 'lg');
+      assert.deepEqual(avisos, ['lg']);
+      // El siguiente cambio no regresa el anterior a su valor inicial.
+      const despues = silenciar('warn', () => guardarPreferencias({ tema: 'oscuro' }, { almacenamiento, doc, ventana }));
+      assert.equal(despues.tamano, 'lg');
+      assert.equal(despues.tema, 'oscuro');
+      assert.equal(leerPreferencias({ almacenamiento }).tamano, 'lg');
+      assert.deepEqual(doc.estado().tamano, 'lg');
+      silenciar('warn', () => restablecerPreferencias({ almacenamiento, doc: null, ventana: null }));
+      assert.deepEqual(leerPreferencias({ almacenamiento }), POR_DEFECTO);
+    }
+  });
+
+  test('restablecerPreferencias regresa la accesibilidad a su valor inicial y conserva ahorro, soloWifi y dispositivo', () => {
+    const almacenamiento = crearStorage();
     const doc = crearDocumento();
     const ventana = new EventTarget();
+    guardarPreferencias(
+      { tema: 'contraste', tamano: 'xxl', espaciado: true, movimiento: 'reducido', simple: true, voz: true, ahorro: false, soloWifi: false, dispositivo: 'movil' },
+      { almacenamiento, doc, ventana },
+    );
     const avisos = [];
-    alCambiarPreferencias((p) => avisos.push(p.texto), { ventana });
-    const prefs = silenciar('warn', () => guardarPreferencias({ texto: 'grande' }, { almacenamiento: roto, doc, ventana }));
-    assert.equal(prefs.texto, 'grande');
-    assert.equal(doc.estado().texto, 'grande');
-    assert.deepEqual(avisos, ['grande']);
+    alCambiarPreferencias((p) => avisos.push(p), { ventana });
+
+    const prefs = restablecerPreferencias({ almacenamiento, doc, ventana });
+    const esperado = { ...POR_DEFECTO, ahorro: false, soloWifi: false, dispositivo: 'movil' };
+    assert.deepEqual(prefs, esperado);
+    assert.deepEqual(leerPreferencias({ almacenamiento }), esperado);
+    assert.deepEqual(avisos, [esperado]);
+    assert.deepEqual(doc.estado(), {
+      tema: 'system',
+      tamano: 'md',
+      espaciado: 'normal',
+      movimiento: 'system',
+      simple: 'off',
+      texto: null,
+      clases: [],
+      color: CLARO,
+    });
+    assert.deepEqual(restablecerPreferencias({ todo: true, almacenamiento, doc, ventana }), POR_DEFECTO);
+    assert.deepEqual(restablecerPreferencias({ almacenamiento: crearStorage(), doc: null, ventana: null }), POR_DEFECTO, 'sin nada guardado');
   });
 
   test('alCambiarPreferencias oye a otras pestañas/iframes (storage) y llama fn con UN solo argumento', async () => {
@@ -205,22 +572,38 @@ describe('Preferencias', () => {
     // Igual que main.js: alCambiarPreferencias(aplicarPreferencias) → el 2.º argumento sería `doc`.
     const quitar = alCambiarPreferencias((...args) => llamadas.push(args), { ventana: iframe.ventana });
 
-    guardarPreferencias({ texto: 'muy-grande', movimiento: 'reducido' }, { almacenamiento: panel.almacenamiento, doc: panel.documento, ventana: panel.ventana });
+    guardarPreferencias({ tamano: 'xl', movimiento: 'reducido' }, { almacenamiento: panel.almacenamiento, doc: panel.documento, ventana: panel.ventana });
     panel.almacenamiento.setItem('tecu:otra', '1');
     await tick();
 
     assert.equal(llamadas.length, 1);
     assert.equal(llamadas[0].length, 1);
-    assert.deepEqual(llamadas[0][0], { texto: 'muy-grande', contraste: false, movimiento: 'reducido', voz: false });
+    assert.deepEqual(llamadas[0][0], { ...POR_DEFECTO, tamano: 'xl', texto: 'muy-grande', movimiento: 'reducido' });
+
+    // Otra pestaña con la versión anterior guarda con el modelo anterior: llega ya migrado.
+    panel.almacenamiento.setItem('tecu:prefs', JSON.stringify({ texto: 'grande', contraste: true, movimiento: 'auto', voz: false }));
+    await tick();
+    assert.deepEqual(llamadas[1], [{ ...POR_DEFECTO, tamano: 'lg', texto: 'grande', tema: 'contraste', contraste: true }]);
 
     panel.almacenamiento.clear();
     await tick();
-    assert.deepEqual(llamadas[1], [PREFS_POR_DEFECTO]);
+    assert.deepEqual(llamadas[2], [POR_DEFECTO]);
 
     quitar();
-    guardarPreferencias({ contraste: true }, { almacenamiento: panel.almacenamiento, doc: null, ventana: panel.ventana });
+    guardarPreferencias({ tema: 'oscuro' }, { almacenamiento: panel.almacenamiento, doc: null, ventana: panel.ventana });
     await tick();
-    assert.equal(llamadas.length, 2);
+    assert.equal(llamadas.length, 3);
+  });
+
+  test('alCambiarPreferencias(aplicarPreferencias), como en main.js, aplica lo que cambió otra pestaña', async () => {
+    const navegador = crearNavegador();
+    const panel = navegador.abrirPestana();
+    const iframe = navegador.abrirPestana();
+    alCambiarPreferencias((prefs) => aplicarPreferencias(prefs, iframe.documento), { ventana: iframe.ventana });
+    guardarPreferencias({ tema: 'oscuro', espaciado: true }, { almacenamiento: panel.almacenamiento, doc: panel.documento, ventana: panel.ventana });
+    await tick();
+    assert.deepEqual(iframe.documento.estado(), panel.documento.estado());
+    assert.equal(iframe.documento.estado().tema, 'dark');
   });
 
   test('un listener que truena no rompe a guardarPreferencias', () => {
@@ -239,25 +622,79 @@ describe('Preferencias', () => {
     assert.doesNotThrow(quitar);
   });
 
-  test('lo que guarda el módulo lo aplica igual el script en línea de index.html (sin parpadeo)', () => {
-    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
-    assert.ok(script && script.includes('tecu:prefs'), 'no encontré el script en línea que lee tecu:prefs');
+  describe('script en línea de index.html (antes del primer pintado)', () => {
+    /** Lo guardado que puede encontrarse al cargar, además de lo que escribe el módulo. */
+    const GUARDADOS_RAROS = [
+      null,
+      '{roto',
+      '[1,2]',
+      '"x"',
+      '{}',
+      JSON.stringify({ texto: 'grande' }),
+      JSON.stringify({ contraste: true }),
+      JSON.stringify({ texto: 'muy-grande', contraste: true, movimiento: 'reducido', voz: true }),
+      JSON.stringify({ texto: 'normal', contraste: false, movimiento: 'auto', voz: false }),
+      JSON.stringify({ tema: 'rosa', tamano: 9, espaciado: 'si', simple: 1, movimiento: 'x' }),
+      JSON.stringify({ tema: 'oscuro', tamano: 'xxl', texto: 'grande', contraste: true }),
+      JSON.stringify({ tema: 'contraste', tamano: 'xxl', texto: 'muy-grande', contraste: false }),
+      JSON.stringify({ tema: 'claro' }),
+    ];
+    /** Valores inválidos en las claves del modelo anterior (el script anterior no los validaba). */
+    const GUARDADOS_INVALIDOS = [JSON.stringify({ texto: 'constructor', contraste: 'si', tema: 'toString', tamano: '__proto__' })];
 
-    const combinaciones = [];
-    for (const texto of ['normal', 'grande', 'muy-grande']) {
-      for (const contraste of [false, true]) {
-        for (const movimiento of ['auto', 'reducido']) combinaciones.push({ texto, contraste, movimiento });
+    function mismoResultado(script, { soloAnterior = false } = {}) {
+      for (const oscuro of [false, true]) {
+        for (const prefs of combinaciones()) {
+          const almacenamiento = crearStorage();
+          const conModulo = crearDocumento({ oscuro });
+          guardarPreferencias(prefs, { almacenamiento, doc: conModulo, ventana: null });
+          const cargado = alCargar(script, almacenamiento, { oscuro });
+          const nota = `${JSON.stringify(prefs)} · sistema ${oscuro ? 'oscuro' : 'claro'}`;
+          if (soloAnterior) assert.deepEqual(cargado.anterior(), conModulo.anterior(), nota);
+          else assert.deepEqual(cargado.estado(), conModulo.estado(), nota);
+        }
+        for (const guardado of soloAnterior ? GUARDADOS_RAROS : [...GUARDADOS_RAROS, ...GUARDADOS_INVALIDOS]) {
+          const almacenamiento = crearStorage();
+          if (guardado !== null) almacenamiento.setItem('tecu:prefs', guardado);
+          const conModulo = crearDocumento({ oscuro });
+          aplicarPreferencias(leerPreferencias({ almacenamiento }), conModulo);
+          const cargado = alCargar(script, almacenamiento, { oscuro });
+          const nota = `guardado: ${guardado} · sistema ${oscuro ? 'oscuro' : 'claro'}`;
+          if (soloAnterior) assert.deepEqual(cargado.anterior(), conModulo.anterior(), nota);
+          else assert.deepEqual(cargado.estado(), conModulo.estado(), nota);
+        }
       }
     }
-    for (const prefs of combinaciones) {
-      const almacenamiento = crearStorage();
-      const conModulo = crearDocumento();
-      guardarPreferencias(prefs, { almacenamiento, doc: conModulo, ventana: null });
-      const alCargar = crearDocumento();
-      vm.runInNewContext(script, { localStorage: almacenamiento, document: alCargar });
-      assert.deepEqual(alCargar.estado(), conModulo.estado(), JSON.stringify(prefs));
-    }
+
+    test('el fragmento canónico aplica exactamente lo mismo que el módulo (modelo nuevo, modelo anterior y datos dañados)', () => {
+      mismoResultado(SCRIPT_EN_LINEA);
+    });
+
+    test('el fragmento canónico no truena si el almacenamiento está bloqueado ni si falta el meta theme-color', () => {
+      const bloqueado = alCargar(SCRIPT_EN_LINEA, crearRoto());
+      const sinNada = crearDocumento();
+      aplicarPreferencias(PREFS_POR_DEFECTO, sinNada);
+      assert.deepEqual(bloqueado.estado(), sinNada.estado());
+      const documento = crearDocumento({ conMeta: false });
+      assert.doesNotThrow(() => vm.runInNewContext(SCRIPT_EN_LINEA, { document: documento, localStorage: crearStorage() }));
+      assert.equal(documento.estado().tema, 'system');
+    });
+
+    test('el fragmento canónico es ES5 (corre en navegadores viejos) y no pasa de 2 KB', () => {
+      assert.doesNotMatch(SCRIPT_EN_LINEA, /=>|\b(?:const|let)\b|`|\?\.|\?\?/);
+      assert.ok(Buffer.byteLength(SCRIPT_EN_LINEA) < 2048, `${Buffer.byteLength(SCRIPT_EN_LINEA)} bytes`);
+    });
+
+    test('lo que guarda el módulo lo aplica igual el script en línea que hoy trae index.html (sin parpadeo)', () => {
+      const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+      const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+      const script = scripts.find((s) => s.includes('tecu:prefs'));
+      assert.ok(script, 'no encontré el script en línea que lee tecu:prefs');
+      // Mientras index.html conserve el script del modelo anterior, se comprueba el contrato
+      // anterior (data-texto y clases); con el script unificado, todo lo que se aplica en <html>.
+      const unificado = /data-theme|dataset\.theme/.test(script);
+      mismoResultado(script, { soloAnterior: !unificado });
+    });
   });
 });
 

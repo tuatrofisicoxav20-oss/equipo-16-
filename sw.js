@@ -45,7 +45,7 @@
  *      se te olvida).
  *   3. Publica sw.js junto con los demás archivos (en el mismo push).
  */
-const VERSION = 'tecu-2026-11-12-46cc357b';
+const VERSION = 'tecu-2026-11-12-a82e4289';
 
 const PRECACHE = [
   './',
@@ -63,7 +63,9 @@ const PRECACHE = [
   'css/libre.css',
   'css/pitch.css',
   'css/tecu.css',
-  'fonts/nunito-latin-wght-normal.woff2',
+  'fonts/atkinson-hyperlegible-latin-400-italic.woff2',
+  'fonts/atkinson-hyperlegible-latin-400-normal.woff2',
+  'fonts/atkinson-hyperlegible-latin-700-normal.woff2',
   'icons/icono-192.png',
   'icons/icono-512.png',
   'icons/icono-maskable-512.png',
@@ -75,10 +77,13 @@ const PRECACHE = [
   'js/core/rng.js',
   'js/core/ruta.js',
   'js/core/textos.js',
+  'js/data/alertas.js',
   'js/data/analitica.js',
   'js/data/escenas.js',
   'js/data/grupo.js',
   'js/data/guiones.js',
+  'js/data/habilidades.js',
+  'js/data/mensajes.js',
   'js/data/paquete.js',
   'js/data/store.js',
   'js/main.js',
@@ -86,6 +91,13 @@ const PRECACHE = [
   'js/services/preferencias.js',
   'js/services/red.js',
   'js/services/sw-registro.js',
+  'js/shell/componentes.js',
+  'js/shell/dialogo.js',
+  'js/shell/dispositivo.js',
+  'js/shell/paneles.js',
+  'js/shell/recorrido.js',
+  'js/shell/rutas.js',
+  'js/shell/voz.js',
   'js/ui/actualizacion.js',
   'js/ui/atajos.js',
   'js/ui/balanza.js',
