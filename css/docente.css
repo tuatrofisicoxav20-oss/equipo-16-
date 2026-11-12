@@ -1075,6 +1075,7 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
 .docente-compacto .docente-th--error .docente-orden__texto {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+  line-height: 1;
   white-space: nowrap;
 }
 
