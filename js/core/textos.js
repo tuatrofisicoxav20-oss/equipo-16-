@@ -6,7 +6,10 @@
  *   - explicar un error al estudiante o al docente,
  *   - armar la escalera de pistas del ejercicio que se está resolviendo,
  *   - construir la pregunta orientadora de Tecu,
- *   - contestar dudas con respuestas preparadas.
+ *   - contestar dudas con respuestas preparadas,
+ *   - leer el contenido de la app unificada: lecciones, botones del tutor
+ *     («otra forma», «ejemplo cotidiano», nivel de apoyo) y plantillas de
+ *     retroalimentación.
  *
  * Módulo puro: recibe el paquete como parámetro.
  */
@@ -14,11 +17,13 @@ import {
   TIPOS,
   analizarProcedimiento,
   bonito,
+  fmtEcuacion,
   fmtLado,
   fmtNum,
   parsearRenglon,
   pasosSolucion,
   procedimientoConError,
+  resolver,
   siguientePaso,
 } from './engine.js';
 import { Fr } from './fraction.js';
@@ -34,12 +39,31 @@ const entreParentesis = (n) => (/^−|\//.test(n) ? `(${n})` : n);
 /** «la x» (también «la x/4») cuando el término es la x sola; «el 5», «el 2x» en los demás casos. */
 const esLaX = (t) => /^x/.test(t);
 
-/** Reemplaza {clave} por datos[clave]. Las claves sin dato se quitan. */
+const conDato = (v) => v !== undefined && v !== null && v !== '';
+
+/**
+ * Reemplaza {clave} por datos[clave]. Las claves sin dato se quitan.
+ * Con {clave|uno|varios} escribe el número y la palabra que le toca:
+ * «{sueltas|pesa suelta|pesas sueltas}» → «1 pesa suelta», «5 pesas sueltas».
+ */
 export function rellenar(plantilla, datos = {}) {
+  const d = datos || {};
   return String(plantilla ?? '')
-    .replace(/\{(\w+)\}/g, (_, k) => (datos[k] === undefined || datos[k] === null ? '' : String(datos[k])))
+    .replace(/\{(\w+)\|([^{}|]*)\|([^{}|]*)\}/g, (_, k, uno, varios) =>
+      conDato(d[k]) ? `${d[k]} ${String(d[k]) === '1' ? uno : varios}` : '',
+    )
+    .replace(/\{(\w+)\}/g, (_, k) => (d[k] === undefined || d[k] === null ? '' : String(d[k])))
     .replace(/\s{2,}/g, ' ')
     .trim();
+}
+
+/** Nombres de los datos que pide una plantilla ({clave} y {clave|uno|varios}). */
+const datosDe = (plantilla) => [...String(plantilla ?? '').matchAll(/\{(\w+)(?:\|[^{}]*)?\}/g)].map((m) => m[1]);
+
+/** La primera plantilla de la lista que se puede llenar completa con `datos` (o la última, la más general). */
+function primeraCompleta(variantes, datos) {
+  const lista = [].concat(variantes ?? []).filter((p) => typeof p === 'string' && p);
+  return lista.find((p) => datosDe(p).every((k) => conDato(datos[k]))) ?? lista[lista.length - 1] ?? '';
 }
 
 /** Fracción a partir de su texto ASCII o de pantalla ("25/3", "-4", "−4"). */
@@ -54,10 +78,34 @@ function formatearValor(fr, esX) {
   return fmtLado([{ c: fr, x: true }]);
 }
 
+/**
+ * Varios términos con el mismo error («el 14 y el 5x», lista armada por el motor): se dejan en el
+ * orden de la ecuación (primero los del lado izquierdo) y, si no están todos del mismo lado, se
+ * arma además `terminosConLado` («el 5x del lado izquierdo y el 14 del lado derecho»).
+ *
+ * El motor siempre toma esos términos de los que estorban para despejar: los números que están
+ * de un lado y las x que están del otro. Por eso basta el lado del primero (`lado`, `esX`).
+ */
+function ordenarVarios(d) {
+  const piezas = d.terminos.split(/, | y /);
+  if (piezas.length < 2 || !d.lado || !d.otroLado || !piezas.every((p) => /^(?:el|la) \S+$/.test(p))) return;
+  const conLado = piezas.map((p) => ({ p, lado: /x/.test(p) === Boolean(d.esX) ? d.lado : d.otroLado }));
+  const orden = [...conLado.filter((t) => t.lado === 'izquierdo'), ...conLado.filter((t) => t.lado !== 'izquierdo')];
+  d.terminos = enLista(orden.map((t) => t.p));
+  const lados = [...new Set(orden.map((t) => t.lado))];
+  if (lados.length > 1) {
+    d.ladosDistintos = true;
+    d.terminosConLado = lados
+      .map((lado) => `${enLista(orden.filter((t) => t.lado === lado).map((t) => t.p))} del lado ${lado}`)
+      .join(' y ');
+  }
+}
+
 /** Campos derivados que usan las plantillas (verbo, operación inversa, etc.). */
-export function datosError(error = {}) {
-  const d = { ...(error.detalle || {}) };
-  if (error.renglon) d.renglon = error.renglon;
+export function datosError(error) {
+  const e = error || {};
+  const d = { ...(e.detalle || {}) };
+  if (e.renglon) d.renglon = e.renglon;
   if (d.signoOriginal) {
     const suma = d.signoOriginal === 'suma';
     d.verbo = suma ? 'sumando' : 'restando';
@@ -78,8 +126,11 @@ export function datosError(error = {}) {
     d.elTerminoCap = cap(d.elTermino);
     d.alTermino = `${laX ? 'a la' : 'al'} ${d.terminoSinSigno}`;
   }
-  // «el 2 y el x» (lista armada por el motor) → «el 2 y la x».
-  if (typeof d.terminos === 'string') d.terminos = d.terminos.replace(/\bel (x[^\s,]*)(?=,| y |$)/g, 'la $1');
+  if (typeof d.terminos === 'string') {
+    // «el 2 y el x» (lista armada por el motor) → «el 2 y la x».
+    d.terminos = d.terminos.replace(/\bel (x[^\s,]*)(?=,| y |$)/g, 'la $1');
+    ordenarVarios(d);
+  }
   if (d.coefNum) {
     d.coefNumAbs = d.coefNum.replace('−', '');
     d.coefNumParentesis = entreParentesis(d.coefNum);
@@ -102,18 +153,30 @@ export function datosError(error = {}) {
   return d;
 }
 
+/** −x (coeficiente −1): se habla del opuesto y de multiplicar por −1, igual que en la pista de ese paso. */
+const esOpuesto = (d) => d.coefNum === '−1' && !d.divisor;
+
 /**
  * Explicación de un error para el estudiante ('alumno') o el docente ('docente').
+ *
+ * Cada variante del motor tiene su plantilla; algunas tienen además una versión más precisa
+ * que se prefiere cuando aplica:
+ *   `<variante>_divisor`          la x estaba dividida (x/4 = 3): se habla del divisor, no de «1/4»;
+ *   `<variante>_opuesto`          el coeficiente es −1 (−x = 5): se habla de multiplicar por −1;
+ *   `<variante>_lados_distintos`  varios términos quitados que no estaban todos del mismo lado.
+ *
  * @param {{tipo: string, renglon: number, detalle: object}} error
  */
 export function explicarError(error, pack, audiencia = 'alumno') {
-  const info = pack.errores[error.tipo] || pack.errores[TIPOS.NO_CLASIFICADO];
+  const e = error || {};
+  const info = pack.errores[e.tipo] || pack.errores[TIPOS.NO_CLASIFICADO];
   const plantillas = info[audiencia] || info.alumno;
-  const variante = error.detalle?.variante;
+  const d = datosError(e);
+  const variante = d.variante;
   // x/4 = 3: el "coeficiente" es 1/4, pero se habla del divisor (4): «multiplicaste», «le restaste 4».
-  const conDivisor = error.detalle?.divisor ? plantillas[`${variante}_divisor`] : null;
-  const plantilla = conDivisor || plantillas[variante] || Object.values(plantillas)[0];
-  return rellenar(plantilla, datosError(error));
+  const sufijo = d.divisor ? 'divisor' : esOpuesto(d) ? 'opuesto' : d.ladosDistintos ? 'lados_distintos' : null;
+  const plantilla = (sufijo && plantillas[`${variante}_${sufijo}`]) || plantillas[variante] || Object.values(plantillas)[0];
+  return rellenar(plantilla, d);
 }
 
 export function nombreError(tipo, pack, corto = false) {
@@ -179,12 +242,17 @@ function datosPaso(paso) {
  *
  * @param {string} ejercicioTexto
  * @param {string[]} renglonesAlumno renglones escritos por el estudiante (sin el enunciado)
+ * @returns {{pistas: string[], solucion: string[], paso: string|null, error: object|null}}
+ *   `paso`: tipo del siguiente paso ('transponer_constante', 'reducir', 'dividir'…; 'distribuir'
+ *   si antes hay que quitar un paréntesis; null si ya no hay paso o el ejercicio no sirve).
  */
 export function pistasPara(ejercicioTexto, renglonesAlumno, pack) {
   try {
     return pistasSinRed(ejercicioTexto, renglonesAlumno, pack);
-  } catch {
+  } catch (e) {
     // Números fuera de rango o un renglón raro: pistas generales, nunca una excepción en pantalla.
+    // Lo que no sea un desborde es un defecto nuestro: que quede en la consola y no pase en silencio.
+    if (!(e instanceof RangeError)) console.error(e);
     return {
       pistas: pack.pistas.revisar.map((p) => rellenar(p, { renglon: 'anterior', anterior: bonito(ejercicioTexto) })),
       solucion: [],
@@ -199,38 +267,51 @@ const PISTAS_EJERCICIO_INVALIDO = [
   'Si está bien escrito y aun así no se puede resolver, pide otro ejercicio.',
 ];
 
+/** ¿El renglón tiene un paréntesis con la x adentro? Antes de mover términos hay que quitarlo. */
+const conParentesis = (texto) => /\([^()]*x[^()]*\)/i.test(String(texto ?? ''));
+
 function pistasSinRed(ejercicioTexto, renglonesAlumno, pack) {
+  const enunciado = String(ejercicioTexto ?? '').trim();
   const todos = [ejercicioTexto, ...(renglonesAlumno || [])];
   const analisis = analizarProcedimiento(todos);
+  const primero = analisis.renglones?.[0];
+  // Sin enunciado, el motor tomaría como ejercicio el primer renglón del estudiante.
   const ejercicioInvalido =
+    !enunciado ||
     analisis.estado === 'vacio' ||
     analisis.estado === 'sin_solucion_unica' ||
-    (analisis.estado === 'sin_entender' && analisis.renglon === 1);
+    (analisis.estado === 'sin_entender' && analisis.renglon === 1) ||
+    !primero?.eq ||
+    (primero.n ?? 1) !== 1;
   if (ejercicioInvalido) {
     // Ejercicio escrito a mano (modo libre) que no se puede resolver paso a paso: decir por qué
     // (antes: "Revisa el renglón anterior…" o, si no tenía solución, "Ya tienes la x sola").
     return {
-      pistas: [analisis.mensaje || 'Escribe primero el ejercicio.', ...PISTAS_EJERCICIO_INVALIDO],
-      solucion: [bonito(ejercicioTexto)],
+      pistas: [(enunciado && analisis.mensaje) || 'Escribe primero el ejercicio.', ...PISTAS_EJERCICIO_INVALIDO],
+      solucion: enunciado ? [bonito(enunciado)] : [],
       paso: null,
       error: null,
     };
   }
-  const inicial = analisis.renglones[0].eq; // ya parseado: no hace falta volver a llamar a ecuacion()
-  let base = inicial;
+  const inicial = primero.eq; // ya parseado: no hace falta volver a llamar a ecuacion()
+  let base = primero;
   let error = null;
 
-  if (analisis.estado === 'error') {
-    error = analisis.error;
+  if (analisis.estado === 'error') error = analisis.error;
+  if (['error', 'incompleto', 'correcto'].includes(analisis.estado)) {
     const ultimaValida = [...analisis.renglones].reverse().find((r) => r.valido && r.tipo === 'ecuacion');
-    if (ultimaValida) base = ultimaValida.eq;
-  } else if (analisis.estado === 'incompleto' || analisis.estado === 'correcto') {
-    const ultima = [...analisis.renglones].reverse().find((r) => r.valido && r.tipo === 'ecuacion');
-    if (ultima) base = ultima.eq;
+    if (ultimaValida) base = ultimaValida;
   }
 
-  const solucion = [bonito(ejercicioTexto), ...pasosSolucion(inicial).map((p) => p.texto)];
-  const paso = siguientePaso(base);
+  // 2(x + 3) = 14: el motor ya lo lee como 2x + 6 = 14; el estudiante todavía tiene que escribirlo.
+  const sinParentesis = (r) => (conParentesis(r.texto) && fmtEcuacion(r.eq) !== bonito(r.texto) ? fmtEcuacion(r.eq) : null);
+  const expandidoInicial = sinParentesis(primero);
+  const solucion = [
+    bonito(enunciado),
+    ...(expandidoInicial ? [expandidoInicial] : []),
+    ...pasosSolucion(inicial).map((p) => p.texto),
+  ];
+  const paso = siguientePaso(base.eq);
   if (!paso) {
     return {
       pistas: [
@@ -243,13 +324,14 @@ function pistasSinRed(ejercicioTexto, renglonesAlumno, pack) {
       error,
     };
   }
-  const datos = datosPaso(paso);
-  const plantillas = pack.pistas[paso.tipo] || pack.pistas.revisar;
+  const expandido = pack.pistas.distribuir ? sinParentesis(base) : null;
+  const datos = expandido ? { siguiente: expandido } : datosPaso(paso);
+  const plantillas = (expandido ? pack.pistas.distribuir : pack.pistas[paso.tipo]) || pack.pistas.revisar;
   const pistas = plantillas.map((p) => rellenar(p, datos));
   if (error && pack.pistasPorError[error.tipo]) {
     pistas[0] = rellenar(pack.pistasPorError[error.tipo], { ...datos, ...datosError(error) });
   }
-  return { pistas, solucion, paso: paso.tipo, error };
+  return { pistas, solucion, paso: expandido ? 'distribuir' : paso.tipo, error };
 }
 
 /* ------------------------------------------------------------------ */
@@ -286,13 +368,16 @@ function distractor(d) {
  * restar el mismo número del otro lado. ¿Daría, por casualidad, el mismo valor de x?
  * Con 2x = 4, «se le resta 2» da 4 − 2 = 2 = 4 ÷ 2; con x/2 = 2, «se le suma 2» da
  * 2 + 2 = 4 = 2 · 2. Vale igual si se dividió el lado de la x o el de los números.
- *   dividir entre n (n·x = b), restar n:     b(n − 1) = n²
- *   multiplicar por k (x/k = b), sumar k:   b(k − 1) = k
+ *   dividir entre n (n·x = b), restar n:        b(n − 1) = n²
+ *   multiplicar por k (x/k = b), sumar k:      b(k − 1) = k
+ *   multiplicar por −1 (−x = b), sumar 1:      b + 1 = −b
+ * @param {'Divide'|'Multiplica'|'Opuesto'} caso
  */
-function otraUnLadoCoincide(d, multiplica) {
+function otraUnLadoCoincide(d, caso) {
   try {
     const b = fraccion(d.b);
-    if (multiplica) {
+    if (caso === 'Opuesto') return b.add(1).eq(b.neg());
+    if (caso === 'Multiplica') {
       const k = fraccion(d.divisor);
       return b.mul(k.sub(1)).eq(k);
     }
@@ -318,7 +403,8 @@ function ordenar(opciones, semilla) {
  */
 export function preguntaOrientadora(tipo, delAlumno, pack) {
   const q = pack.preguntas[tipo] || pack.preguntas[TIPOS.NO_CLASIFICADO];
-  let error = delAlumno?.error?.tipo === tipo ? delAlumno.error : null;
+  const suyo = delAlumno?.error && delAlumno.error.tipo === tipo ? delAlumno.error : null;
+  let error = suyo;
   let intro;
   if (error) {
     intro = rellenar(pack.preguntas.introDiagnostico, {
@@ -355,27 +441,35 @@ export function preguntaOrientadora(tipo, delAlumno, pack) {
     correcta,
     retro: rellenar(retro, d),
   });
+  /** Las tres opciones de una familia de claves: correcta<S>, suya<S>, otra<S><alt> y sus retro. */
+  const familia = (s, alt = '') => [
+    op('a', q[`correcta${s}`], true, q[`retroCorrecta${s}`]),
+    op('b', q[`suya${s}`], false, q[`retroSuya${s}`]),
+    op('c', q[`otra${s}${alt}`], false, q[`retroOtra${s}${alt}`]),
+  ];
+  const sinRepetir = (ops) => new Set(ops.map((o) => o.texto)).size === ops.length;
 
   if (tipo === TIPOS.ARITMETICA) {
-    // Sin cuenta que hacer (x = 25/3 = 26/3: «¿Cuánto es 25/3?» se contesta solo), se pregunta como copia.
-    if (variante === 'copia' || !d.cuenta || d.cuenta === d.esperado) {
+    const deCuenta = [
+      { id: 'a', texto: d.esperado, correcta: true, retro: rellenar(q.retroCorrecta, d) },
+      { id: 'b', texto: d.escrito, correcta: false, retro: rellenar(q.retroSuya, d) },
+      { id: 'c', texto: distractor(d), correcta: false, retro: rellenar(q.retroOtra, d) },
+    ];
+    // Sin cuenta que hacer (x = 25/3 = 26/3: «¿Cuánto es 25/3?» se contesta solo) o con dos opciones
+    // que se leerían igual, se pregunta como copia.
+    if (variante === 'copia' || !d.cuenta || d.cuenta === d.esperado || !sinRepetir(deCuenta)) {
       texto = rellenar(q.textoCopia, d);
-      opciones = [
-        op('a', q.correctaCopia, true, q.retroCorrectaCopia),
-        op('b', q.suyaCopia, false, q.retroSuyaCopia),
-        op('c', q.otraCopia, false, q.retroOtraCopia),
-      ];
+      opciones = familia('Copia');
     } else {
       texto = rellenar(q.texto, d);
-      opciones = [
-        { id: 'a', texto: d.esperado, correcta: true, retro: rellenar(q.retroCorrecta, d) },
-        { id: 'b', texto: d.escrito, correcta: false, retro: rellenar(q.retroSuya, d) },
-        { id: 'c', texto: distractor(d), correcta: false, retro: rellenar(q.retroOtra, d) },
-      ];
+      opciones = deCuenta;
     }
   } else if (tipo === TIPOS.SIGNO_NEGATIVO) {
     // x/4 = −3: la cuenta es −3 · 4 (se pregunta por la multiplicación, no por "−3 entre 1/4").
-    texto = rellenar(d.divisor && q.textoMultiplica ? q.textoMultiplica : q.texto, d);
+    // −x = 5: la cuenta es 5 · (−1), como en la pista «Multiplica los dos lados por −1».
+    const plantilla =
+      (d.divisor && q.textoMultiplica) || (esOpuesto(d) && q.textoOpuesto) || q.texto;
+    texto = rellenar(plantilla, d);
     const negativo = String(d.correcto || '').startsWith('−');
     opciones = [
       { id: 'a', texto: 'Positivo', correcta: !negativo, retro: rellenar(negativo ? q.retroSuya : q.retroCorrecta, d) },
@@ -385,48 +479,33 @@ export function preguntaOrientadora(tipo, delAlumno, pack) {
   } else if (tipo === TIPOS.INVERSA_EQUIVOCADA && (variante === 'divide' || d.divisor)) {
     // La x estaba dividida (x/4 = 3): da igual si volvió a dividir o restó el 4, lo que la deshace es multiplicar.
     texto = rellenar(q.textoDivide, d);
-    opciones = [
-      op('a', q.correctaDivide, true, q.retroCorrectaDivide),
-      op('b', q.suyaDivide, false, q.retroSuyaDivide),
-      op('c', q.otraDivide, false, q.retroOtraDivide),
-    ];
+    opciones = familia('Divide');
   } else if (tipo === TIPOS.INVERSA_EQUIVOCADA && String(variante).startsWith('aditivo')) {
     texto = rellenar(q.textoAditivo, d);
-    opciones = [
-      op('a', q.correctaAditivo, true, q.retroCorrectaAditivo),
-      op('b', q.suyaAditivo, false, q.retroSuyaAditivo),
-      op('c', q.otraAditivo, false, q.retroOtraAditivo),
-    ];
-  } else if (tipo === TIPOS.INVERSA_EQUIVOCADA && d.coefNum === '−1' && q.textoOpuesto) {
+    opciones = familia('Aditivo');
+  } else if (tipo === TIPOS.INVERSA_EQUIVOCADA && esOpuesto(d) && q.textoOpuesto) {
     // −x = 5: dividir entre −1 y multiplicar por −1 son la misma operación (las dos serían correctas).
     // Se pregunta como en la pista de ese paso: «Multiplica los dos lados por −1».
     texto = rellenar(q.textoOpuesto, d);
-    opciones = [
-      op('a', q.correctaOpuesto, true, q.retroCorrectaOpuesto),
-      op('b', q.suyaOpuesto, false, q.retroSuyaOpuesto),
-      op('c', q.otraOpuesto, false, q.retroOtraOpuesto),
-    ];
+    opciones = familia('Opuesto');
+  } else if (tipo === TIPOS.INVERSA_EQUIVOCADA && variante === 'invierte' && q.textoInvierte) {
+    // 3x = 12 → x = 3/12: sí dividió, pero al revés. Se pregunta por el orden de la división,
+    // no por la operación (esa ya la sabía).
+    texto = rellenar(q.textoInvierte, d);
+    opciones = familia('Invierte');
   } else if (tipo === TIPOS.UN_SOLO_LADO && String(variante).startsWith('divide')) {
-    // Con x/4 la operación de un solo lado fue multiplicar por 4.
-    const s = d.divisor && q.textoMultiplica ? 'Multiplica' : 'Divide';
+    // Con x/4 la operación de un solo lado fue multiplicar por 4; con −x, multiplicar por −1.
+    const s = d.divisor && q.textoMultiplica ? 'Multiplica' : esOpuesto(d) && q.textoOpuesto ? 'Opuesto' : 'Divide';
     // La opción equivocada nunca debe dar, por casualidad, el valor correcto de x.
-    const alt = q[`otra${s}Alt`] && otraUnLadoCoincide(d, s === 'Multiplica') ? 'Alt' : '';
+    const alt = q[`otra${s}Alt`] && otraUnLadoCoincide(d, s) ? 'Alt' : '';
     texto = rellenar(q[`texto${s}`], d);
-    opciones = [
-      op('a', q[`correcta${s}`], true, q[`retroCorrecta${s}`]),
-      op('b', q[`suya${s}`], false, q[`retroSuya${s}`]),
-      op('c', q[`otra${s}${alt}`], false, q[`retroOtra${s}${alt}`]),
-    ];
+    opciones = familia(s, alt);
   } else {
     texto = rellenar(q.texto, d);
-    opciones = [
-      op('a', q.correcta, true, q.retroCorrecta),
-      op('b', q.suya, false, q.retroSuya),
-      op('c', q.otra, false, q.retroOtra),
-    ];
+    opciones = familia('');
   }
-  const semilla = tipo.length + (error?.renglon || 0);
-  return { texto, opciones: ordenar(opciones, semilla), basadaEnAlumno: Boolean(delAlumno?.error?.tipo === tipo) };
+  const semilla = String(tipo).length + (error?.renglon || 0);
+  return { texto, opciones: ordenar(opciones, semilla), basadaEnAlumno: Boolean(suyo) };
 }
 
 /* ------------------------------------------------------------------ */
@@ -434,28 +513,64 @@ export function preguntaOrientadora(tipo, delAlumno, pack) {
 /* ------------------------------------------------------------------ */
 
 const sinAcentos = (s) =>
-  String(s)
+  String(s ?? '')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '');
 
+/** La duda lista para buscar claves: sin acentos ni signos de puntuación, y su «forma» con # en lugar de cada número. */
+function prepararDuda(pregunta) {
+  const texto = sinAcentos(pregunta)
+    .replace(/[¿?¡!,;"«»]/g, ' ')
+    .replace(/\.(?=\s|$)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { texto, forma: texto.replace(/\d+(?:[.,/]\d+)?/g, '#') };
+}
+
 /**
- * Respuesta preparada para una duda escrita. Gana el grupo con más claves
- * distintas dentro de la duda; en un empate, el que va primero en el paquete.
+ * ¿La clave está en la duda? Tres formas de escribir una clave en el paquete:
+ *   «pasa restando»   aparece en cualquier parte de la duda;
+ *   «no sé$»          la duda termina ahí («pues no sé», pero no «no sé cómo» ni «no se puede sumar»);
+ *   «# de #x»         # es cualquier número («el 4 de 4x», «el 12 de 12x»).
  */
-export function respuestaTecu(pregunta, pack) {
-  const t = sinAcentos(pregunta);
+function claveEnDuda(clave, duda) {
+  const alFinal = clave.endsWith('$');
+  const k = alFinal ? clave.slice(0, -1) : clave;
+  const t = k.includes('#') ? duda.forma : duda.texto;
+  if (!alFinal) return t.includes(k);
+  const fin = t.replace(/[^\p{L}\p{N}#]+$/u, '');
+  return fin === k || fin.endsWith(` ${k}`);
+}
+
+/**
+ * Grupo de respuestas preparadas (pack.tecu.respuestas) que mejor corresponde a una duda escrita.
+ * Gana el grupo con más claves distintas dentro de la duda; en un empate, el que va primero
+ * en el paquete (por eso los saludos y agradecimientos van al final).
+ * @returns {{id: string, claves: string[], texto: string}|null} null si ninguna clave coincide
+ */
+export function clasificarDuda(pregunta, pack) {
+  const duda = prepararDuda(pregunta);
   let mejor = null;
   let puntos = 0;
-  for (const r of pack.tecu.respuestas) {
+  for (const r of pack.tecu?.respuestas || []) {
     // Sin duplicados al quitar acentos: «no sé» y «no se» cuentan una sola vez.
-    const p = [...new Set(r.claves.map(sinAcentos))].filter((k) => t.includes(k)).length;
+    const p = [...new Set(r.claves.map(sinAcentos))].filter((k) => claveEnDuda(k, duda)).length;
     if (p > puntos) {
       mejor = r;
       puntos = p;
     }
   }
-  return mejor ? mejor.texto : pack.tecu.porDefecto;
+  return mejor;
+}
+
+/**
+ * Respuesta preparada para una duda escrita (ver clasificarDuda). Si ninguna clave
+ * coincide, la respuesta por defecto del paquete.
+ */
+export function respuestaTecu(pregunta, pack) {
+  const grupo = clasificarDuda(pregunta, pack);
+  return grupo ? grupo.texto : pack.tecu.porDefecto;
 }
 
 /** Sugerencia de 15 minutos para el docente. */
@@ -478,4 +593,272 @@ export function sugerenciaPorMotivo(motivo, datos = {}, pack) {
   const tema = datos.tema || (pack.tema ? pack.tema[0].toLowerCase() + pack.tema.slice(1) : 'el tema');
   const texto = rellenar(plantilla, { dias: Number.isFinite(n) && n >= 0 ? n : 'varios', tema });
   return n === 1 ? texto.replace('1 días', '1 día') : texto;
+}
+
+/* ------------------------------------------------------------------ */
+/* Lecciones (pantalla «Aprender»)                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @typedef {object} Leccion
+ * @property {string} clave tipo de error o id de habilidad al que pertenece la lección
+ * @property {string} titulo
+ * @property {string} meta qué se aprende (la meta de la ruta, o la de la habilidad)
+ * @property {string[]} pasos de 3 a 5 frases cortas (formato «Paso a paso»)
+ * @property {string|null} ejemplo ecuación de ejemplo (sus renglones: pasosExplicados)
+ * @property {{modo: string, ecuacion: string, unLado?: boolean, instruccion: string, cierre: string}|null} visual
+ *   configuración de la balanza interactiva (formato «Visual»)
+ * @property {string} cotidiano ejemplo de la vida diaria (formato «Ejemplo cotidiano»)
+ * @property {string} escuchar el mismo contenido redactado para oírse (formato «Escuchar»)
+ */
+
+/**
+ * Lección de un tipo de error (la de su ruta) o de una habilidad (pack.lecciones).
+ * Si la clave es una habilidad sin lección propia, se usa la del primer tipo de error que la
+ * afecta; si no se reconoce, la lección general (NO_CLASIFICADO). El título, la meta, el ejemplo
+ * y la balanza de las lecciones por tipo de error salen de `pack.errores[tipo].ruta`, para que
+ * la lección y la ruta nunca digan cosas distintas.
+ *
+ * @param {string} clave tipo de error ('SIGNO_TRANSPOSICION'…) o id de habilidad ('leer', 'plantear'…)
+ * @param {object} pack
+ * @returns {Leccion|null} null si el paquete no trae lecciones
+ */
+export function leccionPara(clave, pack) {
+  const lecciones = pack?.lecciones || {};
+  let id = lecciones[clave] ? clave : null;
+  if (!id) {
+    const habilidad = (pack?.habilidades || []).find((h) => h.id === clave);
+    id = habilidad?.errores?.find((t) => lecciones[t]) ?? (lecciones[TIPOS.NO_CLASIFICADO] ? TIPOS.NO_CLASIFICADO : null);
+  }
+  if (!id) return null;
+  const leccion = lecciones[id];
+  const ruta = pack.errores?.[id]?.ruta || {};
+  return {
+    clave: id,
+    titulo: leccion.titulo || ruta.titulo || '',
+    meta: leccion.meta || ruta.meta || '',
+    pasos: [...(leccion.pasos || [])],
+    ejemplo: leccion.ejemplo || ruta.ejemplo || null,
+    visual: leccion.visual || ruta.visual || null,
+    cotidiano: leccion.cotidiano || '',
+    escuchar: leccion.escuchar || '',
+  };
+}
+
+/**
+ * Resolución de una ecuación renglón por renglón, con lo que se hizo en cada uno (pack.pasos).
+ * Es el «Paso a paso» del ejemplo de una lección y sirve para «Ver la solución».
+ * OJO: el último renglón dice cuánto vale x; no usar como pista.
+ *
+ * @param {string} ecuacionTexto p. ej. '2x + 3 = 11'
+ * @param {object} pack
+ * @returns {{renglon: string, explicacion: string}[]} el primero es la ecuación tal cual; [] si no se puede resolver
+ */
+export function pasosExplicados(ecuacionTexto, pack) {
+  const frases = pack?.pasos || {};
+  let leido;
+  let pasos;
+  try {
+    leido = parsearRenglon(ecuacionTexto);
+    if (!leido.ok || leido.tipo !== 'ecuacion' || leido.cadena) return [];
+    pasos = pasosSolucion(leido.eq);
+  } catch {
+    return [];
+  }
+  if (!pasos.length) return [];
+  const salida = [{ renglon: bonito(ecuacionTexto), explicacion: rellenar(frases.inicio, {}) }];
+  if (conParentesis(ecuacionTexto) && fmtEcuacion(leido.eq) !== bonito(ecuacionTexto)) {
+    salida.push({ renglon: fmtEcuacion(leido.eq), explicacion: rellenar(frases.distribuir, {}) });
+  }
+  for (const paso of pasos) {
+    salida.push({ renglon: paso.texto, explicacion: rellenar(frases[paso.tipo], datosPaso(paso)) });
+  }
+  return salida;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tutor: «Explícamelo de otra forma», «Ejemplo cotidiano», apoyo      */
+/* ------------------------------------------------------------------ */
+
+/** Entero (como texto) si la fracción lo es y vale al menos `min`; si no, null. */
+const enteroDesde = (fr, min) => (fr.isInt() && fr.n >= min ? String(fr.n) : null);
+
+/**
+ * Forma del ejercicio cuando se puede contar como una balanza o una historia con cantidades
+ * positivas (cajas, pesas, precios). Los nombres coinciden con los del generador del motor.
+ * Devuelve null si no es una de estas formas o si la x no vale un número positivo (no se puede
+ * hablar de un precio o de un peso negativo). Solo dice la forma: nunca el valor de x.
+ */
+function formaDe(eq) {
+  const partir = (ts) => ({
+    xs: ts.filter((t) => t.x && !t.c.isZero()).map((t) => t.c),
+    ns: ts.filter((t) => !t.x && !t.c.isZero()).map((t) => t.c),
+  });
+  let A = partir(eq.L);
+  let B = partir(eq.R);
+  if (!A.xs.length && B.xs.length) [A, B] = [B, A]; // la x a la izquierda
+  const solucion = resolver(eq);
+  if (solucion.tipo !== 'unica' || solucion.valor.cmp(0) <= 0) return null;
+  if (A.ns.length > 1 || B.ns.length !== 1) return null;
+  const sueltas = A.ns.length ? enteroDesde(A.ns[0], 1) : null;
+  const descuento = A.ns.length ? enteroDesde(A.ns[0].neg(), 1) : null;
+  const totalB = enteroDesde(B.ns[0], 1);
+  if (!totalB || (A.ns.length && !sueltas && !descuento)) return null;
+
+  if (B.xs.length) {
+    // x en los dos lados: ax + b = cx + d, con todo positivo.
+    if (A.xs.length !== 1 || B.xs.length !== 1 || !sueltas) return null;
+    const cajas = enteroDesde(A.xs[0], 2);
+    const cajasB = enteroDesde(B.xs[0], 1);
+    if (!cajas || !cajasB) return null;
+    return cajasB === '1'
+      ? { forma: 'ax+b=x+d', cajas, sueltas, sueltasB: totalB }
+      : { forma: 'ax+b=cx+d', cajas, sueltas, cajasB, sueltasB: totalB };
+  }
+  const total = totalB;
+  if (A.xs.length === 2) {
+    const [cajas, cajasB] = A.xs.map((c) => enteroDesde(c, 2));
+    if (!cajas || !cajasB || descuento) return null;
+    return sueltas ? { forma: 'ax+b+cx=d', cajas, cajasB, sueltas, total } : { forma: 'ax+bx=c', cajas, cajasB, total };
+  }
+  if (A.xs.length !== 1) return null;
+  const c = A.xs[0];
+  if (c.eq(1)) {
+    if (sueltas) return { forma: 'x+b=c', sueltas, total };
+    return descuento ? { forma: 'x-b=c', descuento, total } : null;
+  }
+  const cajas = enteroDesde(c, 2);
+  if (cajas) {
+    if (sueltas) return { forma: 'ax+b=c', cajas, sueltas, total };
+    return descuento ? { forma: 'ax-b=c', cajas, descuento, total } : { forma: 'ax=b', cajas, total };
+  }
+  const partes = c.n === 1 ? enteroDesde(new Fr(c.d), 2) : null; // x/4
+  if (partes) {
+    if (sueltas) return { forma: 'x/a+b=c', partes, sueltas, total };
+    return descuento ? null : { forma: 'x/a=b', partes, total };
+  }
+  const gastadas = enteroDesde(c.neg(), 2); // −3x + 20 = 5: tenías 20, compraste 3 y te quedaron 5
+  if (gastadas && sueltas) return { forma: '-ax+b=c', cajas: gastadas, tenias: sueltas, total };
+  return null;
+}
+
+/**
+ * Datos del ejercicio en curso para las plantillas del tutor (pack.tutor). Solo usa lo que está
+ * a la vista en el enunciado: nunca el valor de x ni resultados intermedios.
+ *
+ * Siempre (si el ejercicio se puede leer): `ejercicio`, `izquierdo`, `derecho`.
+ * Si hay un número que suma o resta y hay que pasarlo al otro lado: `termino`, `elTermino`,
+ * `terminoSinSigno`, `verbo`, `verboInverso`, `inversa`, `lado`, `otroLado`…
+ * Si la x tiene un coeficiente negativo a la vista: `coefNum` («−3») o `menosX` («−x»).
+ * Si el ejercicio tiene una de las formas de formaDe(): `forma` y sus cantidades (`cajas`,
+ * `cajasB`, `sueltas`, `sueltasB`, `descuento`, `partes`, `tenias`, `total`).
+ *
+ * @param {string|{ecuacion: string}} ejercicio texto de la ecuación o un ejercicio de la ruta
+ * @returns {object} {} si no se puede leer
+ */
+export function datosEjercicio(ejercicio) {
+  const texto = String((ejercicio && typeof ejercicio === 'object' ? ejercicio.ecuacion : ejercicio) ?? '').trim();
+  if (!texto) return {};
+  try {
+    const leido = parsearRenglon(texto);
+    if (!leido.ok || leido.tipo !== 'ecuacion' || leido.cadena) return {};
+    const escrito = bonito(texto);
+    const [izquierdo, derecho] = escrito.split(' = ');
+    if (!conDato(izquierdo) || !conDato(derecho)) return {};
+    const d = { ejercicio: escrito, izquierdo, derecho };
+    // Con paréntesis, los términos que maneja el motor (2x + 6) no son los que se ven: 2(x + 3).
+    if (/[()]/.test(escrito)) return d;
+    const eq = leido.eq;
+    const paso = siguientePaso(eq);
+    const numero = paso?.movidos?.find((m) => !m.esX);
+    if (numero) Object.assign(d, datosError({ detalle: numero }));
+    const conX = [...eq.L, ...eq.R].filter((t) => t.x && !t.c.isZero());
+    if (conX.length === 1 && conX[0].c.isInt() && conX[0].c.isNeg()) {
+      if (conX[0].c.eq(-1)) d.menosX = fmtLado([conX[0]]);
+      else d.coefNum = fmtNum(conX[0].c);
+    }
+    return Object.assign(d, formaDe(eq));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * «Explícamelo de otra forma»: la balanza contada con palabras y con los números del ejercicio
+ * en curso, seguida de la regla que trabaja la ruta de ese tipo de error. Termina con una
+ * pregunta y nunca dice cuánto vale x.
+ *
+ * Se arma con `pack.tutor.balanza[forma]` (o `.general`, o `.sinEjercicio`) y la primera
+ * plantilla de `pack.tutor.otraForma[tipo]` que se pueda llenar con los datos del ejercicio.
+ *
+ * @param {string} tipo tipo de error de la ruta del estudiante
+ * @param {string|{ecuacion: string}} ejercicio el ejercicio en curso
+ * @param {object} pack
+ * @returns {string}
+ */
+export function otraForma(tipo, ejercicio, pack) {
+  const tutor = pack?.tutor || {};
+  const datos = datosEjercicio(ejercicio);
+  const balanza = tutor.balanza || {};
+  const descripcion = datos.ejercicio ? balanza[datos.forma] || balanza.general : balanza.sinEjercicio;
+  const reglas = tutor.otraForma || {};
+  const regla = primeraCompleta(reglas[tipo] ?? reglas[TIPOS.NO_CLASIFICADO], datos);
+  return [rellenar(descripcion, datos), rellenar(regla, datos)].filter(Boolean).join(' ');
+}
+
+/**
+ * «Un ejemplo cotidiano»: si se pasa el ejercicio en curso y tiene una forma con historia
+ * (`pack.tutor.historias[forma]`), la historia usa sus mismos números; si no, el ejemplo fijo
+ * del tipo de error (`pack.tutor.cotidiano[tipo]`). Ninguno dice cuánto vale x.
+ *
+ * @param {string} tipo tipo de error de la ruta del estudiante
+ * @param {object} pack
+ * @param {string|{ecuacion: string}|null} [ejercicio] el ejercicio en curso (opcional)
+ * @returns {string}
+ */
+export function ejemploCotidiano(tipo, pack, ejercicio = null) {
+  const tutor = pack?.tutor || {};
+  const datos = ejercicio ? datosEjercicio(ejercicio) : {};
+  const historia = datos.forma ? tutor.historias?.[datos.forma] : null;
+  if (historia && datosDe(historia).every((k) => conDato(datos[k]))) return rellenar(historia, datos);
+  const fijos = tutor.cotidiano || {};
+  return rellenar(fijos[tipo] ?? fijos[TIPOS.NO_CLASIFICADO], {});
+}
+
+/**
+ * Nivel de apoyo del tutor según el dominio de la habilidad en curso: baja cuando sube el dominio
+ * (pack.tutor.apoyo.niveles, cada uno con `desde`: dominio mínimo). Sin datos, el apoyo más alto.
+ *
+ * @param {number|null} valor dominio de 0 a 100 (dominioPorHabilidad), o null si no hay datos
+ * @param {object} pack
+ * @returns {{id: 'alto'|'medio'|'bajo', etiqueta: string, n: number, desde: number, texto: string, nota: string}|null}
+ *   `n`: 3 = alto … 1 = bajo (para el medidor de tres pasos); null si el paquete no trae niveles
+ */
+export function nivelDeApoyo(valor, pack) {
+  const apoyo = pack?.tutor?.apoyo || {};
+  const niveles = [...(apoyo.niveles || [])].sort((a, b) => a.desde - b.desde);
+  if (!niveles.length) return null;
+  const v = typeof valor === 'number' && Number.isFinite(valor) ? valor : 0;
+  const nivel = niveles.filter((n) => v >= n.desde).pop() || niveles[0];
+  return { ...nivel, nota: apoyo.nota || '' };
+}
+
+/* ------------------------------------------------------------------ */
+/* Docente: plantillas de retroalimentación                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Plantillas para escribirle a un estudiante (pack.plantillasRetro). Con `tema` (por ejemplo, el
+ * nombre de su ruta) se usa la versión que lo menciona; sin él, el texto general.
+ *
+ * @param {object} pack
+ * @param {{tema?: string}} [datos]
+ * @returns {{etiqueta: string, texto: string}[]}
+ */
+export function plantillasDeRetro(pack, datos = {}) {
+  const tema = String(datos?.tema ?? '').trim();
+  return (pack?.plantillasRetro || []).map((p) => ({
+    etiqueta: p.etiqueta,
+    texto: tema && p.conTema ? rellenar(p.conTema, { tema }) : p.texto,
+  }));
 }

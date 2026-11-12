@@ -1,0 +1,152 @@
+/* =========================================================
+   Cascarón (js/shell/): lo que la página alrededor de las pantallas
+   agrega al sistema de diseño.
+
+   El encabezado, la barra «Demostración», la navegación, el pie, los
+   diálogos y el escenario usan las clases del sistema de diseño tal
+   cual (.topbar, .demo, .nav, .footer, .dialog, .stage… en styles.css).
+   Aquí solo va lo propio del cascarón:
+   1. Página y foco bajo las barras fijas
+   2. Contador de pendientes en el estado de conexión
+   3. Barra «Demostración» (estudiante de ejemplo)
+   4. Panel de conexión
+   5. Objetivos táctiles de 44 px en los controles del cascarón
+   6. Modo embebido y compacto (dentro del modo presentación)
+   ========================================================= */
+
+/* ---------- 1. Página ---------- */
+.cascaron {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* El foco nunca queda tapado por las barras fijas (WCAG 2.4.11): js/main.js mide el
+   encabezado y las pestañas de abajo y publica su alto real (con texto grande crecen). */
+html.con-cascaron {
+  scroll-padding-top: calc(var(--alto-barra-medida, var(--topbar-h, 4rem)) + 1rem);
+  scroll-padding-bottom: calc(var(--alto-nav-medida, var(--tabbar-h, 4.5rem)) + 1rem);
+}
+
+.cascaron .main > .cargando {
+  margin: 2rem auto;
+}
+
+/* ---------- 2. Estado de conexión: pendientes de sincronizar ---------- */
+.chip__n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+@media (max-width: 30em) {
+  /* En pantallas angostas el estado es solo un icono: el contador pasa a ser una insignia
+     (igual que la de «Alertas») y la palabra queda para lectores de pantalla. */
+  .topbar .chip {
+    position: relative;
+  }
+  .topbar .chip .chip__n {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.375rem;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.3rem;
+    border: 2px solid var(--nav-bg, #0b2f45);
+    background: #f2b134;
+    color: #0b2f45;
+    font-size: 0.75rem;
+  }
+  .topbar .chip .chip__palabra {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* ---------- 3. Barra «Demostración» ---------- */
+.cascaron__demo {
+  display: block;
+}
+.demo__alumno {
+  max-width: min(100%, 24rem);
+}
+.demo__detalle {
+  font-weight: 400;
+  color: var(--muted);
+}
+html[data-simple="on"] .demo__detalle {
+  display: none;
+}
+
+/* ---------- 4. Panel de conexión ---------- */
+.conexion__datos > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+#conn-panel [data-zona="cola"] .cola--tarjeta {
+  margin: 0;
+}
+#conn-panel [data-zona="acciones"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ---------- 5. Objetivos táctiles de 44 px ---------- */
+.cascaron .demo .btn--sm,
+.cascaron .demo .segmented__opt span,
+.cascaron .stage__intro .segmented__opt span,
+.dialog--cascaron .segmented__opt span {
+  min-height: var(--target, 2.75rem);
+}
+.cascaron .footer .link,
+.cascaron .toc .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target, 2.75rem);
+}
+/* Interruptores: la etiqueta ocupa todo el alto del renglón y el control tiene un área
+   táctil más alta que su dibujo. */
+.cascaron .switch__label,
+.dialog--cascaron .switch__label {
+  align-self: stretch;
+  justify-content: center;
+}
+.cascaron .switch__input::after,
+.dialog--cascaron .switch__input::after {
+  content: "";
+  position: absolute;
+  inset: -0.5rem -0.25rem;
+}
+
+/* ---------- 6. Dentro del modo presentación ---------- */
+/* Embebido (celulares de Ana y Luis): sin barra de demostración ni pie (no se dibujan). */
+/* Compacto (panel docente): además sin navegación y con el encabezado sin fijar. */
+.cascaron--compacto .nav {
+  display: none;
+}
+.cascaron--compacto .layout {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+}
+.cascaron--compacto .topbar {
+  position: static;
+  min-height: 0;
+  padding-block: 0.25rem;
+}
+.cascaron--compacto .main {
+  padding: 0.75rem;
+}

@@ -80,6 +80,15 @@ const ALUMNOS_EJEMPLO = [
 /** Quiénes tienen guion para sembrar datos de ejemplo (js/data/guiones.js). */
 const CON_GUION = ['ana', 'luis'];
 
+/** Modo presentación: siempre desde la raíz de la app (también si el cascarón se abre desde docs/). */
+const URL_PRESENTACION = (() => {
+  try {
+    return `${new URL('../../', import.meta.url).pathname}?vista=pitch`;
+  } catch {
+    return '?vista=pitch';
+  }
+})();
+
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
 /* ------------------------------------------------------------------ */
@@ -270,7 +279,7 @@ export async function montarCascaron(raiz, { perfil = 'estudiante', alumno = 'in
 
   function descripcionAlumno() {
     const ejemplo = ALUMNOS_EJEMPLO.find((a) => a.valor === quien);
-    return ejemplo ? `${ejemplo.texto}: ${ejemplo.detalle}.` : `«${quien}»: estudiante de este dispositivo.`;
+    return ejemplo ? `${ejemplo.texto}: ${ejemplo.detalle}` : `«${quien}»: estudiante de este dispositivo`;
   }
 
   function htmlDemo() {
@@ -297,13 +306,12 @@ export async function montarCascaron(raiz, { perfil = 'estudiante', alumno = 'in
           ? html`<div class="demo__alumno">
               ${segmentado({
                 nombre: 'demo-alumno',
-                leyenda: 'Estudiante de ejemplo',
+                leyenda: html`Estudiante de ejemplo<span class="demo__detalle"> · ${descripcionAlumno()}</span>`,
                 cambio: 'alumno',
                 valor: quien,
-                descritoPor: 'demo-alumno-h demo-cambia',
+                descritoPor: 'demo-cambia',
                 opciones: opcionesAlumno(),
               })}
-              <p class="field__hint" id="demo-alumno-h">${descripcionAlumno()}</p>
             </div>`
           : ''}
         ${interruptor({ id: 'demo-sin-internet', etiqueta: 'Simular sin internet', marcado: estado.red.simulada, cambio: 'sin-internet' })}
@@ -315,7 +323,7 @@ export async function montarCascaron(raiz, { perfil = 'estudiante', alumno = 'in
             ${ic('route', 16)}Recorrido guiado
           </button>
           <a class="btn btn--ghost btn--sm" href="#${RUTA_ACERCA}">${ic('info', 16)}Acerca del proyecto</a>
-          <a class="btn btn--ghost btn--sm" href="${location.pathname}?vista=pitch"${attr('target', EN_MARCO, '_top')}>${ic('proyector', 16)}Modo presentación</a>
+          <a class="btn btn--ghost btn--sm" href="${URL_PRESENTACION}"${attr('target', EN_MARCO, '_top')}>${ic('proyector', 16)}Modo presentación</a>
           <button type="button" class="btn btn--ghost btn--sm" data-act="reiniciar" data-foco="reiniciar" aria-haspopup="dialog">${ic('reset', 16)}Reiniciar</button>
         </div>
       </div>
@@ -793,6 +801,7 @@ export async function montarCascaron(raiz, { perfil = 'estudiante', alumno = 'in
   /* ---------------- Modo app ---------------- */
 
   function construirApp() {
+    document.documentElement.classList.add('con-cascaron');
     raiz.className = `cascaron${embebido ? ' cascaron--embebido' : ''}${compacto ? ' cascaron--compacto' : ''}`;
     raiz.dataset.perfil = yo;
     raiz.innerHTML = String(html`<header class="topbar" role="banner"></header>
@@ -867,6 +876,7 @@ export async function montarCascaron(raiz, { perfil = 'estudiante', alumno = 'in
     apagarCola();
     cerrarDialogo();
     regiones = null;
+    document.documentElement.classList.add('con-cascaron');
     raiz.className = 'cascaron cascaron--escenario';
     raiz.innerHTML = String(htmlEscenario(modo, { dispositivo: estado.prefs.dispositivo, src: `${location.pathname}${location.search}${location.hash}` }));
     document.title = `${tituloEscenario(modo)} · ${MARCA.nombre}`;

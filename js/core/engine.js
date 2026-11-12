@@ -1019,10 +1019,39 @@ const sinParesOpuestos = (eq) => ({ L: sinOpuestos(eq.L), R: sinOpuestos(eq.R) }
  * `visto` es el renglón del estudiante sin sus pares opuestos (ver sinOpuestos).
  */
 function sinJuntarDeMas(visto, c, vS) {
-  const cabe = (s, k) => [true, false].every((esX) => terminosDe(s, esX).length <= terminosDe(k, esX).length);
+  const cabe = (s, k) => [true, false].every((esX) => seAgrupan(terminosDe(s, esX), terminosDe(k, esX)));
   const v = c.vector;
   if (vS.every((x, i) => x.eq(v[i])) && cabe(visto.L, c.eq.L) && cabe(visto.R, c.eq.R)) return true;
   return !c.fantasma && vS.every((x, i) => x.eq(v[(i + 2) % 4])) && cabe(visto.L, c.eq.R) && cabe(visto.R, c.eq.L);
+}
+
+/** Con más términos que esto no se prueban los agrupamientos (crecen como kⁿ): basta con contarlos. */
+const MAX_TERMINOS_AGRUPAR = 6;
+
+/**
+ * ¿Los términos del estudiante (de un lado, x o números) salen de sumar por grupos los del
+ * candidato, sin partir ninguno? Con las mismas sumas, «2x + 9x» no sale de «16x − 5x»: el
+ * estudiante no escribió ese 16x, así que el candidato no explica su renglón.
+ */
+function seAgrupan(suyos, delCandidato) {
+  if (suyos.length > delCandidato.length) return false;
+  if (suyos.length <= 1 || delCandidato.length > MAX_TERMINOS_AGRUPAR) return true;
+  const metas = suyos.map((t) => t.c);
+  const sumas = metas.map(() => Fr.ZERO);
+  const usados = metas.map(() => 0);
+  const probar = (k) => {
+    if (k === delCandidato.length) return sumas.every((suma, j) => usados[j] > 0 && suma.eq(metas[j]));
+    for (let j = 0; j < metas.length; j++) {
+      const antes = sumas[j];
+      sumas[j] = antes.add(delCandidato[k].c);
+      usados[j]++;
+      if (probar(k + 1)) return true;
+      sumas[j] = antes;
+      usados[j]--;
+    }
+    return false;
+  };
+  return probar(0);
 }
 
 /** ¿Los dos lados tienen los mismos términos, sin importar el orden? */

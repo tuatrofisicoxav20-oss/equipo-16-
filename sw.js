@@ -45,7 +45,7 @@
  *      se te olvida).
  *   3. Publica sw.js junto con los demás archivos (en el mismo push).
  */
-const VERSION = 'tecu-2026-11-12-acdd3427';
+const VERSION = 'tecu-2026-11-12-1c2aaff2';
 
 const PRECACHE = [
   './',
@@ -53,6 +53,7 @@ const PRECACHE = [
   'manifest.webmanifest',
   'styles.css',
   'css/balanza.css',
+  'css/cascaron.css',
   'css/cola.css',
   'css/cuaderno.css',
   'css/diapositiva.css',
