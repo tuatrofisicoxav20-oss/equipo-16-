@@ -11,13 +11,14 @@
  * .imprimiendo-cuadernillo para que css/impresion.css oculte la app entera al
  * imprimir, llama window.print() y quita todo en 'afterprint'.
  *
- * Hojas (tamaño carta). Cada estudiante recibe 1 hoja por las dos caras con la
- * ruta normal (4 ejercicios):
+ * Hojas (tamaño carta). Con la ruta del panel (3 ejercicios) o la ruta completa
+ * (3 + la comprobación) cada estudiante recibe 2 páginas: 1 hoja por las dos caras.
  *   hoja 1    encabezado (Nombre, Grupo, Fecha), "Antes de empezar" (meta de la
  *             ruta, balanza en blanco y negro, regla de oro) y el ejercicio 1
- *   hoja 2…   hasta 3 ejercicios por hoja
+ *   hoja 2…   hasta 3 ejercicios por hoja (con 2 o menos, 8 renglones cada uno)
  *   clave     al final y en hoja aparte, solo para el docente
- * Si `alumnos` trae nombres, sale un juego por estudiante con su nombre impreso.
+ * Si `alumnos` trae nombres, sale un juego por estudiante con su nombre impreso:
+ * 3 estudiantes = 3 × 2 + 1 = 7 páginas.
  *
  * Armar el HTML es puro (sin DOM): htmlCuadernillo() y prepararCuadernillo() se
  * pueden probar en Node.
@@ -149,7 +150,8 @@ function repartirEnHojas(ejercicios) {
  * @param {OpcionesCuadernillo} opciones
  * @param {object} pack packs/ecuaciones-1.json
  */
-export function prepararCuadernillo({ titulo, alumnos = [], tipo, ejercicios, semilla } = {}, pack = {}) {
+export function prepararCuadernillo(opciones, pack) {
+  const { titulo, alumnos = [], tipo, ejercicios, semilla } = opciones || {};
   const errores = pack?.errores || {};
   const primero = Array.isArray(ejercicios) ? ejercicios[0] : ejercicios;
   const tipoRuta = [tipo, primero?.tipo].find((t) => t && errores[t]) || TIPOS.NO_CLASIFICADO;
