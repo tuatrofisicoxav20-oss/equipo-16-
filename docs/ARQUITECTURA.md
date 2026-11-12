@@ -161,7 +161,7 @@ montarBalanza(contenedor, {
   textos: { instruccion, cierre },
   onCompletar(resumen),        // una vez, al lograr la meta
   onCambio(estado),
-}) → { destruir(), reiniciar() }
+}) → { destruir(), reiniciar(), resolver() → Promise }   // resolver(): completa la meta paso a paso (modo pitch)
 ```
 
 Metas por modo: **quitar** = dejar solas las cajas (pesas fuera del platillo de las x);
@@ -201,6 +201,7 @@ API de control para el modo pitch (mensajes `postMessage` del mismo origen):
 ```js
 { tecu: 'control', cmd: 'reproducirDiagnostico', items: string[][], rapido?: boolean } // renglones del alumno por ejercicio
 { tecu: 'control', cmd: 'reproducirPractica' }        // resuelve bien el ejercicio de práctica actual
+{ tecu: 'control', cmd: 'avanzarRuta' }               // completa bien la actividad actual de la ruta y avanza
 { tecu: 'control', cmd: 'simularRed', sinInternet: boolean }
 { tecu: 'control', cmd: 'irA', pantalla: string }
 { tecu: 'control', cmd: 'reiniciar' }
@@ -231,3 +232,60 @@ API de control para el modo pitch (mensajes `postMessage` del mismo origen):
 `.cuaderno__entrada`, `.teclas-rapidas` + `.tecla`; `.diagnostico` + `--error|--ok|--revisar`;
 `.pistas` + `.pista`; `.dialogo` (para `<dialog>`); `.vacio`; `.avisos` + `.aviso--info|exito|alerta|error`;
 `.oculto-impresion`, `.solo-impresion`.
+
+## Fase 4 — Panel docente (`?vista=docente`)
+
+Fuentes de datos: el **grupo simulado** (28 estudiantes generados con semilla fija; sus procedimientos los
+escribe el propio motor con `procedimientoConError` y se vuelven a diagnosticar con `analizarProcedimiento`,
+así que son coherentes) + los eventos reales del "servidor" (`eventosServidor()`), que traen a Ana, Luis y a
+cualquier otro celular que sincronice (por ejemplo, un juez que abrió la app con el QR).
+
+### `js/data/grupo.js`
+
+```js
+SEMILLA_GRUPO = 'tecu-1A-veracruz'
+NOMBRES_GRUPO = ['Sofía M.', 'Diego R.', …]          // 28 nombres, sin Ana ni Luis
+generarGrupo({ semilla = SEMILLA_GRUPO, ahora = Date.now(), pack }) → {
+  alumnos: { id, nombre, simulado: true }[],        // id: 'sim-01' … 'sim-28'
+  eventos: Evento[]                                 // mismo esquema que store.js, sincronizado: true
+}
+```
+
+Perfiles (deterministas por semilla): error dominante con pesos aproximados (signos 30 %, inversa 20 %,
+términos 15 %, un solo lado 12 %, negativos 10 %, cuentas 10 %, no clasificado 3 %) y estado: sin diagnóstico,
+en diagnóstico, en ruta, atorado (≥ 2 comprobaciones sin ayuda falladas), dominado, inactivo (última actividad
+hace 8–14 días). Fechas dentro de los últimos 14 días respecto a `ahora`. Algunos piden pistas o la solución,
+algunos escriben dudas.
+
+### `js/data/analitica.js` (puro, con pruebas)
+
+```js
+resumirAlumnos(eventos, { ahora, nombres }) → ResumenAlumno[]
+// ResumenAlumno = { id, nombre, simulado, enVivo, estado: 'sin_actividad'|'diagnostico'|'en_ruta'|'atorado'|'dominado'|'inactivo',
+//   conteoErrores: { [tipo]: n }, errorDominante, ruta, ultimaActividad, diasSinActividad,
+//   pistasUsadas, solucionesPedidas, comprobaciones: { intentos, aprobadas },
+//   ultimoProcedimiento: { ejercicio, renglones, error } | null, dudas: Evento[], porRevisar: n, eventos: Evento[] }
+resumirGrupo(resumenes) → { total, activosSemana, dominados, porRevisar, masRepetidos: [{ tipo, alumnos, ocurrencias }] }
+aQuienLlamar(resumenes, pack, { ahora, max = 6 }) → [{ alumno, motivo: 'atorado'|'por_revisar'|'inactivo'|'sin_diagnostico',
+  detalle, sugerencia, prioridad }]          // sugerencia de 15 min: sugerenciaLlamada() de textos.js con su ejercicio
+gruposDeRefuerzo(resumenes, pack, { semilla }) → [{ tipo, nombre, alumnos, actividad, ejercicios: [{ ecuacion, nivel }] }]
+```
+
+### `js/views/docente.js`
+
+`montarDocente(raiz, { compacto = false })`. Escritorio primero (también usable en tableta/celular).
+Secciones: encabezado (grupo, tema, "en vivo" + última sincronización, nota discreta: grupo simulado para la
+demostración), **lo que más se repite en el grupo**, indicadores, **a quién llamar esta semana** (con sugerencia
+de 15 min), **mapa de dificultades** (tabla estudiantes × tipo de error, con números además de color),
+**grupos de refuerzo** con botón **Imprimir cuadernillo**. Cada estudiante abre su **ficha** en 1 clic.
+Se actualiza con `escucharServidor()` sin recargar y resalta lo nuevo. `compacto` = versión densa para el
+iframe del modo pitch.
+
+### `js/ui/ficha.js` y `js/ui/cuadernillo.js`
+
+```js
+abrirFicha(resumenAlumno, pack) → void        // <dialog> modal accesible: procedimiento con el renglón roto
+                                              // resaltado y explicado (explicarError 'docente'), ruta, pistas,
+                                              // solución pedida, comprobación sin ayuda, dudas, historial
+imprimirCuadernillo({ titulo, alumnos, tipo, ejercicios }, pack) → void   // arma la hoja y llama window.print()
+```
