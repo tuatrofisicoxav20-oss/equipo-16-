@@ -57,6 +57,41 @@ async function correr() {
     await navegador.close();
     await servidor.cerrar();
   }
+  // Panel docente: escritorio, compacto (iframe del pitch) y con la ficha abierta.
+  const servidor2 = await levantarServidor();
+  const navegador2 = await abrirNavegador();
+  try {
+    const casos = [
+      ['Panel docente', '?vista=docente', { width: 1280, height: 800 }, false, false],
+      ['Panel docente compacto', '?vista=docente&compacto=1', { width: 600, height: 700 }, false, false],
+      ['Panel docente con ficha abierta', '?vista=docente', { width: 1280, height: 800 }, false, true],
+      ['Panel docente (alto contraste)', '?vista=docente', { width: 1280, height: 800 }, true, false],
+      ['Panel docente en celular', '?vista=docente', { width: 360, height: 740 }, false, false],
+    ];
+    for (const [nombre, ruta, viewport, contraste, conFicha] of casos) {
+      const ctx = await navegador2.newContext({ viewport, reducedMotion: 'reduce' });
+      const p = await ctx.newPage();
+      await p.goto(`${servidor2.url}/?reiniciar=1`);
+      if (contraste) await p.evaluate(() => localStorage.setItem('tecu:prefs', JSON.stringify({ contraste: true })));
+      await p.goto(`${servidor2.url}/${ruta}`);
+      await p.getByRole('heading', { level: 1 }).first().waitFor();
+      if (conFicha) {
+        await p.locator('table tbody tr').first().getByRole('button').first().click();
+        await p.locator('dialog[open]').waitFor();
+      }
+      const violaciones = await auditarAxe(p);
+      total += violaciones.length;
+      if (!violaciones.length) console.log(`✓ ${nombre}: 0 violaciones`);
+      else {
+        console.log(`✗ ${nombre}: ${violaciones.length} violaciones`);
+        for (const v of violaciones) console.log(`    - [${v.impacto}] ${v.id}: ${v.ayuda} → ${v.nodos.join(' | ')}`);
+      }
+      await ctx.close();
+    }
+  } finally {
+    await navegador2.close();
+    await servidor2.cerrar();
+  }
   console.log(`\nTotal de violaciones: ${total}`);
   process.exitCode = total ? 1 : 0;
 }

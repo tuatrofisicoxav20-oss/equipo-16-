@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const PRUEBAS = [
   ['Modo avión y sincronización', 'avion.mjs'],
+  ['Panel docente en vivo', 'panel-en-vivo.mjs'],
   ['Presupuesto de 5 clics', 'clics.mjs'],
   ['Accesibilidad (axe, WCAG 2.2 AA)', 'accesibilidad.mjs'],
 ];

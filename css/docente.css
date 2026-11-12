@@ -120,6 +120,12 @@
   font-weight: 600;
 }
 
+/* Separador visual «·» (silencioso para el lector de pantalla) */
+.docente-tema__fecha::before {
+  content: '· ';
+  content: '· ' / '';
+}
+
 .docente-nota {
   display: inline-flex;
   align-items: flex-start;
@@ -597,6 +603,7 @@
 .docente-alumno {
   display: inline-flex;
   align-items: center;
+  min-width: var(--objetivo);
   min-height: var(--objetivo);
   margin-inline-start: calc(-1 * var(--espacio-1));
   padding: 0 var(--espacio-1);
@@ -931,6 +938,16 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
   .docente-vivo {
     margin-inline-start: 0;
   }
+
+  /* La fecha baja a su propio renglón, alineada con el tema y sin el «·» */
+  .docente-tema__fecha {
+    flex-basis: 100%;
+    padding-inline-start: calc(1.5em + var(--espacio-2));
+  }
+
+  .docente-tema__fecha::before {
+    content: none;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -941,11 +958,18 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
   font-size: 0.9375rem;
 }
 
-/* Barra de una sola línea: título + "En vivo" */
+/* Barra de una sola línea: título + "En vivo". En el iframe de la presentación se queda
+   arriba (el kit la suelta en pantallas angostas): así "En vivo" siempre está a la vista. */
 .docente-compacto .barra-superior {
   min-height: 0;
   padding-block: var(--espacio-2);
   gap: var(--espacio-1) var(--espacio-3);
+}
+
+@media (min-height: 28.0625rem) {
+  .docente-compacto .barra-superior {
+    position: sticky;
+  }
 }
 
 .docente-titulo {

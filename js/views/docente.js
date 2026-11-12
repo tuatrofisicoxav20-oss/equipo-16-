@@ -234,6 +234,8 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     resaltes: new Map(),
     /** Ficha abierta desde el panel: { id, foco } (foco = data-foco del botón que la abrió). */
     ficha: null,
+    /** "Qué significa cada columna" abierto: se conserva al repintar. */
+    glosario: false,
     error: null,
   };
 
@@ -258,6 +260,11 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     reintentar: () => iniciar(),
   });
   window.addEventListener('message', alMensajeVentana);
+  // 'toggle' no burbujea: se escucha en captura para recordar si el glosario quedó abierto.
+  const alAlternar = (evento) => {
+    if (evento.target?.matches?.('.docente-glosario')) state.glosario = evento.target.open;
+  };
+  raiz.addEventListener('toggle', alAlternar, true);
 
   await iniciar();
   return { destruir };
@@ -383,7 +390,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     if (alumnos.length) state.ultimaSync = { fecha: new Date(), alumnos };
     resaltar(clavesCambiadas(anterior, state.datos, alumnos), 'nuevo', MS_RESALTE);
     render();
-    refrescarFicha();
+    refrescarFicha(alumnos);
     avisarAlPadre();
 
     for (const [id, n] of cambiados) porAnunciar.set(id, (porAnunciar.get(id) || 0) + n);
@@ -446,6 +453,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     state.resaltes.clear();
     state.ultimaSync = null;
     state.orden = ordenInicial(state.compacto);
+    state.glosario = false;
     cerrarFicha();
     huellasPrevias = huellas(leerServidor());
     try {
@@ -560,10 +568,14 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     modulo.abrirFicha(resumen, state.pack, opcionesFicha(foco));
   }
 
-  /** Después de un cambio en vivo: la ficha abierta se actualiza en su lugar (conserva foco y scroll). */
-  function refrescarFicha() {
+  /**
+   * Después de un cambio en vivo: si la ficha abierta es de alguien que sincronizó, se
+   * actualiza en su lugar (la ficha conserva foco y scroll y lo anuncia ella misma).
+   */
+  function refrescarFicha(cambiados) {
     const id = moduloFicha?.fichaAbierta?.();
-    const resumen = id ? state.datos?.porId.get(String(id)) : null;
+    if (!id || !cambiados.includes(String(id))) return;
+    const resumen = state.datos?.porId.get(String(id));
     if (resumen) moduloFicha.abrirFicha(resumen, state.pack, opcionesFicha(state.ficha?.foco ?? null));
   }
 
@@ -611,16 +623,19 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
 
   /**
    * Hoja de un solo estudiante (botón de su ficha): los ejercicios de la ruta que le tocó
-   * en la app; si no los trae, los de su grupo de refuerzo o los que arma el cuadernillo.
+   * en la app; si no los trae, los de su grupo de refuerzo o los que arma el cuadernillo;
+   * si todavía no tiene ruta ni errores, las ecuaciones del diagnóstico para hacerlo en papel.
    */
   function imprimirAlumno(resumen) {
     const tipo = resumen.ruta || resumen.errorDominante || 'NO_CLASIFICADO';
     const eventos = Array.isArray(resumen.eventos) ? resumen.eventos : [];
     const rutaApp = [...eventos].reverse().find((e) => e?.tipo === 'ruta' && Array.isArray(e.datos?.ejercicios));
     const delGrupo = state.datos?.refuerzo.find((g) => g.tipo === tipo)?.ejercicios;
-    const ejercicios = rutaApp
-      ? rutaApp.datos.ejercicios.map((ecuacion, i) => ({ ecuacion: String(ecuacion), nivel: i + 1 }))
-      : delGrupo;
+    const sinRuta = !rutaApp && !resumen.ruta && !resumen.errorDominante;
+    const delDiagnostico = (state.pack?.diagnostico || []).map((d) => ({ ecuacion: d.ecuacion }));
+    let ejercicios = delGrupo;
+    if (rutaApp) ejercicios = rutaApp.datos.ejercicios.map((ecuacion, i) => ({ ecuacion: String(ecuacion), nivel: i + 1 }));
+    else if (sinRuta && delDiagnostico.length) ejercicios = delDiagnostico; // aún sin diagnóstico: en papel
     return imprimir({
       titulo: resumen.nombre,
       alumnos: [resumen.nombre],
@@ -683,6 +698,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
     quitarServidor();
     quitarDelegar();
     window.removeEventListener('message', alMensajeVentana);
+    raiz.removeEventListener('toggle', alAlternar, true);
     Object.values(temporizadores).forEach(clearTimeout);
     cerrarFicha();
   }
@@ -802,7 +818,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
         <h1 class="titulo-1" id="docente-titulo">${TITULO}</h1>
         <p class="docente-tema">
           ${ico('libro')}<strong>${state.pack.tema || 'Ecuaciones lineales con una incógnita'}</strong>${
-            hoy ? html`<span class="docente-tema__fecha"><span aria-hidden="true">· </span>${hoy}</span>` : ''
+            hoy ? html`<span class="docente-tema__fecha">${hoy}</span>` : ''
           }
         </p>
         ${notaSimulado()}
@@ -884,7 +900,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
                 <p class="docente-ejemplo">
                   <span class="docente-ejemplo__etiqueta">Así se ve <span class="texto-sec">(${nombreFijo(ejemplo.nombre)})</span>:</span>
                   <span class="docente-ejemplo__renglon">${htmlEcuacion(ejemplo.anterior)}</span>
-                  <span class="docente-ejemplo__flecha">${ico('siguiente')}<span class="solo-lector">, y escribió:</span></span>
+                  <span class="docente-ejemplo__flecha">${ico('siguiente')}<span class="solo-lector">, y escribió con el error:</span></span>
                   <span class="docente-ejemplo__renglon docente-ejemplo__renglon--error">${ico('error')}${htmlEcuacion(ejemplo.texto)}</span>
                 </p>`
             : ''}
@@ -939,7 +955,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
         <h2 class="titulo-3 docente-indicadores__titulo" id="docente-t-indicadores">Indicadores de la semana</h2>
         <dl class="docente-kpis">
           ${kpi('activos', 'grupo', html`${cuantos(g.activosSemana)}${de}`, 'Activos esta semana', 'entraron a Tecu en los últimos 7 días')}
-          ${kpi('dominados', 'trofeo', html`${cuantos(g.dominados)}${de}`, 'Temas dominados', 'aprobaron la comprobación sin ayuda')}
+          ${kpi('dominados', 'trofeo', html`${cuantos(g.dominados)}${de}`, 'Dominaron el tema', 'aprobaron la comprobación sin ayuda')}
           ${kpi(
             'revisar',
             'pregunta',
@@ -1073,7 +1089,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
                 ? html`Veces que cada estudiante cometió cada error. En vivo primero; luego, por ${nombreColumna(columna)} (${textoDireccion(columna, dir)}).`
                 : html`Veces que cada estudiante cometió cada tipo de error (${plural(filas.length, 'estudiante')}; los celulares en vivo van primero).
                     Ordenado por ${nombreColumna(columna)}, ${textoDireccion(columna, dir)}.`}
-              <span class="docente-mapa__ayuda">Toca un nombre para ver su ficha o un encabezado para ordenar.</span>
+              <span class="docente-mapa__ayuda">Elige un nombre para ver su ficha o un encabezado para ordenar.</span>
             </caption>
             <thead>
               <tr>
@@ -1097,8 +1113,8 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
         ${state.compacto
           ? ''
           : html`
-              <details class="docente-glosario">
-                <summary>Qué significa cada columna</summary>
+              <details class="docente-glosario"${attr('open', state.glosario)}>
+                <summary data-foco="glosario">Qué significa cada columna</summary>
                 <dl>
                   ${tipos.map((t) => {
                     const i = infoError(t);

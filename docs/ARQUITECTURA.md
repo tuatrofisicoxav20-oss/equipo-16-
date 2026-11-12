@@ -398,3 +398,34 @@ respuestas preparadas y no muestra ningún fallo.
   haya encontrado (`revelaSolucion` de `engine.js`), se descarta y se usa la pista preparada.
 - **`js/services/tutor.js`** (cliente): solo llama si hay red real, el servidor responde `ia: true` y no está en
   la comprobación sin ayuda; con cualquier problema regresa la respuesta preparada en silencio.
+
+### Fase 5 — interfaces internas (para trabajar en paralelo)
+
+```js
+// js/data/escenas.js — qué hacer en cada paso del guion (puro: no toca el DOM)
+crearDirector({
+  enviar(destino, mensaje),                 // destino: 'ana' | 'luis' | 'docente'; mensaje sin `tecu` (lo agrega pitch.js)
+  esperarEstado(destino, predicado, ms),    // resuelve cuando el último {tecu:'estado'} de ese destino cumple el predicado
+  esperar(ms),                              // pausa (respeta movimiento reducido)
+  avisar(texto),                            // nota visible para el presentador
+}) → {
+  irAPaso(id) → Promise,                    // id de GUIDE: problema | diagnostico | rutas | avion | sincronizacion | panel
+  reproducir(alumno) → Promise,             // 'ana' | 'luis': reiniciar + reproducirDiagnostico con GUIONES[alumno]
+  modoAvion(sinInternet) → Promise,         // simularRed en los dos teléfonos
+  reiniciar() → Promise,                    // reiniciar en las tres vistas + simularRed(false)
+}
+
+// js/ui/diapositiva.js — "El problema"
+mostrarDiapositiva(contenedor, { contexto, onCerrar }) → { cerrar() }   // contexto = packs/contexto.json
+// Si estadisticas[i].fuente está vacía: aviso visible SOLO para el presentador (clase .solo-presentador).
+
+// js/ui/atajos.js — atajos del presentador
+instalarAtajos({ paso(n), ana(), luis(), avion(), libre(), reiniciar(), ayuda() }) → { quitar(), mostrarAyuda() }
+// 1–6 pasos, A, L, M (modo avión), F (modo libre), R (reiniciar, pide confirmación), ? (ayuda).
+// No se disparan mientras el foco está en un campo de texto.
+
+// js/ui/libre.js — modo libre del jurado
+abrirModoLibre({ pack, onCerrar }) → { cerrar() }
+// <dialog> grande para proyector: el juez escribe la ecuación y su procedimiento con el teclado de la
+// computadora, y ve el diagnóstico en letra grande (renglón roto + explicación + tipo de error).
+```
