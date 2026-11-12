@@ -97,10 +97,11 @@ const paraFiltro = (t) =>
     .replace(/«[^»]*»/g, '«»');
 
 /**
- * Lo que el estudiante ya tiene a la vista: sus renglones hasta el error y los renglones
- * que tiene que escribir de todos modos camino a la respuesta (sin el último, «x = valor»).
- * Un número que aparece en ese camino no es la respuesta: 5x + 7 = 2x + 16 lleva a 3x = 9, y
- * «el 3 que multiplica a la x» no le dice que x = 3.
+ * Lo que el estudiante ya tiene a la vista: sus renglones hasta el error, lo que el motor dice
+ * que él mismo hizo (8x − 10 = 6 → x = −3: «juntaste 8x − 10 y quedó −2x»; nunca el resultado
+ * esperado ni el correcto) y los renglones que tiene que escribir de todos modos camino a la
+ * respuesta (sin el último, «x = valor»). Un número de ese camino no es la respuesta:
+ * 5x + 7 = 2x + 16 lleva a 3x = 9, y «el 3 que multiplica a la x» no le dice que x = 3.
  */
 function contexto(lineas, error) {
   const camino = [lineas[0], error.anterior].flatMap((t) => {
@@ -112,7 +113,8 @@ function contexto(lineas, error) {
       return [];
     }
   });
-  return [...lineas.slice(0, error.renglon), ...camino];
+  const suyo = ['escrito', 'quedo', 'resultado'].map((k) => error.detalle[k]).filter(Boolean);
+  return [...lineas.slice(0, error.renglon), ...suyo, ...camino];
 }
 
 /* ------------------------------------------------------------------ */
@@ -397,7 +399,7 @@ describe('Barrido amplio de procedimientos con error', () => {
     for (const { lineas, r, error } of barrido()) {
       const ctx = contexto(lineas, error);
       const revisar = (texto, que, extra = []) => {
-        if (revelaSolucion(sinRenglon(texto), r.solucion, [...ctx, ...extra])) fugas.push(`${que}: ${lineas.join(' | ')} → «${texto}»`);
+        if (revelaSolucion(paraFiltro(texto), r.solucion, [...ctx, ...extra])) fugas.push(`${que}: ${lineas.join(' | ')} → «${texto}»`);
       };
       revisar(explicarError(error, pack, 'alumno'), `explicación ${error.tipo}`);
       const { pistas } = pistasPara(lineas[0], lineas.slice(1, error.renglon), pack);
@@ -405,11 +407,13 @@ describe('Barrido amplio de procedimientos con error', () => {
       const q = preguntaOrientadora(error.tipo, { error, ejercicio: 1 }, pack);
       revisar(q.texto, `pregunta ${error.tipo}`);
       // B3: en la pregunta de cuentas la opción correcta ES el resultado de la cuenta, a propósito (el
-      // ejercicio del diagnóstico no vuelve a salir en la ruta). Las retroalimentaciones traen ejemplos fijos.
+      // ejercicio del diagnóstico no vuelve a salir en la ruta). Las retroalimentaciones traen ejemplos fijos
+      // («15 ÷ 3», «3 · 4») que no dependen del ejercicio. Las opciones «Sumar 3x: 4x + 1 + 3x» se revisan por
+      // partes: el filtro leería «3x: 4» como «x: 4».
       const deCuentas = /¿Cuánto es /.test(q.texto);
       const ejemplosFijos = Object.values(pack.preguntas[error.tipo]);
       for (const o of q.opciones) {
-        if (!deCuentas) revisar(o.texto, `opción ${error.tipo}`);
+        if (!deCuentas) o.texto.split(': ').forEach((parte) => revisar(parte, `opción ${error.tipo}`));
         revisar(o.retro, `retro ${error.tipo}`, ejemplosFijos);
       }
     }
@@ -428,7 +432,7 @@ describe('Barrido amplio de procedimientos con error', () => {
           if (r.estado !== 'error') continue;
           casos++;
           const t = explicarError(r.error, pack, 'alumno');
-          assert.ok(!revelaSolucion(sinRenglon(t), r.solucion, [enunciado, previo, mal]), `${enunciado} | ${previo} | ${mal} → «${t}»`);
+          assert.ok(!revelaSolucion(paraFiltro(t), r.solucion, [enunciado, previo, mal]), `${enunciado} | ${previo} | ${mal} → «${t}»`);
         }
       }
     }

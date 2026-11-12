@@ -275,8 +275,9 @@ cualquier otro celular que sincronice (por ejemplo, un juez que abrió la app co
   `.tabla-desplazable` (primera columna fija), `.chip--tono`, `.fila--entre`, `.fila--centro`, `.pila--chica`,
   `.texto-chico`, `.marca`, `.campo*`. Iconos: `icono(nombre)` de `js/ui/iconos.js` (61; `hayIcono(nombre)`).
 - Ecuaciones en el panel: `htmlEcuacion`, `formatearEcuacion` y `leerEcuacion` de `js/ui/cuaderno.js`.
-- Textos de llamadas: `pack.llamadas.inactivo` y `pack.llamadas.sin_diagnostico` (los está agregando el agente
-  de contenido; si no existen aún, usa un respaldo local en español claro y anótalo).
+- Textos de llamadas: `pack.llamadas.inactivo` y `pack.llamadas.sin_diagnostico`, que se llenan con
+  `sugerenciaPorMotivo(motivo, { dias, tema }, pack)` de `js/core/textos.js` (para atorado y por revisar se usa
+  `sugerenciaLlamada(tipo, ejercicio, pack)`). Cada respuesta de `pack.tecu.respuestas` tiene un `id` estable.
 
 ### `js/data/grupo.js`
 

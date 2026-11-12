@@ -259,7 +259,7 @@
       "retroOtra": "Si {elTermino} solo desaparece, un lado cambia y el otro no: la balanza se inclina. Prueba otra opción."
     },
     "INVERSA_EQUIVOCADA": {
-      "texto": "{intro} El {coefNum} está multiplicando a la x: {coef} quiere decir {coefNum} veces x. ¿Qué operación lo deshace?",
+      "texto": "{intro} El {coefNum} está multiplicando a la x, porque {coef} quiere decir {coefNum} veces x. ¿Qué operación lo deshace?",
       "correcta": "Dividir los dos lados entre {coefNum}",
       "suya": "Restar {coefNum} en los dos lados",
       "otra": "Multiplicar los dos lados por {coefNum}",

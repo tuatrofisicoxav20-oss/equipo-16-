@@ -4,8 +4,8 @@
  * GUIDE: los pasos de la historia que se cuenta en 3 minutos.
  * GUIONES: lo que "escriben" Ana y Luis en el diagnóstico (renglones por
  * ejercicio, sin el enunciado). Están verificados contra el motor:
- *   Ana  → 3 de 4 con SIGNO_TRANSPOSICION (uno bien)  → ruta "Lo que suma, pasa restando"
- *   Luis → 3 de 4 con INVERSA_EQUIVOCADA (uno bien)   → ruta "Lo que multiplica, pasa dividiendo"
+ *   Ana  → 3 de 4 con SIGNO_TRANSPOSICION (uno bien)  → ruta "Lo que suma pasa restando"
+ *   Luis → 3 de 4 con INVERSA_EQUIVOCADA (uno bien)   → ruta "Lo que multiplica pasa dividiendo"
  * El ejercicio 1 es el mismo para los dos (3x + 5 = 20) y los dos llegan a un
  * resultado incorrecto, pero por razones distintas.
  */
