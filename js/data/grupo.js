@@ -13,6 +13,9 @@
  *   ecuacionesDelDiagnostico): la misma semilla que usaría su celular.
  * - Los eventos tienen el esquema de store.js (sincronizado: true) y los mismos campos
  *   que registra js/views/estudiante.js para cada tipo.
+ * - Quien empezó el diagnóstico tiene primero el evento 'rapido' (las preguntas de opción
+ *   múltiple, una por habilidad): sus respuestas son coherentes con su perfil y salen de un
+ *   generador aparte, así que agregarlo no cambió nada del resto de su historia.
  *
  * Módulo puro: sin DOM ni almacenamiento.
  */
@@ -27,6 +30,7 @@ import {
 import { construirRuta, otraComprobacion, resumirDiagnostico } from '../core/ruta.js';
 import { createRng } from '../core/rng.js';
 import { preguntaOrientadora, respuestaTecu } from '../core/textos.js';
+import { habilidadesDe } from './habilidades.js';
 
 /* ------------------------------------------------------------------ */
 /* Constantes públicas                                                 */
@@ -96,6 +100,17 @@ const AYUDA = {
   medio: { falla: 0.3, pistas: [0, 1, 1, 2], solucion: 0.08, pregunta: [[1, 6], [2, 4]] },
   alto: { falla: 0.5, pistas: [1, 2, 3, 3], solucion: 0.3, pregunta: [[1, 4], [2, 4], [3, 2]] },
 };
+
+/**
+ * Diagnóstico rápido: probabilidad de acertar cada pregunta según el perfil.
+ * `suya`: la pregunta de la habilidad de su error dominante; `procedimiento`: las otras
+ * habilidades con errores asociados (`sinClasificar` si su error no se pudo clasificar);
+ * `planteo`: las que no dependen del procedimiento (leer, plantear), que bajan `pendiente`
+ * por cada lugar que ocupan en el tema (plantear cuesta más que leer).
+ */
+const RAPIDO = { suya: 0.25, procedimiento: 0.8, sinClasificar: 0.6, planteo: 0.7, pendiente: 0.05 };
+/** Quien ya domina el tema acierta un poco más; quien está atorado, un poco menos. */
+const AJUSTE_RAPIDO = { dominado: 0.1, atorado: -0.15 };
 
 /** Dudas que escriben a Tecu, por error; {campo} sale de su propio error del diagnóstico. */
 const DUDAS = {
@@ -177,6 +192,11 @@ const FRANJAS = [
  * Hay 2 con un renglón NO_CLASIFICADO ("por revisar"): uno como error dominante y otro
  * como error secundario.
  *
+ * Los 26 que empezaron el diagnóstico tienen, como primer evento, el del diagnóstico rápido:
+ * `{ tipo: 'rapido', datos: { respuestas: [{ id, habilidad, elegida, correcta }], aciertos, total } }`
+ * (`correcta`: si acertó; `elegida`: índice de la opción, o null si el paquete no trae las
+ * preguntas). La analítica del panel (resumirAlumnos) lo ignora: los estados no cambian.
+ *
  * @param {object} opciones
  * @param {string|number} [opciones.semilla=SEMILLA_GRUPO]
  * @param {number|Date|string} [opciones.ahora=Date.now()] momento de referencia (todo cae en los 14 días anteriores)
@@ -201,15 +221,38 @@ function crearContexto(semilla, ahora, pack) {
     throw new TypeError('generarGrupo: falta el paquete de contenido (pack con su diagnóstico).');
   }
   const diagnostico = pack.diagnostico.map((d, i) => ({ id: d.id ?? `d${i + 1}`, ecuacion: String(d.ecuacion) }));
+  const habilidades = habilidadesDe(pack);
   return {
     semilla: String(semilla),
     ahora: aMilisegundos(ahora),
     pack,
     diagnostico,
     ecuaciones: diagnostico.map((d) => d.ecuacion),
+    habilidades,
+    rapidas: preguntasRapidas(pack, habilidades),
     procedimientos: new Map(),
     analisis: new Map(),
   };
+}
+
+/**
+ * Preguntas del diagnóstico rápido: las del paquete (`diagnosticoRapido`) o, si aún no las
+ * trae, una por habilidad en el orden del tema (sin opciones: `elegida` queda en null).
+ * @returns {{ id: string, habilidad: string|null, opciones: number, correcta: number|null }[]}
+ */
+function preguntasRapidas(pack, habilidades) {
+  const ids = new Set(habilidades.map((h) => h.id));
+  const propias = Array.isArray(pack.diagnosticoRapido) ? pack.diagnosticoRapido.filter((q) => q && typeof q === 'object') : [];
+  if (!propias.length) return habilidades.map((h, i) => ({ id: `r${i + 1}`, habilidad: h.id, opciones: 0, correcta: null }));
+  return propias.map((q, i) => {
+    const porIndice = Number.isInteger(q.habilidad) ? habilidades[q.habilidad]?.id : null;
+    return {
+      id: String(q.id ?? `r${i + 1}`),
+      habilidad: ids.has(q.habilidad) ? q.habilidad : porIndice ?? habilidades[i]?.id ?? null,
+      opciones: Array.isArray(q.opciones) ? q.opciones.length : 0,
+      correcta: Number.isInteger(q.correcta) ? q.correcta : null,
+    };
+  });
 }
 
 function aMilisegundos(ahora) {
@@ -341,7 +384,52 @@ function lugaresNc(ctx, tipo) {
 function eventosDe(ctx, perfil) {
   if (perfil.etapa === 'nada') return [];
   const rng = createRng(`${ctx.semilla}:${perfil.id}`);
-  return fechar(ctx, perfil, historia(ctx, perfil, rng), rng);
+  const pasos = historia(ctx, perfil, rng);
+  anteponerRapido(ctx, perfil, pasos);
+  return fechar(ctx, perfil, pasos, rng);
+}
+
+/* ---------- Diagnóstico rápido (primer evento, con su propio azar) ---------- */
+
+/**
+ * Pone el diagnóstico rápido al inicio de la primera sesión, justo antes del primer ejercicio.
+ * Dura 0 segundos en la bitácora y no usa el generador de la historia: las fechas y los
+ * renglones de todo lo demás quedan idénticos a como eran sin él.
+ */
+function anteponerRapido(ctx, perfil, pasos) {
+  if (!pasos.length) return;
+  pasos[0].sesionNueva = false;
+  pasos.unshift({ evento: eventoRapido(ctx, perfil), segundos: 0, sesionNueva: true, chat: false, pegado: false });
+}
+
+function eventoRapido(ctx, perfil) {
+  const rng = createRng(`${ctx.semilla}:${perfil.id}:rapido`);
+  const respuestas = ctx.rapidas.map((pregunta) => responderRapida(ctx, perfil, pregunta, rng));
+  return {
+    tipo: 'rapido',
+    datos: { respuestas, aciertos: respuestas.filter((r) => r.correcta).length, total: respuestas.length },
+  };
+}
+
+/** Una respuesta: acierta según su perfil; si falla, elige al azar una de las otras opciones. */
+function responderRapida(ctx, perfil, pregunta, rng) {
+  const correcta = rng.chance(probabilidadDeAcertar(ctx, perfil, pregunta.habilidad));
+  let elegida = null;
+  if (pregunta.correcta !== null && pregunta.opciones > 1) {
+    const otras = [...Array(pregunta.opciones).keys()].filter((i) => i !== pregunta.correcta);
+    elegida = correcta ? pregunta.correcta : rng.pick(otras);
+  }
+  return { id: pregunta.id, habilidad: pregunta.habilidad, elegida, correcta };
+}
+
+/** Coherente con el perfil: falla sobre todo la pregunta de la habilidad de su error dominante. */
+function probabilidadDeAcertar(ctx, perfil, habilidad) {
+  const lugar = ctx.habilidades.findIndex((h) => h.id === habilidad);
+  const errores = ctx.habilidades[lugar]?.errores ?? [];
+  let p = RAPIDO.planteo - RAPIDO.pendiente * Math.max(lugar, 0);
+  if (errores.includes(perfil.tipo)) p = RAPIDO.suya;
+  else if (errores.length) p = perfil.tipo === TIPOS.NO_CLASIFICADO ? RAPIDO.sinClasificar : RAPIDO.procedimiento;
+  return Math.min(0.95, Math.max(0.05, p + (AJUSTE_RAPIDO[perfil.estado] ?? 0)));
 }
 
 function historia(ctx, perfil, rng) {

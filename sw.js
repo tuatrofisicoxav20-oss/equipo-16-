@@ -45,7 +45,7 @@
  *      se te olvida).
  *   3. Publica sw.js junto con los demás archivos (en el mismo push).
  */
-const VERSION = 'tecu-2026-11-12-24ac609c';
+const VERSION = 'tecu-2026-11-12-3dc02193';
 
 const PRECACHE = [
   './',
@@ -114,6 +114,7 @@ const PRECACHE = [
   'js/ui/libre.js',
   'js/ui/qr.js',
   'js/ui/tecu.js',
+  'js/views/acerca.js',
   'js/views/docente.js',
   'js/views/estudiante.js',
   'js/views/pitch.js',
