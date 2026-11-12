@@ -993,16 +993,36 @@ const terminosDe = (lado, esX) => lado.filter((t) => t.x === esX && !t.c.isZero(
 const xReducida = (eq) => terminosDe(eq.L, true).length <= 1 && terminosDe(eq.R, true).length <= 1;
 
 /**
+ * Un lado sin los pares de términos semejantes opuestos que el estudiante dejó escritos
+ * (+5 − 5, +2x − 2x). Es la notación de la balanza («3x + 5 − 5 = 20 − 5»): ahí el 5 ya se
+ * quitó de ese lado, aunque siga a la vista.
+ */
+function sinOpuestos(terms) {
+  const resto = [];
+  for (const t of terms) {
+    if (t.c.isZero()) continue;
+    const k = resto.findIndex((u) => u.x === t.x && u.c.eq(t.c.neg()));
+    if (k >= 0) resto.splice(k, 1);
+    else resto.push(t);
+  }
+  return resto;
+}
+
+/** El renglón del estudiante como se compara con los candidatos: sin los pares opuestos de cada lado. */
+const sinParesOpuestos = (eq) => ({ L: sinOpuestos(eq.L), R: sinOpuestos(eq.R) });
+
+/**
  * ¿El candidato explica lo escrito sin juntar términos que el estudiante dejó separados?
  * Puede haber hecho cuentas que el candidato deja pendientes (5 − 20 → −15), pero si
  * escribió −5x + 16x no juntó 2x + 14 − 5x en 11x, aunque los dos renglones den 2 = 11x.
  * Se revisa en la orientación en que coinciden los vectores (volteado solo si no es fantasma).
+ * `visto` es el renglón del estudiante sin sus pares opuestos (ver sinOpuestos).
  */
-function sinJuntarDeMas(escrita, c, vS) {
+function sinJuntarDeMas(visto, c, vS) {
   const cabe = (s, k) => [true, false].every((esX) => terminosDe(s, esX).length <= terminosDe(k, esX).length);
   const v = c.vector;
-  if (vS.every((x, i) => x.eq(v[i])) && cabe(escrita.L, c.eq.L) && cabe(escrita.R, c.eq.R)) return true;
-  return !c.fantasma && vS.every((x, i) => x.eq(v[(i + 2) % 4])) && cabe(escrita.L, c.eq.R) && cabe(escrita.R, c.eq.L);
+  if (vS.every((x, i) => x.eq(v[i])) && cabe(visto.L, c.eq.L) && cabe(visto.R, c.eq.R)) return true;
+  return !c.fantasma && vS.every((x, i) => x.eq(v[(i + 2) % 4])) && cabe(visto.L, c.eq.R) && cabe(visto.R, c.eq.L);
 }
 
 /** ¿Los dos lados tienen los mismos términos, sin importar el orden? */
@@ -1022,9 +1042,9 @@ function mismosTerminos(a, b) {
  * con las mismas sumas)? «2 = −5x + 16x» es el candidato que junta 2x + 14 en 16x,
  * no el que junta 2x + 14 − 5x en 11x, aunque los dos den 2 = 11x.
  */
-function escritoTalCual(escrita, c) {
-  if (mismosTerminos(escrita.L, c.eq.L) && mismosTerminos(escrita.R, c.eq.R)) return true;
-  return !c.fantasma && mismosTerminos(escrita.L, c.eq.R) && mismosTerminos(escrita.R, c.eq.L);
+function escritoTalCual(visto, c) {
+  if (mismosTerminos(visto.L, c.eq.L) && mismosTerminos(visto.R, c.eq.R)) return true;
+  return !c.fantasma && mismosTerminos(visto.L, c.eq.R) && mismosTerminos(visto.R, c.eq.L);
 }
 
 /**
@@ -1083,7 +1103,12 @@ function terminoCambiado(delCandidato, delEstudiante) {
   return sinPareja.length === 1 ? { antes: sinPareja[0].c, despues: resto[0].c } : null;
 }
 
-function buscarAritmetica(vS, correctos, escrita) {
+/**
+ * ¿Lo escrito es un renglón correcto con un solo número (o coeficiente) equivocado?
+ * `previa` es el renglón anterior: lo que el estudiante copió de ahí tal cual no puede ser
+ * un error de cuenta ni de copia.
+ */
+function buscarAritmetica(vS, correctos, escrita, previa) {
   for (const cand of correctos) {
     const vC = cand.vector;
     // Un candidato fantasma (−15 = −3x) no se compara volteado: citaría números que el estudiante no escribió.
@@ -1101,22 +1126,45 @@ function buscarAritmetica(vS, correctos, escrita) {
       if (vS[i].isZero() && !suyos.length && lado.some((t) => !t.c.isZero())) continue;
       // índice real dentro del candidato (por si estaba volteado)
       const iCand = orden === vC ? i : (i + 2) % 4;
+      // El lado del renglón anterior del que sale ese lado del estudiante.
+      const ladoPrevio = previa[iCand < 2 ? 'L' : 'R'];
+      // 2x + 1 − 1 = 9: el 9 es el lado derecho del renglón anterior, copiado tal cual. Ahí el
+      // estudiante no hizo ninguna cuenta ("9 − 1 no da 9" sería falso) ni copió mal.
+      if (mismosTerminos(lado, ladoPrevio)) continue;
+      const delAnterior = terminosDe(ladoPrevio, esX);
+      const yaEstaba = (c) => delAnterior.some((t) => t.c.eq(c));
       let esperado = orden[i];
       let escrito = vS[i];
       let cuenta = null;
+      let seguro = true;
       if (suyos.length >= 2) {
         // 3x = 21 − 5: dejó la cuenta sin hacer, así que no la hizo mal ("20 − 5 no da 16" sería
         // falso). Lo que cambió es un término al copiarlo (el 20 se volvió 21).
         const par = terminoCambiado(terminosDe(cand.eq[iCand < 2 ? 'L' : 'R'], esX), suyos);
         if (!par || !cercano(par.antes, par.despues)) continue;
+        // "Ese término no sale del renglón anterior" sería falso si ahí está, del mismo lado.
+        if (yaEstaba(par.despues)) continue;
         ({ antes: esperado, despues: escrito } = par);
       } else {
-        if (!cercano(orden[i], vS[i])) continue;
         cuenta = cuentaDe(cand, iCand);
-        // 3x + 5 = 20 → 3x + 5 = 25: sin ninguna cuenta a la vista, un cambio igual al término del
-        // otro lado (el 5) es pasarlo sin quitarlo, no un error al copiar.
-        const otro = vS[(i + 2) % 4];
-        if (!cuenta && !otro.isZero() && orden[i].sub(vS[i]).abs().eq(otro.abs())) continue;
+        if (!cercano(orden[i], vS[i])) {
+          // 3x = 20 − 5 → 3x = 20: el renglón anterior dejó una cuenta pendiente y lo único que
+          // cambió es su resultado. No es un desliz cercano (quizá olvidó hacerla), pero
+          // "20 − 5 no da 20" es cierto; por eso se dice, con confianza media.
+          if (cand.ops !== 0 || !cuenta) continue;
+          seguro = false;
+        }
+        if (!cuenta) {
+          // 3x + 5 = 20 → 3x + 5 = 25: sin ninguna cuenta a la vista, un cambio igual al término del
+          // otro lado (el 5) es pasarlo sin quitarlo, no un error al copiar.
+          const otro = vS[(i + 2) % 4];
+          if (!otro.isZero() && orden[i].sub(vS[i]).abs().eq(otro.abs())) continue;
+          // 12 − x = 5 → −x = 12 − 5: el −x sí sale del renglón anterior (está en ese lado).
+          if (suyos.length === 1 && yaEstaba(suyos[0].c)) continue;
+          // 2x + 3 = 9 → x + 3 = 9: quitar el coeficiente no es un desliz al copiarlo (es
+          // dividir un solo término); lo mismo da si era 2x o 7x.
+          if (esX && vS[i].abs().eq(1) && !orden[i].abs().eq(1)) continue;
+        }
       }
       return {
         tipo: TIPOS.ARITMETICA,
@@ -1130,7 +1178,7 @@ function buscarAritmetica(vS, correctos, escrita) {
           esX,
           componente: NOMBRE_COMPONENTE[i],
         },
-        confianza: cand.ops >= 2 ? 'media' : 'alta',
+        confianza: cand.ops >= 2 || !seguro ? 'media' : 'alta',
         ops: cand.ops,
       };
     }
@@ -1224,30 +1272,46 @@ function sinMarcas({ dudoso, ...elegido }) {
   return elegido;
 }
 
+/**
+ * ¿Lo único que cambió respecto al renglón anterior es el valor del lado de los números (el
+ * que no tiene x)? 3x = 20 − 5 → 3x = 20: ahí el estudiante hizo, mal o a medias, la cuenta
+ * pendiente; no "quitó el 5 de un solo lado".
+ */
+function soloCambianNumeros(previa, vS) {
+  const vP = vector(previa);
+  const distintos = [0, 1, 2, 3].filter((i) => !vP[i].eq(vS[i]));
+  if (distintos.length !== 1 || distintos[0] % 2 === 0) return false;
+  return !tieneX(previa[distintos[0] < 2 ? 'L' : 'R']);
+}
+
 function clasificarExacto(previa, escrita) {
   const vS = vector(escrita);
   const memo = candidatosClasificables(previa);
   // Un despeje ("x = 5") nunca se explica con un renglón fantasma: el estudiante no escribió −15 = −3x.
+  // Tampoco un renglón donde solo cambió el lado de los números (ver soloCambianNumeros).
   const esDespeje = despeje(escrita) !== null;
-  const conError = esDespeje ? memo.conErrorDespeje : memo.conError;
-  const correctos = esDespeje ? memo.correctosDespeje : memo.correctos;
+  const sinFantasmas = esDespeje || soloCambianNumeros(previa, vS);
+  const conError = sinFantasmas ? memo.conErrorDespeje : memo.conError;
+  const correctos = sinFantasmas ? memo.correctosDespeje : memo.correctos;
+  const visto = sinParesOpuestos(escrita);
 
   // Coincidencias exactas. Se descartan las que juntan términos que el estudiante dejó separados
   // (no explican lo que escribió, solo dan las mismas sumas). Los errores del último paso
   // (dividir) siempre dan el número ya calculado y el estudiante puede dejar la cuenta escrita
   // (x = 15 − 3 es restar el 3), así que a ellos solo se les pide que la x haya quedado reducida.
+  // Las reglas `literal` hablan de un término que sigue a la vista: no explican un despeje.
   const exactos = conError.filter(
-    (c) => esElCandidato(vS, c) && (c.final ? xReducida(escrita) : sinJuntarDeMas(escrita, c, vS)),
+    (c) => !(c.literal && esDespeje) && esElCandidato(vS, c) && (c.final ? xReducida(visto) : sinJuntarDeMas(visto, c, vS)),
   );
   if (exactos.length) {
     // A igualdad de pasos, gana el que coincide término a término con lo escrito.
-    const elegido = elegir(exactos, (c) => escritoTalCual(escrita, c));
+    const elegido = elegir(exactos, (c) => escritoTalCual(visto, c));
     // Una explicación que necesita 3 operaciones seguidas es posible, no segura; tampoco
     // cuando otra regla, de otro tipo, explica el renglón con los mismos pasos.
     return { ...sinMarcas(elegido), confianza: elegido.ops >= 3 || elegido.dudoso ? 'media' : 'alta' };
   }
 
-  const arit = buscarAritmetica(vS, correctos, escrita);
+  const arit = buscarAritmetica(vS, correctos, escrita, previa);
   if (arit) return { ...arit, alternativas: [] };
 
   // Nivel 2: el estudiante ya escribió "x = valor" y ese valor es el que da un
@@ -1255,12 +1319,12 @@ function clasificarExacto(previa, escrita) {
   // Solo aplica a renglones despejados: en otros casos una coincidencia
   // numérica podría inventar un diagnóstico. Los errores del último paso
   // (`final`) no cuentan: "dividiste solo los números y la x se quedó igual"
-  // contradice un renglón donde la x sí quedó sola.
+  // contradice un renglón donde la x sí quedó sola; tampoco las reglas `literal`.
   let tipos = [];
   if (esDespeje) {
     const solS = resolver(escrita);
     const equivalentes = conError.filter((c) => {
-      if (c.final) return false;
+      if (c.final || c.literal) return false;
       if (c.sol === undefined) c.sol = sinDesborde(() => resolver(c.eq)); // también se memoriza
       return c.sol !== null && mismaSolucion(c.sol, solS);
     });
@@ -1289,6 +1353,20 @@ function aritmeticaDeCadena(errorCadena) {
     confianza: 'alta',
     alternativas: [],
   };
+}
+
+/**
+ * ¿El renglón sin x es el anterior con la x borrada (cada lado suma sus coeficientes y sus
+ * números)? Ahí no hay una cuenta que revisar: se perdió la incógnita.
+ */
+function sinLaX(previa, numerica) {
+  return sinDesborde(() => {
+    const [aL, bL, aR, bR] = vector(previa);
+    const [, nL, , nR] = vector(numerica);
+    const L = aL.add(bL);
+    const R = aR.add(bR);
+    return (nL.eq(L) && nR.eq(R)) || (nL.eq(R) && nR.eq(L));
+  }, false);
 }
 
 /** ¿La parte de un renglón muestra una operación (20 − 5, 3(8.33), 15/3) y no solo un número? */
@@ -1473,7 +1551,11 @@ function analizarSinRed(renglones, avance = { renglon: 1, info: [] }) {
       // Un renglón sin x y falso: o vino de un error típico (8 = 20) o es una cuenta mal hecha
       // (si no hay ninguna operación a la vista, como "15 = 3", queda sin clasificar).
       const c = clasificarSeguro(previa.eq, r.eq);
-      diag = (c.tipo === TIPOS.NO_CLASIFICADO && aritmeticaNumerica(r)) || c;
+      if (c.tipo !== TIPOS.NO_CLASIFICADO) diag = c;
+      // 3x + 5 = 20 → 3 + 5 = 20: es el renglón anterior sin la x, no una cuenta mal hecha
+      // ("el paso va bien, revisa la cuenta: 3 + 5 no da 20" felicitaría justo el error).
+      else if (sinLaX(previa.eq, r.eq)) diag = noClasificado([TIPOS.TERMINOS_NO_SEMEJANTES]);
+      else diag = aritmeticaNumerica(r) || c;
     } else if (r.cadena) {
       const solIni = resolver(r.eqInicial);
       diag = mismaSolucion(sol0, solIni) ? aritmeticaDeCadena(r.cadena[0]) : clasificarSeguro(previa.eq, r.eqInicial);

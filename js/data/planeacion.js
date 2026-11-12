@@ -31,7 +31,6 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 const MINUTO_MS = 60 * 1000;
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const CON_PROCEDIMIENTO = new Set(['diagnostico', 'practica', 'comprobacion', 'libre']);
-const NOMBRES_A_LA_VISTA = 3;
 const LARGO_CITA = 60;
 
 const esObjeto = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -147,12 +146,14 @@ function contenidoDiagnostico(resumenGrupo, pack) {
   const sinEmpezar = conteo(porEstado.sin_actividad);
   const aMedias = conteo(porEstado.diagnostico);
   if (!sinEmpezar && !aMedias) return null;
-  const partes = [];
-  if (sinEmpezar) partes.push(sinEmpezar === 1 ? '1 estudiante no lo ha empezado' : `${sinEmpezar} estudiantes no lo han empezado`);
-  if (aMedias) partes.push(aMedias === 1 ? '1 lo dejó a medias' : `${aMedias} lo dejaron a medias`);
+  const noEmpiezan = sinEmpezar === 1 ? '1 estudiante no lo ha empezado' : `${sinEmpezar} estudiantes no lo han empezado`;
+  const loDejaron = aMedias === 1 ? 'lo dejó a medias' : 'lo dejaron a medias';
+  let quienes = noEmpiezan;
+  if (sinEmpezar && aMedias) quienes = `${noEmpiezan} y ${aMedias} ${loDejaron}`;
+  else if (aMedias) quienes = `${plural(aMedias, 'estudiante', 'estudiantes')} ${loDejaron}`;
   const total = esObjeto(pack) && Array.isArray(pack.diagnostico) ? pack.diagnostico.length : 0;
   const ecuaciones = total ? `las ${total} ecuaciones del diagnóstico` : 'el diagnóstico';
-  const detalle = `${partes.join(' y ')[0].toUpperCase()}${partes.join(' y ').slice(1)}. Dales tiempo en clase para resolver ${ecuaciones}, en la app o en papel: sin diagnóstico no hay ruta.`;
+  const detalle = `${quienes}. Dales tiempo en clase para resolver ${ecuaciones}, en la app o en papel: sin diagnóstico no hay ruta.`;
   return contenidoExtra('plan-diagnostico', 'diagnostico', 'Terminar el diagnóstico', sinEmpezar + aMedias, detalle);
 }
 

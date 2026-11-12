@@ -45,7 +45,7 @@
  *      se te olvida).
  *   3. Publica sw.js junto con los demás archivos (en el mismo push).
  */
-const VERSION = 'tecu-2026-11-12-a501fe68';
+const VERSION = 'tecu-2026-11-12-24ac609c';
 
 const PRECACHE = [
   './',
@@ -85,17 +85,20 @@ const PRECACHE = [
   'js/data/habilidades.js',
   'js/data/mensajes.js',
   'js/data/paquete.js',
+  'js/data/planeacion.js',
   'js/data/store.js',
   'js/main.js',
   'js/marca.js',
   'js/services/preferencias.js',
   'js/services/red.js',
   'js/services/sw-registro.js',
+  'js/shell/cascaron.js',
   'js/shell/componentes.js',
   'js/shell/dialogo.js',
   'js/shell/dispositivo.js',
   'js/shell/paneles.js',
   'js/shell/recorrido.js',
+  'js/shell/relleno.js',
   'js/shell/rutas.js',
   'js/shell/voz.js',
   'js/ui/actualizacion.js',

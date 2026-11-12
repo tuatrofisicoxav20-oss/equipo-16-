@@ -85,14 +85,20 @@ export function alCambiarPantalla(fn) {
   };
 }
 
-/** El control «Vista» (no se muestra dentro de un marco). */
-export function controlVista(valor) {
+/**
+ * El control «Vista» (no se muestra dentro de un marco). Sus radios son #demo-vista-auto,
+ * #demo-vista-movil y #demo-vista-escritorio.
+ * @param {string} valor preferencia `dispositivo`
+ * @param {string} [descritoPor] id del texto que avisa que la página cambia al elegir
+ */
+export function controlVista(valor, descritoPor = '') {
   if (EN_MARCO) return '';
   return segmentado({
-    nombre: 'dispositivo',
+    nombre: 'demo-vista',
     leyenda: 'Vista',
     cambio: 'dispositivo',
     valor,
+    descritoPor,
     opciones: [
       { valor: 'auto', texto: 'Automática', icono: 'compass' },
       { valor: 'movil', texto: 'Móvil', icono: 'phone' },

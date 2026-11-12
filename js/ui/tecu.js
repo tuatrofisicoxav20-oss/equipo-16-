@@ -80,9 +80,9 @@ function cuerpo() {
 
 const ALA_ABAJO = 'M25 74c-9 10-8 30 5 42 3-15 3-30-5-42Z';
 /** Ala levantada (feliz): sube pegada a la cabeza y termina en punta redonda. */
-const ALA_ARRIBA = 'M27 88C15 84 6.5 66 7 47c.2-5.6 6.4-6.6 8.2-1.4C18.6 56 22.4 66 27.5 72Z';
+const ALA_ARRIBA = 'M27 88C15 84 6.5 66 7 47c.2-5.6 6.4-6.6 8.2-1.4C18.6 56 22.4 66 27.5 72c4.5 4 4.5 12-.5 16Z';
 /** Ala que señala hacia afuera (atento): «mira, aquí». */
-const ALA_SENALA = 'M27 90C14 90 4.5 80 2.6 66.5c-.7-4.6 4.6-6.6 7.4-2.8C14.6 70 20.6 74.6 27.5 76Z';
+const ALA_SENALA = 'M27 90C14 90 4.5 80 2.6 66.5c-.7-4.6 4.6-6.6 7.4-2.8C14.6 70 20.6 74.6 27.5 76c4 3 4 10-.5 14Z';
 
 /** Refleja un trazo respecto al eje vertical x = 60 (el ala derecha es el espejo de la izquierda). */
 function alaDe(lado, trazo) {
@@ -162,22 +162,18 @@ function birrete() {
 /* Extras por estado                                                    */
 /* ------------------------------------------------------------------ */
 
-/** Trazo con borde claro debajo: se lee sobre fondo claro y sobre fondo oscuro. */
+/** Trazo dorado con borde oscuro debajo: se lee sobre fondo claro y sobre fondo oscuro. */
 function rotulo(d, grosor) {
   return (
-    `<path d="${d}" stroke="${C.blanco}" stroke-width="${grosor + 3}"/>` +
-    `<path d="${d}" stroke="${C.tinta}" stroke-width="${grosor}"/>`
+    `<path d="${d}" stroke="${C.tinta}" stroke-width="${grosor + 2.8}"/>` +
+    `<path d="${d}" stroke="${C.oro}" stroke-width="${grosor}"/>`
   );
 }
 
 function chispa(cara) {
-  const estrella = 'M100 30l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z';
-  return (
-    `<g class="tecu__chispa" fill="${C.oro}"${cara ? ' transform="translate(-3 -6)"' : ''}>` +
-    `<path d="${estrella}"/>` +
-    (cara ? '' : '<path d="M17 14l1.2 3.6 3.6 1.2-3.6 1.2-1.2 3.6-1.2-3.6-3.6-1.2 3.6-1.2Z"/>') +
-    `</g>`
-  );
+  const grande = cara ? 'M96 9l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z' : 'M106 8l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z';
+  const chica = cara ? 'M24 12l1.2 3.6 3.6 1.2-3.6 1.2-1.2 3.6-1.2-3.6-3.6-1.2 3.6-1.2Z' : 'M16 12l1.2 3.6 3.6 1.2-3.6 1.2-1.2 3.6-1.2-3.6-3.6-1.2 3.6-1.2Z';
+  return `<g class="tecu__chispa" fill="${C.oro}"><path d="${grande}"/><path d="${chica}"/></g>`;
 }
 
 function duda() {
@@ -188,11 +184,12 @@ function duda() {
   );
 }
 
-function zetas() {
+function zetas(cara) {
+  const [grande, chica] = cara ? ['M88.5 12.5h7.5l-7.5 9h7.5', 'M98.6 9h4.6l-4.6 5.4h4.6'] : ['M95 10h8.5l-8.5 10h8.5', 'M107.5 4h5.5l-5.5 6.5h5.5'];
   return (
     `<g class="tecu__zetas" fill="none" stroke-linecap="round" stroke-linejoin="round">` +
-    `<g class="tecu__z tecu__z--1">${rotulo('M88.5 14h8l-8 9.5h8', 2.6)}</g>` +
-    `<g class="tecu__z tecu__z--2">${rotulo('M99.5 7.5h5l-5 6h5', 2)}</g>` +
+    `<g class="tecu__z tecu__z--1">${rotulo(grande, 2.6)}</g>` +
+    `<g class="tecu__z tecu__z--2">${rotulo(chica, 2)}</g>` +
     `</g>`
   );
 }
@@ -213,7 +210,7 @@ function insignia(cara) {
 function extras(estado, cara) {
   if (estado === 'feliz') return chispa(cara);
   if (estado === 'pensando') return cara ? '' : duda();
-  if (estado === 'dormido') return zetas();
+  if (estado === 'dormido') return zetas(cara);
   if (estado === 'sin-senal') return insignia(cara);
   return '';
 }

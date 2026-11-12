@@ -8,7 +8,8 @@
  * REGLA DE DOMINIO (simple y explicable; es la misma que exporta `REGLA_DOMINIO` para mostrarla):
  *   1. Evidencia a favor (+) o en contra (−) de cada habilidad:
  *        · cada error clasificado en un procedimiento (diagnóstico, práctica, comprobación, modo
- *          libre): −1 para la habilidad de ese tipo de error (lo que no se pudo clasificar no cuenta);
+ *          libre): −1 para la habilidad de ese tipo de error; un error que no se pudo clasificar
+ *          se reparte en partes iguales entre las habilidades de procedimiento (−⅓ a cada una);
  *        · cada procedimiento correcto: +1 para las habilidades de procedimiento (las que tienen
  *          errores asociados); con pistas vale ½ y, si pidió ver la solución, no cuenta;
  *        · cada respuesta del diagnóstico rápido (evento 'rapido'): ±½ (una pregunta de opción
@@ -74,7 +75,7 @@ export const PISO_COMPROBACION = 70;
 
 /** La regla en palabras, para explicarla en pantalla («¿Cómo se calcula?»). */
 export const REGLA_DOMINIO = Object.freeze([
-  'Cada error que se pudo clasificar cuenta en contra de la habilidad de ese error. Cada procedimiento correcto cuenta a favor; con pistas vale la mitad y, si se pidió ver la solución, no cuenta.',
+  'Cada error que se pudo clasificar cuenta en contra de la habilidad de ese error (si no se pudo clasificar, se reparte entre las habilidades de procedimiento). Cada procedimiento correcto cuenta a favor; con pistas vale la mitad y, si se pidió ver la solución, no cuenta.',
   'Cada respuesta del diagnóstico rápido vale la mitad que un procedimiento escrito: a favor si fue correcta y en contra si no.',
   'La comprobación sin ayuda aprobada vale por tres y deja la habilidad en 70 % o más mientras no aparezca un error nuevo.',
   'Lo reciente pesa más: cada dato cuenta un poco menos (80 %) que el dato que le sigue.',
@@ -263,10 +264,13 @@ const conteo = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(
 
 /** Evidencias de un procedimiento revisado por el motor (ver la regla al inicio del archivo). */
 function evidenciasProcedimiento(ev, ctx) {
-  const tipoError = esObjeto(ev.error) ? comoTexto(ev.error.tipo) : '';
-  if (tipoError) {
+  if (esObjeto(ev.error) || ev.resultado === 'error') {
+    const tipoError = esObjeto(ev.error) ? comoTexto(ev.error.tipo) : '';
     const habilidad = ctx.deError.get(tipoError);
-    return habilidad ? [{ habilidad, clase: 'error', tipo: tipoError, aFavor: false, peso: PESOS.error }] : [];
+    if (habilidad) return [{ habilidad, clase: 'error', tipo: tipoError, aFavor: false, peso: PESOS.error }];
+    // No se sabe de qué habilidad es: se reparte entre las de procedimiento.
+    const peso = PESOS.error / (ctx.deProcedimiento.length || 1);
+    return ctx.deProcedimiento.map((h) => ({ habilidad: h, clase: 'sin_clasificar', tipo: null, aFavor: false, peso }));
   }
   if (ev.resultado !== 'correcto' || ev.pidioSolucion === true) return [];
   let clase = 'procedimiento';
@@ -331,6 +335,7 @@ const TEXTO_EVIDENCIA = {
       ? `${plural(n, 'acierto', 'aciertos')} en el diagnóstico rápido`
       : `${plural(n, 'respuesta incorrecta', 'respuestas incorrectas')} en el diagnóstico rápido`,
   error: (n, _aFavor, nombre) => `${plural(n, 'error', 'errores')} de «${nombre}»`,
+  sin_clasificar: (n) => plural(n, 'error sin clasificar', 'errores sin clasificar'),
   procedimiento: (n) => `${plural(n, 'procedimiento correcto', 'procedimientos correctos')} sin ayuda`,
   con_pistas: (n) => `${plural(n, 'procedimiento correcto', 'procedimientos correctos')} con pistas`,
   comprobacion: (n) => plural(n, 'comprobación sin ayuda aprobada', 'comprobaciones sin ayuda aprobadas'),
@@ -364,7 +369,7 @@ function agruparEvidencias(pesadas, ctx) {
 
 /**
  * @typedef {object} Evidencia
- * @property {'rapido'|'error'|'procedimiento'|'con_pistas'|'comprobacion'} clase
+ * @property {'rapido'|'error'|'sin_clasificar'|'procedimiento'|'con_pistas'|'comprobacion'} clase
  * @property {string|null} tipo tipo de error (solo en la clase 'error')
  * @property {boolean} aFavor
  * @property {number} veces cuántas evidencias de esta clase
