@@ -95,8 +95,19 @@ async function iniciar() {
     await montarEstudiante(raiz, { alumno, embebido: params.has('embebido') });
   }
   medirBarras();
-  // Guarda la app en el celular para que funcione en modo avión (no bloquea la carga).
-  import('./services/sw-registro.js').then((m) => m.registrarServiceWorker());
+  prepararSinConexion();
+}
+
+/**
+ * Guarda la app en el celular para que funcione en modo avión y, si hay una
+ * versión nueva, muestra el aviso "Actualizar" (no bloquea la carga y nunca
+ * recarga sola: ver js/ui/actualizacion.js).
+ */
+function prepararSinConexion() {
+  import('./services/sw-registro.js')
+    .then((sw) => sw.registrarServiceWorker())
+    .then((registro) => registro && import('./ui/actualizacion.js').then((m) => m.montarAvisoActualizacion(registro)))
+    .catch((error) => console.warn('No se pudo preparar el modo sin internet:', error));
 }
 
 iniciar().catch((error) => {
@@ -104,4 +115,5 @@ iniciar().catch((error) => {
   raiz.innerHTML =
     '<div class="pantalla pila" role="alert"><h1 class="titulo-1">Algo salió mal</h1>' +
     '<p>Recarga la página. Si sigue fallando, abre la vista con <code>?reiniciar=1</code>.</p></div>';
+  prepararSinConexion(); // aunque la vista falle, se puede recibir una versión nueva que la corrija
 });

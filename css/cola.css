@@ -1,1 +1,554 @@
-/* Cola de sincronización (fase 3). La completa su agente; existe desde ahora para que index.html no pida un archivo inexistente. */
+/*
+ * Cola de sincronización (js/ui/cola.js).
+ *
+ * - .cola--compacta: botón de una sola línea en la barra superior ("5 pendientes").
+ * - .cola--tarjeta: tarjeta de Inicio; las actividades son fichas que avanzan hacia una
+ *   nube y, al volver la red, suben una por una mientras el contador baja.
+ * - .cola-panel: <dialog> con la lista (tipo de actividad y hora).
+ *
+ * Nada depende solo del color: cada estado cambia también de icono, de texto y de borde
+ * (punteado = esperando en el cel; continuo = enviando o ya enviado).
+ * Con movimiento reducido no hay animaciones: los cambios son inmediatos.
+ */
+
+/* ------------------------------------------------------------------ */
+/* Compacta: barra superior                                            */
+/* ------------------------------------------------------------------ */
+
+/* Mismas medidas que el chip de conexión: cabe en una línea a 360 px con 44 px de alto. */
+.cola--compacta {
+  position: relative;
+  gap: 0.25rem;
+  padding-inline: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.cola--compacta .cola__icono {
+  display: inline-flex;
+  flex: none;
+}
+
+.cola--compacta .cola__icono svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.cola__n {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+/* El número nuevo entra desde arriba, como un contador que baja */
+.cola__n--cambia {
+  animation: cola-numero 0.32s var(--curva, ease-out);
+}
+
+/* Avance de la subida: una rayita dentro del botón (el texto y los anuncios dicen lo mismo) */
+.cola__linea {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.3125rem;
+  left: 0.75rem;
+  height: 0.1875rem;
+  overflow: hidden;
+  border-radius: var(--radio-pildora, 999px);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.cola__linea::before,
+.cola__avance {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+}
+
+.cola__linea::before {
+  opacity: 0.25;
+}
+
+.cola__avance {
+  transform: scaleX(var(--avance, 0));
+  transform-origin: left center;
+  transition: transform 0.3s var(--curva, ease-out);
+}
+
+.cola--compacta[data-estado='sincronizando'] .cola__linea {
+  opacity: 1;
+}
+
+.cola--compacta.cola--celebra .cola__icono {
+  animation: cola-pop 0.5s var(--curva, ease-out);
+}
+
+/* La flecha de la nube sube mientras se envía */
+.cola__flecha {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+:is(.cola, .cola-panel)[data-estado='sincronizando'] .cola__flecha {
+  animation: cola-flecha 0.9s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tarjeta: Inicio                                                     */
+/* ------------------------------------------------------------------ */
+
+.cola--tarjeta,
+.cola-panel {
+  /* Esperando en el cel (sin red o a punto de enviarse) */
+  --cola-tono: var(--color-acento-fuerte, #8a5400);
+  --cola-fondo: var(--color-acento-suave, #fff3d4);
+}
+
+:is(.cola--tarjeta, .cola-panel)[data-estado='sincronizando'] {
+  --cola-tono: var(--color-info, #1f5ea8);
+  --cola-fondo: var(--color-info-suave, #e3edfa);
+}
+
+:is(.cola--tarjeta, .cola-panel)[data-estado='al-dia'] {
+  --cola-tono: var(--color-exito, #196c3f);
+  --cola-fondo: var(--color-exito-suave, #e0f3e7);
+}
+
+.cola--tarjeta {
+  /* Fichas: ancho y distancia entre una y otra (js/ui/cola.js usa el mismo paso: 2.5rem) */
+  --cola-ficha: 2.125rem;
+  --cola-paso: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3, 0.75rem);
+  padding: var(--espacio-3, 0.75rem) var(--espacio-4, 1rem) var(--espacio-4, 1rem);
+  border: var(--borde-control, 2px) dashed var(--cola-tono);
+  border-radius: var(--radio-grande, 1.25rem);
+  background: var(--cola-fondo);
+  color: var(--color-texto, #15252d);
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.cola--tarjeta:is([data-estado='sincronizando'], [data-estado='al-dia']) {
+  border-style: solid;
+}
+
+.cola--tarjeta > * {
+  margin: 0;
+}
+
+.cola__cabeza {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.cola__cabeza .cola__icono {
+  flex: none;
+  margin-top: 0.0625rem;
+  color: var(--cola-tono);
+  line-height: 0;
+}
+
+.cola__cabeza .cola__icono svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.cola__titulo {
+  min-width: 0;
+  margin: 0;
+}
+
+.cola--celebra .cola__cabeza .cola__icono,
+.cola--celebra .cola__nube {
+  animation: cola-pop 0.55s var(--curva, ease-out);
+}
+
+/* Escena: las fichas en fila; la de la derecha es la siguiente en subir a la nube */
+.cola__escena {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2, 0.5rem);
+  min-height: 3rem;
+}
+
+.cola__fichas {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--cola-ficha);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* El camino hacia la nube (sin fichas, solo queda la nube) */
+.cola__fichas:empty::before {
+  display: none;
+}
+
+.cola__fichas::before {
+  content: '';
+  position: absolute;
+  top: calc(50% - 1px);
+  right: 0;
+  left: 0;
+  border-top: 2px dotted var(--cola-tono);
+  opacity: 0.5;
+}
+
+.cola-ficha,
+.cola__mas {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--cola-ficha);
+  height: var(--cola-ficha);
+  transform: translateX(calc(var(--slot, 0) * -1 * var(--cola-paso)));
+  transition: transform 0.35s var(--curva, ease-out);
+}
+
+.cola-ficha__cara,
+.cola__mas {
+  display: grid;
+  place-items: center;
+  border: var(--borde-control, 2px) solid var(--cola-tono);
+  border-radius: 0.625rem;
+  background: var(--color-superficie, #fff);
+  color: var(--cola-tono);
+}
+
+.cola-ficha__cara {
+  width: 100%;
+  height: 100%;
+  box-shadow: 0 2px 0 rgb(21 37 45 / 0.12);
+}
+
+.cola-ficha__cara svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.cola__mas {
+  border-style: dashed;
+  color: var(--color-texto, #15252d);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.cola-ficha--llega .cola-ficha__cara {
+  animation: cola-llega 0.35s var(--curva, ease-out) both;
+}
+
+/* Sube a la nube: un arco corto y se encoge al entrar */
+.cola-ficha--sube {
+  z-index: 1;
+}
+
+.cola-ficha--sube .cola-ficha__cara {
+  animation: cola-sube 0.6s cubic-bezier(0.45, 0, 0.25, 1) forwards;
+}
+
+.cola__nube {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--color-superficie, #fff);
+  color: var(--cola-tono);
+  box-shadow: inset 0 0 0 var(--borde-control, 2px) var(--cola-tono);
+}
+
+.cola__nube svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.cola__nube[data-variante='sin-red'] .cola__nube-borde {
+  stroke-dasharray: 2.4 2.2;
+}
+
+.cola__nube--recibe {
+  animation: cola-recibe 0.35s var(--curva, ease-out);
+}
+
+/* Renglón de estado (tarjeta y panel) */
+.cola__estado {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  font-weight: 700;
+}
+
+.cola__estado-icono {
+  flex: none;
+  color: var(--cola-tono);
+  line-height: 0;
+}
+
+.cola__estado-icono svg {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.cola__progreso {
+  color: var(--color-texto, #15252d);
+}
+
+.cola__progreso progress {
+  --tono: var(--cola-tono);
+}
+
+.cola__ver {
+  align-self: flex-start;
+}
+
+/* ------------------------------------------------------------------ */
+/* Panel con la lista                                                  */
+/* ------------------------------------------------------------------ */
+
+.cola-panel {
+  width: min(28rem, calc(100% - 2 * var(--espacio-4, 1rem)));
+  padding: var(--espacio-4, 1rem);
+}
+
+.cola-panel__cuerpo {
+  gap: var(--espacio-3, 0.75rem);
+}
+
+.cola-panel__cabeza {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3, 0.75rem);
+}
+
+.cola-panel__cabeza .cola__nube {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.cola-panel__cabeza .cola__nube svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.cola-panel__resumen {
+  margin: 0;
+  font-weight: 800;
+}
+
+.cola-panel__lista {
+  display: grid;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cola-panel__item {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3, 0.75rem);
+  min-height: 3rem;
+  padding: var(--espacio-2, 0.5rem) var(--espacio-3, 0.75rem);
+  border: var(--borde-fino, 1px) solid var(--color-borde-suave, #d4dde0);
+  border-radius: var(--radio, 0.75rem);
+  background: var(--color-superficie, #fff);
+}
+
+.cola-panel__icono {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: var(--borde-control, 2px) solid var(--cola-tono);
+  border-radius: 0.625rem;
+  color: var(--cola-tono);
+}
+
+.cola-panel__icono svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.cola-panel__texto {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.cola-panel__tipo {
+  font-weight: 800;
+}
+
+.cola-panel__detalle {
+  color: var(--color-texto-sec, #4b5b63);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.cola-panel__hora {
+  flex: none;
+  color: var(--color-texto-sec, #4b5b63);
+  font-size: var(--texto-chico, 0.875rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cola-panel__item--llega {
+  animation: cola-fila-llega 0.3s var(--curva, ease-out);
+}
+
+/* Sube y se cierra el hueco (el alto lo pone js/ui/cola.js) */
+.cola-panel__item--sube {
+  overflow: hidden;
+  min-height: 0;
+  padding-block: 0;
+  border-width: 0;
+  opacity: 0;
+  transform: translateY(-0.75rem);
+  transition: opacity 0.25s, transform 0.3s, height 0.35s 0.1s, padding 0.35s 0.1s;
+}
+
+.cola-panel__vacio {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2, 0.5rem);
+  margin: 0;
+  padding: var(--espacio-3, 0.75rem) var(--espacio-4, 1rem);
+  border: var(--borde-control, 2px) solid var(--color-exito, #196c3f);
+  border-radius: var(--radio, 0.75rem);
+  background: var(--color-exito-suave, #e0f3e7);
+  font-weight: 800;
+}
+
+.cola-panel__vacio .icono {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-exito, #196c3f);
+}
+
+.cola-panel__vacio[hidden] {
+  display: none;
+}
+
+/* "Cerrar" siempre a la vista aunque la lista sea larga (el <dialog> es el que se desplaza) */
+.cola-panel__pie {
+  position: sticky;
+  bottom: calc(-1 * var(--espacio-4, 1rem));
+  margin: 0 calc(-1 * var(--espacio-4, 1rem)) calc(-1 * var(--espacio-4, 1rem));
+  padding: var(--espacio-3, 0.75rem) var(--espacio-4, 1rem) var(--espacio-4, 1rem);
+  border-top: var(--borde-fino, 1px) solid var(--color-borde-suave, #d4dde0);
+  background: var(--color-superficie, #fff);
+}
+
+/* ------------------------------------------------------------------ */
+/* Movimiento                                                          */
+/* ------------------------------------------------------------------ */
+
+@keyframes cola-numero {
+  from {
+    opacity: 0.3;
+    transform: translateY(-0.4em);
+  }
+}
+
+@keyframes cola-pop {
+  40% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes cola-llega {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@keyframes cola-sube {
+  35% {
+    opacity: 1;
+    transform: translate(calc(var(--dx, 0px) * 0.35), calc(var(--dy, 0px) * 0.35 - 1.5rem)) scale(0.95) rotate(-6deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(0.25) rotate(-14deg);
+  }
+}
+
+@keyframes cola-recibe {
+  45% {
+    transform: scale(1.16);
+  }
+}
+
+@keyframes cola-flecha {
+  0% {
+    opacity: 0.4;
+    transform: translateY(2px);
+  }
+
+  55% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.4;
+    transform: translateY(-2.5px);
+  }
+}
+
+@keyframes cola-fila-llega {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+/* Movimiento reducido: sin vuelos ni conteos animados (el JS también cambia todo al instante). */
+html.reducir-movimiento :is(.cola, .cola-panel),
+html.reducir-movimiento :is(.cola, .cola-panel) *,
+html.reducir-movimiento :is(.cola, .cola-panel) *::before {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.cola, .cola-panel),
+  :is(.cola, .cola-panel) *,
+  :is(.cola, .cola-panel) *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Colores forzados (alto contraste de Windows): las fichas y la nube conservan su borde */
+@media (forced-colors: active) {
+  .cola-ficha__cara,
+  .cola__mas,
+  .cola__nube,
+  .cola-panel__icono {
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+
+  .cola__nube {
+    outline: 2px solid CanvasText;
+    outline-offset: -2px;
+  }
+}

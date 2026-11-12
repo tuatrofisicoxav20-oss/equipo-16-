@@ -1,0 +1,634 @@
+/*
+ * Modo libre del jurado (js/ui/libre.js) — <dialog> grande para el proyector.
+ *
+ * Se lee desde el fondo de un salón: toda la letra sale de --libre-u, que crece
+ * con la pantalla (≈ 21 px a 1366 × 768 y ≈ 27 px a 1920 × 1080) y con la
+ * preferencia de texto de la app (× 1.125 o × 1.25, como html[data-texto]) y el
+ * zoom del navegador. Dentro del diálogo se redefinen los tokens
+ * del kit (--texto-base, --texto-math, --titulo-*, --objetivo…), así el cuaderno
+ * (css/cuaderno.css) también se ve en grande sin tocar su código.
+ *
+ * Colores: solo tokens de styles.css (contraste AA y modo alto contraste).
+ * Movimiento: styles.css lo apaga con prefers-reduced-motion y .reducir-movimiento.
+ *
+ * Estructura: .dialogo.libre > .libre__marco (rejilla: títulos | acciones / cuerpo).
+ * El cuerpo es lo único que se desplaza: el título, «Probar otra ecuación» y
+ * «Cerrar» siempre se ven. Paso 2: .libre__paso2 = cuaderno | diagnóstico.
+ */
+
+/* ------------------------------------------------------------------ */
+/* Diálogo y escala                                                    */
+/* ------------------------------------------------------------------ */
+
+.dialogo.libre {
+  --libre-escala: 1;
+  --libre-u: clamp(1rem, min(6.4px + 1.1vw, 4.8px + 2.4vh) * var(--libre-escala), 1.75rem);
+  --libre-hueco: clamp(0.75rem, 1.5vw, 1.75rem);
+  --texto-base: var(--libre-u);
+  --texto-chico: calc(var(--libre-u) * 0.85);
+  --texto-grande: calc(var(--libre-u) * 1.15);
+  --texto-math: calc(var(--libre-u) * 1.5);
+  --titulo-3: calc(var(--libre-u) * 1.1);
+  --titulo-2: calc(var(--libre-u) * 1.5);
+  --objetivo: max(2.75rem, 44px, calc(var(--libre-u) * 2.2));
+  width: min(110rem, calc(100vw - 2 * var(--espacio-3)));
+  max-width: none;
+  height: calc(100vh - 2 * var(--espacio-3));
+  height: calc(100dvh - 2 * var(--espacio-3));
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+  font-size: var(--libre-u);
+  line-height: 1.4;
+}
+
+html[data-texto='grande'] .dialogo.libre {
+  --libre-escala: 1.125;
+}
+
+html[data-texto='muy-grande'] .dialogo.libre {
+  --libre-escala: 1.25;
+}
+
+.libre__marco {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    'titulos acciones'
+    'cuerpo cuerpo';
+  height: 100%;
+}
+
+.libre :is(p, ul, ol, h2, h3) {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cabecera: título, paso y acciones                                   */
+/* ------------------------------------------------------------------ */
+
+.libre__titulos {
+  grid-area: titulos;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-width: 0;
+  padding: var(--libre-hueco) var(--libre-hueco) var(--espacio-3);
+}
+
+.libre__titulo {
+  color: var(--color-texto);
+  font-size: var(--titulo-2);
+  font-weight: 900;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.libre__paso {
+  color: var(--color-texto-sec);
+  font-weight: 700;
+}
+
+.libre__paso .math {
+  color: var(--color-texto);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.libre__paso-num {
+  display: inline-block;
+  margin-inline-end: 0.25em;
+  padding: 0.05em 0.6em;
+  border-radius: var(--radio-pildora);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+  font-size: 0.85em;
+  font-weight: 800;
+}
+
+.libre__acciones {
+  grid-area: acciones;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--espacio-2);
+  padding: var(--libre-hueco) var(--libre-hueco) var(--espacio-3) 0;
+}
+
+.libre__cuerpo {
+  grid-area: cuerpo;
+  min-height: 0;
+  padding: var(--libre-hueco);
+  padding-top: var(--espacio-4);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-top: var(--borde-fino) solid var(--color-borde-suave);
+}
+
+/* ------------------------------------------------------------------ */
+/* Paso 1: la ecuación                                                 */
+/* ------------------------------------------------------------------ */
+
+.libre__paso1 {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--libre-hueco) * 1.25);
+  max-width: 62rem;
+  margin-inline: auto;
+}
+
+.libre__intro {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+}
+
+.libre__intro-texto {
+  font-size: var(--texto-grande);
+}
+
+.libre__formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.libre__etiqueta {
+  font-size: var(--texto-grande);
+  font-weight: 800;
+}
+
+.libre__fila-entrada {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--espacio-3);
+}
+
+.libre__campo {
+  flex: 1 1 12em;
+  min-width: 0;
+  min-height: calc(var(--libre-u) * 3.2);
+  padding: 0.2em 0.6em;
+  border: 3px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-size: calc(var(--libre-u) * 1.75);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.libre__campo:focus-visible {
+  border-color: var(--color-primario);
+}
+
+.libre__campo[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+.libre__usar {
+  flex: 0 0 auto;
+  padding-inline: 1.25em;
+  font-size: var(--texto-grande);
+}
+
+.libre__ayuda {
+  color: var(--color-texto-sec);
+}
+
+.libre__ayuda .math {
+  color: var(--color-texto);
+  font-weight: 800;
+}
+
+.libre__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+  border-inline-start: 0.35rem solid var(--color-error);
+  border-radius: var(--radio);
+  background: var(--color-error-suave);
+  color: var(--color-texto);
+  font-size: var(--texto-grande);
+  font-weight: 700;
+}
+
+.libre__error .icono {
+  width: 1.2em;
+  height: 1.2em;
+  margin-top: 0.1em;
+  color: var(--color-error);
+}
+
+.libre__ejemplos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.libre__lista-ejemplos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  padding: 0;
+  list-style: none;
+}
+
+.libre__ejemplo {
+  padding-inline: 1em;
+  font-size: calc(var(--libre-u) * 1.3);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Paso 2: cuaderno e ideas | diagnóstico                              */
+/* ------------------------------------------------------------------ */
+
+/* Una columna: cuaderno, diagnóstico (junto al botón «Revisar») e ideas. */
+.libre__paso2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'cuaderno'
+    'resultado'
+    'ideas';
+  align-items: start;
+  gap: var(--libre-hueco);
+}
+
+.libre__cuaderno {
+  grid-area: cuaderno;
+  min-width: 0;
+}
+
+.libre__resultado {
+  grid-area: resultado;
+  min-width: 0;
+}
+
+.libre__ideas {
+  grid-area: ideas;
+  min-width: 0;
+}
+
+/* Dos columnas (mismo corte que DOS_COLUMNAS en js/ui/libre.js): el diagnóstico
+   ocupa las dos filas de la derecha y se queda pegado arriba aunque el
+   procedimiento sea largo. */
+@media (min-width: 60rem) {
+  .libre__paso2 {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'cuaderno resultado'
+      'ideas resultado';
+  }
+
+  .libre__resultado {
+    position: sticky;
+    top: 0;
+  }
+}
+
+/* El cuaderno en grande (sus medidas fijas en rem, escaladas). */
+.libre .cuaderno {
+  --renglon: calc(var(--libre-u) * 2.5);
+  --margen: calc(var(--libre-u) * 2.2);
+}
+
+.libre .cuaderno__num {
+  min-width: 1.6em;
+  height: 1.6em;
+  font-size: calc(var(--libre-u) * 0.8);
+}
+
+.libre .cuaderno__fila {
+  grid-template-columns: calc(var(--libre-u) * 1.6) minmax(0, 1fr) auto;
+}
+
+.libre .cuaderno__enunciado .cuaderno__fila {
+  grid-template-columns: calc(var(--libre-u) * 1.6) minmax(0, 1fr);
+}
+
+.libre .cuaderno__etiqueta {
+  padding-inline-start: calc(var(--libre-u) * 1.6 + var(--espacio-2));
+}
+
+.libre .cuaderno__renglon:is([data-estado='ok'], [data-estado='error'])::before {
+  --lado: calc(var(--libre-u) * 1.25);
+  left: calc((var(--margen) - var(--lado)) / 2 - 1px);
+  width: var(--lado);
+  height: var(--lado);
+  margin-top: calc(var(--lado) / -2);
+}
+
+.libre .cuaderno__renglon[data-estado='despues']::before {
+  --lado: calc(var(--libre-u) * 0.8);
+  left: calc((var(--margen) - var(--lado)) / 2 - 1px);
+  width: var(--lado);
+  height: var(--lado);
+  margin-top: calc(var(--lado) / -2);
+}
+
+.libre .cuaderno__estado {
+  font-size: calc(var(--libre-u) * 0.9);
+}
+
+/* Con teclado físico (proyector) las teclas rápidas sobran: se escribe directo. */
+@media (hover: hover) and (pointer: fine) {
+  .libre .cuaderno__escritura .teclas-rapidas {
+    display: none;
+  }
+}
+
+/* El diagnóstico grande de la derecha reemplaza la caja del cuaderno (no se repite).
+   La caja se queda para lo que no es un diagnóstico: "Todavía no hay pasos" o un
+   renglón que Tecu no entiende (eso no llega a onRevisar). */
+.libre .cuaderno__resultado:has(> .diagnostico:is([data-estado='error'], [data-estado='correcto'], [data-estado='incompleto'])) {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Diagnóstico de Tecu                                                 */
+/* ------------------------------------------------------------------ */
+
+.libre__resultado {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--libre-u) * 0.45);
+  padding: calc(var(--libre-hueco) * 0.8) var(--libre-hueco);
+  border-radius: var(--radio-grande);
+}
+
+.libre__resultado.diagnostico {
+  gap: calc(var(--libre-u) * 0.45);
+  border-inline-start-width: 0.6rem;
+}
+
+.libre__resultado[data-desactualizado] {
+  border-style: dashed;
+}
+
+.libre__resultado--espera {
+  border: var(--borde-control) dashed var(--color-borde);
+  background: var(--color-superficie);
+}
+
+/* Lo que se pinta al revisar aparece suave (sin movimiento si se pidió). */
+.libre__resultado > * {
+  animation: libre-aparece 0.24s var(--curva, ease-out);
+}
+
+@keyframes libre-aparece {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+}
+
+.libre__resultado-cabeza {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.libre__resultado-titulos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+.libre__resultado .libre__resultado-etiqueta {
+  display: block;
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.libre__veredicto {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--diag, var(--color-texto));
+  font-size: calc(var(--libre-u) * 1.6);
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.libre__veredicto .icono {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+.libre__subtitulo {
+  font-size: var(--texto-grande);
+  font-weight: 800;
+}
+
+.libre__nota-cambio {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-control) dashed var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  font-weight: 800;
+}
+
+/* Renglón anterior y renglón roto (mini cuaderno con las marcas del kit). */
+.libre__mini {
+  --renglon: calc(var(--libre-u) * 2.2);
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* el fondo del renglón roto respeta las esquinas redondeadas */
+  list-style: none;
+  box-shadow: none;
+}
+
+.libre__mini-renglon {
+  font-size: calc(var(--libre-u) * 1.3);
+  font-weight: 800;
+}
+
+.libre__mini-renglon:last-child {
+  border-bottom: 0;
+}
+
+.libre__mini-renglon .cuaderno__num {
+  font-size: calc(var(--libre-u) * 0.8);
+}
+
+.libre__mini-texto {
+  min-width: 0;
+}
+
+.libre__mini-nota {
+  color: var(--color-texto-sec);
+  font-family: var(--fuente);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+}
+
+.libre__mini-renglon[data-estado='error'] .libre__mini-nota {
+  color: var(--color-error);
+}
+
+.libre__detalle {
+  font-weight: 600;
+}
+
+.libre__tipo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-weight: 800;
+}
+
+.libre__chip {
+  min-height: 0;
+  padding: 0.15em 0.75em;
+  border-width: var(--borde-control);
+  font-size: calc(var(--libre-u) * 1.2);
+}
+
+.libre__chip .icono {
+  width: 1.2em;
+  height: 1.2em;
+}
+
+.libre__para-etiqueta {
+  color: var(--color-texto-sec);
+  font-weight: 800;
+}
+
+.libre__explicacion {
+  color: var(--color-texto);
+  font-size: calc(var(--libre-u) * 1.15);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* Para el docente: aparte y discreto (más chico, en gris, con borde punteado). */
+.libre__docente {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-fino) dashed var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto-sec);
+  font-size: calc(var(--libre-u) * 0.8);
+  line-height: 1.3;
+}
+
+.libre__docente strong {
+  color: var(--color-texto);
+}
+
+.libre__docente-meta {
+  font-size: 0.9em;
+}
+
+.libre__atajo {
+  white-space: nowrap;
+}
+
+.libre__espera {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+}
+
+.libre__espera p {
+  color: var(--color-texto-sec);
+  font-size: var(--texto-grande);
+}
+
+/* Ideas para el juez (texto chico) */
+.libre__ideas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-fino) solid var(--color-acento-fuerte);
+  border-radius: var(--radio);
+  background: var(--color-acento-suave);
+  color: var(--color-texto);
+  font-size: var(--texto-chico);
+}
+
+.libre__ideas-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  color: var(--color-acento-fuerte);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+}
+
+.libre__ideas-lista {
+  display: grid;
+  gap: 0.2em;
+  padding-inline-start: 1.2em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Pantallas angostas o bajitas                                        */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 40rem) {
+  .dialogo.libre {
+    width: calc(100vw - 2 * var(--espacio-2));
+    height: calc(100vh - 2 * var(--espacio-2));
+    height: calc(100dvh - 2 * var(--espacio-2));
+  }
+
+  .libre__marco {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'titulos'
+      'acciones'
+      'cuerpo';
+  }
+
+  .libre__acciones {
+    justify-content: flex-start;
+    padding: 0 var(--libre-hueco) var(--espacio-3);
+  }
+
+  .libre__intro .tecu {
+    display: none;
+  }
+
+  .libre__usar {
+    flex: 1 1 100%;
+  }
+}
+
+/* Poca altura (letra muy grande o zoom): se desplaza todo el diálogo, no solo el cuerpo. */
+@media (max-height: 32rem) {
+  .dialogo.libre {
+    overflow: auto;
+  }
+
+  .libre__marco {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .libre__cuerpo {
+    overflow: visible;
+  }
+}

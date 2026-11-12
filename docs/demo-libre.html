@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Prueba del modo libre · Tecu Aprende</title>
+  <!-- Las mismas hojas que carga la vista ?vista=pitch (index.html + main.js), con libre.css al final. -->
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../css/tecu.css">
+  <link rel="stylesheet" href="../css/balanza.css">
+  <link rel="stylesheet" href="../css/cuaderno.css">
+  <link rel="stylesheet" href="../css/estudiante.css">
+  <link rel="stylesheet" href="../css/cola.css">
+  <link rel="stylesheet" href="../css/libre.css">
+  <style>
+    /* Solo para esta página de prueba (no forma parte de la app). */
+    body { padding: 1rem; }
+    .demo { display: flex; flex-direction: column; gap: 2rem; max-width: 52rem; margin: 0 auto; }
+    .demo h1 { font-size: 1.5rem; }
+    .demo h2 { font-size: 1.25rem; }
+    .demo :is(h1, h2, p, ul, ol) { margin: 0; }
+    .demo__caso { display: flex; flex-direction: column; gap: 0.75rem; }
+    .demo__controles { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .demo__registro { padding-left: 1.25rem; font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+  <main class="demo" id="contenido">
+    <header class="demo__caso">
+      <h1>Prueba del modo libre del jurado</h1>
+      <p>Página de prueba de <code>js/ui/libre.js</code> con el paquete real. No está enlazada desde la app:
+        en la presentación lo abre el modo pitch (botón «Modo libre» o la tecla F).</p>
+      <p class="texto-sec" id="estado-carga">Cargando el paquete…</p>
+    </header>
+
+    <section class="demo__caso" aria-labelledby="t-abrir">
+      <h2 id="t-abrir">Abrir</h2>
+      <div class="demo__controles">
+        <button type="button" class="boton boton--primario" id="abrir" disabled>Abrir modo libre</button>
+      </div>
+      <p class="texto-sec texto-chico">Atajos de esta página (como los del presentador): <kbd>F</kbd> abre el modo libre y
+        <kbd>R</kbd> deja una nota en el registro. Con el modo libre abierto no deben dispararse.</p>
+    </section>
+
+    <section class="demo__caso" aria-labelledby="t-opciones">
+      <h2 id="t-opciones">Preferencias</h2>
+      <div class="demo__controles">
+        <button type="button" class="boton boton--secundario" data-demo="contraste" aria-pressed="false">Alto contraste</button>
+        <button type="button" class="boton boton--secundario" data-demo="texto" aria-pressed="false">Texto muy grande</button>
+        <button type="button" class="boton boton--secundario" data-demo="movimiento" aria-pressed="false">Reducir movimiento</button>
+      </div>
+    </section>
+
+    <section class="demo__caso" aria-labelledby="t-registro">
+      <h2 id="t-registro">Lo que recibe la vista</h2>
+      <ol class="demo__registro" id="registro"></ol>
+    </section>
+  </main>
+
+  <div id="anuncios" class="solo-lector" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="alertas" class="solo-lector" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="avisos" class="avisos" aria-hidden="true"></div>
+
+  <script type="module">
+    import { abrirModoLibre } from '../js/ui/libre.js';
+
+    const registro = document.getElementById('registro');
+    const botonAbrir = document.getElementById('abrir');
+    const estadoCarga = document.getElementById('estado-carga');
+
+    function registrar(texto) {
+      const li = document.createElement('li');
+      li.textContent = texto;
+      registro.appendChild(li);
+    }
+
+    let pack = null;
+    try {
+      pack = await fetch('../packs/ecuaciones-1.json').then((r) => r.json());
+      estadoCarga.textContent = `Paquete «${pack.tema ?? pack.id}» listo.`;
+    } catch (error) {
+      console.error(error);
+      estadoCarga.textContent = 'No se pudo cargar el paquete: el modo libre se abre sin nombres de errores.';
+    }
+
+    function abrir() {
+      abrirModoLibre({
+        pack,
+        onCerrar: () => registrar('onCerrar'),
+        onRevisar: ({ ecuacion, renglones, analisis }) => {
+          const e = analisis.error;
+          registrar(`onRevisar: ${[ecuacion, ...renglones].join(' | ')} → ${analisis.estado}${e ? ` ${e.tipo} (renglón ${e.renglon})` : ''}`);
+        },
+      });
+    }
+
+    botonAbrir.disabled = false;
+    botonAbrir.addEventListener('click', abrir);
+
+    // Atajos de prueba: no se disparan en campos de texto (como js/ui/atajos.js).
+    document.addEventListener('keydown', (evento) => {
+      if (evento.ctrlKey || evento.metaKey || evento.altKey) return;
+      if (evento.target.closest?.('input, textarea, select, [contenteditable]')) return;
+      const tecla = evento.key.toLowerCase();
+      if (tecla === 'f') {
+        evento.preventDefault();
+        registrar('atajo F');
+        abrir();
+      } else if (tecla === 'r') {
+        registrar('atajo R');
+      }
+    });
+
+    // Preferencias (mismo contrato CSS que js/services/preferencias.js).
+    const raiz = document.documentElement;
+    document.querySelector('.demo').addEventListener('click', (evento) => {
+      const boton = evento.target.closest('[data-demo]');
+      if (!boton) return;
+      const activo = boton.getAttribute('aria-pressed') !== 'true';
+      boton.setAttribute('aria-pressed', String(activo));
+      if (boton.dataset.demo === 'contraste') raiz.classList.toggle('alto-contraste', activo);
+      if (boton.dataset.demo === 'movimiento') raiz.classList.toggle('reducir-movimiento', activo);
+      if (boton.dataset.demo === 'texto') {
+        if (activo) raiz.setAttribute('data-texto', 'muy-grande');
+        else raiz.removeAttribute('data-texto');
+      }
+    });
+  </script>
+</body>
+</html>

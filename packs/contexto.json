@@ -1,11 +1,110 @@
 {
+  "nota": "Estadísticas y fuentes tomadas tal cual de la página «Acerca» del prototipo del equipo (referencia/estudiando-ando/js/about.js). No se verificaron desde este entorno (sin acceso a esos sitios): revísenlas antes de presentar.",
   "estadisticas": [
     {
       "id": "internet-escuelas-veracruz",
-      "texto": "Solo 25.4 % de las escuelas de educación básica de Veracruz tiene internet.",
+      "texto": "Solo 25.4 % de los planteles de educación básica del indicador en Veracruz tiene conexión, frente a 46.9 % nacional.",
       "valor": 25.4,
-      "fuente": "",
-      "nota": "Dato de la propuesta del equipo. Copia aquí la fuente exacta que aparece en docs/ antes de presentar; si este campo queda vacío, el modo pitch avisa al presentador."
+      "fuente": "Indicador estatal 2024 (ver fuentes en «Acerca del proyecto»)",
+      "porConfirmar": "El prototipo cita «Indicador estatal 2024 (ver fuentes)» sin decir de qué documento sale. Por descarte parece venir del Plan Veracruzano de Desarrollo 2025–2030; confírmenlo y, si es así, escriban aquí la cita completa."
     }
-  ]
+  ],
+  "acerca": {
+    "estadisticas": [
+      {
+        "valor": "70 %",
+        "texto": "de los estudiantes mexicanos evaluados no alcanzó el nivel 2 de competencia matemática.",
+        "fuente": "OCDE, PISA 2025"
+      },
+      {
+        "valor": "47 %",
+        "texto": "usa chatbots de IA para aprender cada semana; 35 % para redactar trabajos y 34 % para resumir textos.",
+        "fuente": "OCDE, PISA 2025"
+      },
+      {
+        "valor": "17 %",
+        "texto": "menor desempeño, al evaluarse sin ayuda, en estudiantes que usaron IA sin salvaguardas pedagógicas.",
+        "fuente": "Bastani et al., 2025"
+      },
+      {
+        "valor": "25–33 %",
+        "texto": "de quienes después reprobarían o abandonarían fueron identificados por sus tutores tras 42 días de observación.",
+        "fuente": "O'Neill, Mørcke y Eika, 2016"
+      },
+      {
+        "valor": "68.3 %",
+        "texto": "de los hogares de Veracruz tiene internet, frente a 78.3 % a nivel nacional.",
+        "fuente": "INEGI, ENDUTIH 2025"
+      },
+      {
+        "valor": "25.4 %",
+        "texto": "de los planteles de educación básica del indicador en Veracruz tiene conexión, frente a 46.9 % nacional.",
+        "fuente": "Indicador estatal 2024 (ver fuentes)"
+      }
+    ],
+    "pedagogia": [
+      {
+        "titulo": "Enseñar en el nivel adecuado (TaRL)",
+        "texto": "Adapta las actividades al nivel demostrado por el estudiante, no solo a su grado. En Veracruz hay un antecedente: los campamentos de Medición Independiente de Aprendizajes (MIA) de CIESAS-Golfo y la Universidad Veracruzana."
+      },
+      {
+        "titulo": "Evaluación formativa",
+        "texto": "Identifica dificultades con el análisis de respuestas y usa esa información para ajustar la enseñanza y orientar al docente."
+      },
+      {
+        "titulo": "Aprendizaje por dominio",
+        "texto": "Se avanza a contenidos más complejos cuando se demuestra comprensión de los fundamentos."
+      },
+      {
+        "titulo": "Andamiaje pedagógico",
+        "texto": "Preguntas, pistas y explicaciones progresivas; el apoyo se reduce conforme aumenta la autonomía."
+      },
+      {
+        "titulo": "Metacognición y recuperación activa",
+        "texto": "El estudiante explica su procedimiento, reflexiona sobre sus errores y comprueba lo aprendido con ejercicios nuevos."
+      }
+    ],
+    "fuentes": [
+      {
+        "referencia": "Organización para la Cooperación y el Desarrollo Económicos (OCDE). (2026). PISA 2025 Results (Volume I): Mexico. OECD Publishing.",
+        "url": "https://www.oecd.org/en/publications/pisa-2025-results-volume-i-country-notes_2d4ff9ea-en/mexico_85702d30-en.html"
+      },
+      {
+        "referencia": "Instituto Nacional de Estadística y Geografía (INEGI). (2026). Encuesta Nacional sobre Disponibilidad y Uso de Tecnologías de la Información en los Hogares (ENDUTIH) 2025.",
+        "url": "https://www.inegi.org.mx/contenidos/saladeprensa/boletines/2026/endutih/ENDUTIH_25_RR.pdf"
+      },
+      {
+        "referencia": "Gobierno del Estado de Veracruz. (2025). Plan Veracruzano de Desarrollo 2025–2030.",
+        "url": "https://repositorio.veracruz.gob.mx/programadegobierno/wp-content/uploads/sites/4/2025/05/PVD_2025-2030.pdf"
+      },
+      {
+        "referencia": "Bastani, H., Bastani, O., Sungu, A., Ge, H., Kabakcı, Ö., & Mariman, R. (2025). Generative AI without guardrails can harm learning: Evidence from high school mathematics. PNAS, 122(26), e2422633122.",
+        "url": "https://doi.org/10.1073/pnas.2422633122"
+      },
+      {
+        "referencia": "Banerjee, A., Banerji, R., Berry, J., Duflo, E., Kannan, H., Mukherji, S., Shotland, M., & Walton, M. (2016). Mainstreaming an effective intervention: Evidence from randomized evaluations of Teaching at the Right Level in India. NBER Working Paper No. 22746.",
+        "url": "https://doi.org/10.3386/w22746"
+      },
+      {
+        "referencia": "Education Endowment Foundation (EEF). Mastery learning.",
+        "url": "https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/mastery-learning/"
+      },
+      {
+        "referencia": "Education Endowment Foundation (EEF). Metacognition and self-regulated learning (2.ª ed., 2025).",
+        "url": "https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/metacognition/"
+      },
+      {
+        "referencia": "Medición Independiente de Aprendizajes (MIA). (s. f.). Campamentos MIA: Enseñar en el Nivel Adecuado (ENAd). CIESAS-Golfo y Universidad Veracruzana.",
+        "url": "https://www.medicionmia.org.mx/about-1"
+      },
+      {
+        "referencia": "Institute of Education Sciences (IES). (2015, revisado en 2019). Teaching strategies for improving algebra knowledge in middle and high school students. What Works Clearinghouse.",
+        "url": "https://ies.ed.gov/ncee/wwc/practiceguide/20"
+      },
+      {
+        "referencia": "O'Neill, L. D., Mørcke, A. M., & Eika, B. (2016). The validity of student tutors' judgments in early detection of struggling in medical school: A prospective cohort study. Advances in Health Sciences Education, 21, 1061–1079.",
+        "url": "https://doi.org/10.1007/s10459-016-9677-6"
+      }
+    ]
+  }
 }

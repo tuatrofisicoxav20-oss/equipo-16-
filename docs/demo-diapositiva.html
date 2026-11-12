@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Prueba de la diapositiva y los atajos · Tecu Aprende</title>
+  <link rel="icon" href="../icons/icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../css/tecu.css">
+  <link rel="stylesheet" href="../css/diapositiva.css">
+  <style>
+    /* Solo para esta página de prueba (no forma parte de la app). Simula el modo pitch:
+       barra arriba, escenario (dos teléfonos + panel en un iframe) y controles abajo. */
+    .demo {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      height: 100vh;
+      height: 100dvh;
+      font-size: 1rem;
+    }
+    .demo :is(h1, h2, p) { margin: 0; }
+    .demo__barra,
+    .demo__pie {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 1rem;
+      padding: 0.5rem 1.5rem;
+      background: var(--color-superficie);
+    }
+    .demo__barra { border-bottom: 1px solid var(--color-borde-suave); }
+    .demo__pie { border-top: 1px solid var(--color-borde-suave); }
+    .demo__titulo { flex: 1 1 18rem; font-size: 1.125rem; }
+    .demo__controles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+    .demo__controles .boton { font-size: 0.9375rem; }
+    .demo__check { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; font-weight: 700; }
+    .demo__campo { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-weight: 700; }
+    .demo__campo input { width: 14rem; }
+    .demo__escenario {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.7fr;
+      gap: 1rem;
+      min-height: 0;
+      padding: 1rem 1.5rem;
+    }
+    .demo__telefono,
+    .demo__panel {
+      min-height: 0;
+      border: 2px solid var(--color-borde-suave);
+      border-radius: 1.5rem;
+      background: var(--color-superficie);
+    }
+    .demo__telefono { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; }
+    .demo__telefono h2 { font-size: 1.125rem; }
+    .demo__panel { width: 100%; height: 100%; }
+    .demo__registro { flex: 1 1 20rem; color: var(--color-texto-sec); font-size: 0.9375rem; }
+  </style>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <div class="app app--pitch demo">
+    <header class="demo__barra">
+      <h1 class="demo__titulo">Prueba: diapositiva «El problema» y atajos</h1>
+      <div class="demo__controles">
+        <button type="button" class="boton boton--primario" data-demo="mostrar">Mostrar con contexto.json</button>
+        <label class="demo__campo" for="fuente-prueba">Fuente de prueba
+          <input id="fuente-prueba" type="text" autocomplete="off">
+        </label>
+        <button type="button" class="boton" data-demo="mostrar-fuente">Mostrar con esta fuente</button>
+        <button type="button" class="boton" data-demo="cerrar">cerrar()</button>
+        <button type="button" class="boton" data-demo="ayuda">Atajos <kbd>?</kbd></button>
+      </div>
+    </header>
+
+    <main id="contenido" class="demo__escenario" tabindex="-1" aria-label="Escenario simulado">
+      <section class="demo__telefono" aria-labelledby="t-ana">
+        <h2 id="t-ana">Teléfono de Ana</h2>
+        <p class="texto-sec">Simulado: en el pitch es un iframe con la vista del estudiante.</p>
+        <button type="button" class="boton" id="boton-ana">Botón del teléfono</button>
+      </section>
+      <section class="demo__telefono" aria-labelledby="t-luis">
+        <h2 id="t-luis">Teléfono de Luis</h2>
+        <p class="texto-sec">Simulado.</p>
+      </section>
+      <iframe class="demo__panel" id="panel" title="Panel docente simulado (iframe)" srcdoc="<!doctype html><html lang='es-MX'><head><meta charset='utf-8'><title>Panel simulado</title><style>body{margin:0;padding:1rem;font-family:system-ui,sans-serif;color:#15252d;background:#fff}button,input{font:inherit;min-height:44px;margin:.25rem 0}</style></head><body><p><strong>Panel docente</strong> (simulado, dentro de un iframe)</p><p><button type='button' id='boton-iframe'>Botón dentro del iframe</button></p><p><label>Campo dentro del iframe <input id='campo-iframe'></label></p></body></html>"></iframe>
+    </main>
+
+    <footer class="demo__pie">
+      <p class="demo__registro"><strong>Registro:</strong> <span id="ultimo">—</span></p>
+      <label class="demo__campo" for="campo-prueba">Campo de texto (aquí los atajos no actúan)
+        <input id="campo-prueba" type="text" autocomplete="off">
+      </label>
+      <label class="demo__check"><input type="checkbox" id="ajuste-movimiento"> Reducir movimiento</label>
+      <label class="demo__check"><input type="checkbox" id="ajuste-contraste"> Alto contraste</label>
+    </footer>
+  </div>
+
+  <div id="anuncios" class="solo-lector" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="alertas" class="solo-lector" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="avisos" class="avisos" aria-hidden="true"></div>
+
+  <script type="module">
+    import { mostrarDiapositiva } from '../js/ui/diapositiva.js';
+    import { instalarAtajos, TECLAS } from '../js/ui/atajos.js';
+
+    const escenario = document.getElementById('contenido');
+    const contexto = await fetch('../packs/contexto.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+
+    const registro = [];
+    let diapositiva = null;
+    let sinInternet = false;
+
+    function anotar(texto) {
+      registro.push(texto);
+      document.getElementById('ultimo').textContent = registro.slice(-3).join(' · ');
+    }
+
+    /** Muestra la diapositiva como lo haría el paso 1 del guion. */
+    function mostrar(ctx = contexto) {
+      diapositiva = mostrarDiapositiva(escenario, {
+        contexto: ctx,
+        onCerrar: ({ motivo }) => {
+          anotar(`onCerrar(${motivo})`);
+          diapositiva = null;
+        },
+      });
+      anotar(`diapositiva (faltaFuente: ${diapositiva.faltaFuente})`);
+      return diapositiva;
+    }
+
+    /** Copia de contexto.json con la fuente que se escribió en la página (nada inventado en el código). */
+    function conFuente(fuente) {
+      const copia = structuredClone(contexto || { estadisticas: [] });
+      if (copia.estadisticas && copia.estadisticas[0]) copia.estadisticas[0].fuente = fuente;
+      return copia;
+    }
+
+    const atajos = instalarAtajos({
+      paso(n, id) {
+        anotar(`paso(${n}, ${id})`);
+        if (id === 'problema') mostrar();
+        else {
+          diapositiva?.cerrar();
+          diapositiva = null;
+        }
+      },
+      ana: () => anotar('ana()'),
+      luis: () => anotar('luis()'),
+      avion() {
+        sinInternet = !sinInternet;
+        anotar(`avion() → ${sinInternet ? 'sin internet' : 'con internet'}`);
+        return sinInternet ? 'Modo avión: los teléfonos están sin internet.' : 'Modo avión apagado: los teléfonos tienen internet otra vez.';
+      },
+      libre: () => anotar('libre()'),
+      reiniciar: () => anotar('reiniciar()'),
+      ayuda: () => anotar('ayuda()'),
+    });
+
+    document.addEventListener('click', (evento) => {
+      const boton = evento.target.closest('[data-demo]');
+      if (!boton) return;
+      const que = boton.dataset.demo;
+      if (que === 'mostrar') mostrar();
+      else if (que === 'mostrar-fuente') mostrar(conFuente(document.getElementById('fuente-prueba').value));
+      else if (que === 'cerrar') {
+        diapositiva?.cerrar();
+        diapositiva = null;
+        anotar('cerrar()');
+      } else if (que === 'ayuda') atajos.mostrarAyuda();
+    });
+
+    const raizHtml = document.documentElement;
+    document.getElementById('ajuste-movimiento').addEventListener('change', (e) => {
+      raizHtml.classList.toggle('reducir-movimiento', e.target.checked);
+    });
+    document.getElementById('ajuste-contraste').addEventListener('change', (e) => {
+      raizHtml.classList.toggle('alto-contraste', e.target.checked);
+    });
+
+    // Para las pruebas automáticas (Playwright).
+    window.demo = { registro, contexto, atajos, TECLAS, mostrar, conFuente, get diapositiva() { return diapositiva; } };
+    mostrar();
+  </script>
+</body>
+</html>

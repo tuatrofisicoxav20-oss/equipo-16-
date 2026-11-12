@@ -11,6 +11,10 @@
  * Todo funciona sin internet: el diagnóstico corre en el cel (js/core/engine.js) y
  * cada evento se guarda en el dispositivo (store) hasta que hay conexión.
  *
+ * Sincronización: la hace SOLO la cola (js/ui/cola.js), que es el único lugar que llama a
+ * store.sincronizar(). La vista la monta en la barra superior (compacta, siempre a la vista)
+ * y en Inicio (tarjeta, cuando hay pendientes); las dos comparten el mismo coordinador.
+ *
  * API de control para el modo pitch (postMessage del mismo origen):
  *   { tecu: 'control', cmd: 'reproducirDiagnostico', items: string[][], rapido?: boolean }
  *   { tecu: 'control', cmd: 'reproducirPractica' }   // resuelve bien el ejercicio de práctica actual
@@ -38,12 +42,14 @@ import {
 } from '../ui/dom.js';
 import { tecuSVG } from '../ui/tecu.js';
 import { montarBalanza } from '../ui/balanza.js';
+import { montarCola } from '../ui/cola.js';
 import { formatearEcuacion, htmlEcuacion, leerEcuacion, montarCuaderno } from '../ui/cuaderno.js';
 import * as Iconos from '../ui/iconos.js';
 import { crearStore } from '../data/store.js';
 import * as Paquete from '../data/paquete.js';
 import { alCambiarPreferencias, guardarPreferencias, leerPreferencias } from '../services/preferencias.js';
 import { crearRed } from '../services/red.js';
+import { estadoSinConexion } from '../services/sw-registro.js';
 
 /* ------------------------------------------------------------------ */
 /* Constantes                                                          */
@@ -335,7 +341,6 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   const state = {
     pantalla: 'inicio',
     red: leerRed(),
-    sync: null, // { i, total } mientras se sincroniza
     prefs: leerPreferencias(),
     paquete: paqueteInfo,
     actualizando: false,
@@ -344,7 +349,8 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     repasoCompleto: false,
     balanzaConInstruccion: false,
     balanzaConCierre: false,
-    abrirPendientes: false,
+    colaInicio: false, // la tarjeta de la cola se quedó en Inicio (hasta salir de Inicio)
+    sinConexion: null, // lo que guarda el service worker (Descargas): { cargando, datos, sinSoporte, hora }
     borradorChat: '',
     reproduciendo: false,
   };
@@ -359,15 +365,43 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
 
   /* ---------------- Esqueleto ---------------- */
 
+  // La barra tiene lugares fijos: la marca y la conexión se vuelven a pintar; la cola se
+  // monta una sola vez y se actualiza sola (así no se corta su animación).
   raiz.innerHTML = String(html`
-    <header class="barra-superior est-barra"></header>
+    <header class="barra-superior est-barra">
+      <p class="marca est-barra__marca"></p>
+      <div class="est-barra__estado">
+        <div class="est-barra__red"></div>
+        <div class="est-barra__cola"></div>
+      </div>
+    </header>
     <main id="contenido" class="contenido est-contenido" tabindex="-1"></main>
     <nav class="nav-inferior est-nav" aria-label="Principal"></nav>`);
   const barra = raiz.querySelector('.barra-superior');
+  const marcaBarra = barra.querySelector('.est-barra__marca');
+  const redBarra = barra.querySelector('.est-barra__red');
   const contenido = raiz.querySelector('#contenido');
   const nav = raiz.querySelector('.nav-inferior');
-  let htmlBarraPrevio = '';
+  let htmlMarcaPrevio = '';
+  let htmlRedPrevio = '';
   let htmlNavPrevio = '';
+
+  /** Cola compacta de la barra: "5 pendientes"; al tocarla, la lista. Ella sincroniza. */
+  let colaBarra = null;
+  try {
+    colaBarra = montarCola(barra.querySelector('.est-barra__cola'), {
+      store,
+      red,
+      compacta: true,
+      describir: describirParaCola,
+      onCambio: () => {
+        ajustarBarra();
+        notificarPadre();
+      },
+    });
+  } catch (error) {
+    console.error(error);
+  }
 
   /* ---------------- Datos derivados ---------------- */
 
@@ -505,8 +539,6 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     }
   }
 
-  let nuevosDuranteSync = false;
-
   function registrar(parcial) {
     let evento = null;
     try {
@@ -518,61 +550,20 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     return evento;
   }
 
-  /** Hay algo nuevo por subir: actualiza la insignia y, con red, sincroniza en silencio. */
+  /**
+   * Hay algo nuevo por subir. La cola (js/ui/cola.js) ya escucha al store: cuenta la
+   * actividad nueva y, con red, la sube sola 0.7 s después. Aquí solo se avisa al pitch.
+   */
   function datosCambiaron() {
-    if (sincronizando) nuevosDuranteSync = true;
     renderBarra();
-    if (state.red.enLinea) programarSync(false);
   }
 
-  /* ---------------- Conexión y sincronización ---------------- */
+  /* ---------------- Conexión ---------------- */
 
-  let temporizadorSync = null;
-  let sincronizando = false;
-  let fallosSync = 0;
-
-  function programarSync(avisar, espera = 700) {
-    clearTimeout(temporizadorSync);
-    temporizadorSync = setTimeout(() => sincronizar({ avisar }), espera);
-  }
-
-  async function sincronizar({ avisar = true } = {}) {
-    if (sincronizando || !red.enLinea()) return;
-    const total = contarPendientes();
-    if (!total) return;
-    sincronizando = true;
-    nuevosDuranteSync = false;
-    state.sync = { i: 0, total };
-    renderBarra();
-    if (avisar) anunciar(`Sincronizando ${plural(total, 'actividad', 'actividades')}…`);
-    let fallo = false;
-    try {
-      const enviados = await store.sincronizar({
-        onPaso: (i, t) => {
-          state.sync = { i: Number(i) || 0, total: Number(t) || total };
-          renderBarra();
-        },
-      });
-      fallosSync = 0;
-      if (avisar && enviados !== 0) aviso('Listo, tu maestra o maestro ya ve tu avance.', { tipo: 'exito' });
-    } catch (error) {
-      console.error(error);
-      fallo = true;
-      fallosSync += 1;
-      if (avisar) aviso('No se pudo enviar tu avance. Sigue guardado en tu cel y lo intento de nuevo.', { tipo: 'alerta' });
-    } finally {
-      sincronizando = false;
-      state.sync = null;
-      renderBarra();
-      if (state.pantalla === 'inicio') render();
-      if (red.enLinea() && contarPendientes()) {
-        if (fallo && fallosSync <= 3) programarSync(false, 4000 * fallosSync);
-        else if (!fallo && nuevosDuranteSync) programarSync(false);
-      }
-    }
-  }
-
-  /** Lee el servicio de red y reacciona a los cambios (idempotente). */
+  /**
+   * Lee el servicio de red y reacciona a los cambios (idempotente). La subida de lo
+   * pendiente la hace la cola al volver la red; aquí se contestan las dudas guardadas.
+   */
   function alCambiarRed() {
     const nuevo = leerRed();
     const antes = state.red;
@@ -581,9 +572,10 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     renderBarra();
     if (['tecu', 'descargas', 'inicio'].includes(state.pantalla)) render();
     if (!antes.enLinea && nuevo.enLinea) {
-      fallosSync = 0;
+      const habiaDudas = dudasPendientes().length > 0;
       contestarDudasPendientes();
-      sincronizar({ avisar: true });
+      // En Inicio, la nota "Tienes 1 duda esperando señal" ya no aplica.
+      if (habiaDudas && state.pantalla === 'inicio') render();
     } else if (antes.enLinea && !nuevo.enLinea) {
       anunciar('Sin internet. Todo lo que hagas se guarda en tu cel.');
     }
@@ -707,6 +699,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     if (p !== state.pantalla) {
       state.repaso = null;
       state.mensaje = null;
+      state.colaInicio = false;
     }
     state.pantalla = p;
     prog.pantalla = p;
@@ -833,13 +826,22 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     notificarPadre();
   }
 
+  /** Marca y conexión (la cola de la barra se pinta sola). */
   function renderBarra() {
-    const nuevo = String(htmlBarra());
-    if (nuevo !== htmlBarraPrevio) {
-      htmlBarraPrevio = nuevo;
-      renderConFoco(barra, nuevo);
-      ajustarBarra();
+    const marca = String(htmlMarca());
+    const conexion = String(htmlRed());
+    let cambio = false;
+    if (marca !== htmlMarcaPrevio) {
+      htmlMarcaPrevio = marca;
+      marcaBarra.innerHTML = marca;
+      cambio = true;
     }
+    if (conexion !== htmlRedPrevio) {
+      htmlRedPrevio = conexion;
+      renderConFoco(redBarra, conexion);
+      cambio = true;
+    }
+    if (cambio) ajustarBarra();
     notificarPadre();
   }
 
@@ -855,17 +857,19 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   function notificarPadre() {
     if (window.parent === window) return;
     const r = prog.ruta;
+    // Lo mismo que muestra la cola (durante la animación, el contador que se ve).
+    const cola = colaBarra?.estado?.();
     const mensaje = {
       tecu: 'estado',
       alumno,
       pantalla: state.pantalla,
-      pendientes: contarPendientes(),
+      pendientes: cola ? cola.pendientes : contarPendientes(),
       ruta: r ? r.tipo : null,
       actividad: r?.empezada ? r.actividad : null,
       enLinea: state.red.enLinea,
       dominado: prog.dominado,
       ejercicio: state.pantalla === 'diagnostico' ? indiceDiag() + 1 : null,
-      sincronizando: Boolean(state.sync),
+      sincronizando: Boolean(cola?.sincronizando),
     };
     const firma = JSON.stringify(mensaje);
     if (firma === ultimoEstadoPadre) return;
@@ -879,44 +883,27 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
 
   /* ---------------- Barra superior y navegación ---------------- */
 
-  function htmlBarra() {
-    const n = contarPendientes();
-    const { enLinea, real } = state.red;
-    const estadoTecu = !enLinea ? 'sin-senal' : chatBloqueado() ? 'dormido' : 'normal';
+  /** Tecu y el nombre (Tecu se ve sin señal o dormido según el momento). */
+  function htmlMarca() {
+    const estadoTecu = !state.red.enLinea ? 'sin-senal' : chatBloqueado() ? 'dormido' : 'normal';
+    return html`${tecu(estadoTecu, 32, { decorativo: true })}
+      <span class="est-barra__alumno"><span class="solo-lector">Tecu Aprende, cel de </span>${nombreVisible}</span>`;
+  }
 
-    // Conexión: un solo chip que alterna "Con internet" / "Sin internet" (para proyectar la demo).
+  /** Conexión: un solo chip que alterna "Con internet" / "Sin internet" (para proyectar la demo). */
+  function htmlRed() {
+    const { enLinea, real } = state.red;
     const ayudaRed = !real
       ? 'Tu cel no tiene señal de verdad. En cuanto vuelva, Tecu envía tu avance.'
       : enLinea
         ? 'Toca para simular que no hay internet.'
         : 'Toca para volver a tener internet.';
-    const chipRed = html`<button type="button" class="chip ${enLinea ? 'est-red--con' : 'chip--alerta'} est-red" data-act="conexion"
+    return html`<button type="button" class="chip ${enLinea ? 'est-red--con' : 'chip--alerta'} est-red" data-act="conexion"
       data-foco="red" aria-pressed="${String(enLinea)}" title="${ayudaRed}"
       ${attr('aria-disabled', !real, 'true')} ${attr('data-explica', !real, ayudaRed)}>
       ${ico(enLinea ? 'wifi' : 'sin-wifi')}<span>${enLinea ? 'Con internet' : 'Sin internet'}</span>${!real
         ? html`<span class="solo-lector">: tu cel no tiene señal de verdad</span>`
         : ''}</button>`;
-
-    // Pendientes de sincronizar: siempre a la vista; al tocarlo se ve cuáles son.
-    let chipPendientes;
-    if (state.sync) {
-      const total = state.sync.total || n;
-      const i = Math.min(Math.max(state.sync.i, 1), total);
-      chipPendientes = html`<span class="chip chip--info est-pendientes" data-estado="sincronizando">
-        ${ico('sincronizar', 'est-girando')}<span>Sincronizando ${i} de ${total}…</span></span>`;
-    } else {
-      const texto = `${n} ${n === 1 ? 'pendiente' : 'pendientes'}`;
-      const ayuda = n ? 'Actividades guardadas en tu cel que faltan por sincronizar. Toca para ver cuáles.' : 'Todo tu avance ya está sincronizado.';
-      chipPendientes = html`<button type="button" class="chip ${n ? 'chip--alerta' : 'chip--exito'} est-pendientes"
-        data-estado="${n ? 'pendientes' : 'al-dia'}" data-act="verPendientes" data-foco="pendientes" title="${ayuda}">
-        ${ico(n ? 'reloj' : 'check')}<span>${texto}</span><span class="solo-lector">${n ? ' de sincronizar' : ''}</span></button>`;
-    }
-    return html`
-      <p class="marca est-barra__marca">
-        ${tecu(estadoTecu, 32, { decorativo: true })}
-        <span class="est-barra__alumno"><span class="solo-lector">Tecu Aprende, cel de </span>${nombreVisible}</span>
-      </p>
-      <div class="est-barra__estado">${chipRed}${chipPendientes}</div>`;
   }
 
   /**
@@ -975,59 +962,42 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     return { texto: `Diagnóstico: vas en el ejercicio ${indiceDiag() + 1} de ${totalDiag}.`, boton: 'Continuar' };
   }
 
-  function describirEvento(e) {
-    const ej = e.ejercicio ? formatearEcuacion(e.ejercicio) : '';
-    switch (e.tipo) {
+  /** Cómo se nombra cada actividad en la lista de la cola (tipo + detalle; la hora la pone la cola). */
+  function describirParaCola(e) {
+    const ej = e?.ejercicio ? htmlEcuacion(e.ejercicio) : '';
+    switch (e?.tipo) {
       case 'diagnostico':
-        return `Diagnóstico: ${ej}`;
+        return { tipo: 'Diagnóstico', detalle: e.datos?.numero ? html`Ejercicio ${e.datos.numero}: ${ej}` : ej };
       case 'ruta':
-        return `Tu ruta: ${e.ruta ? nombreError(e.ruta, pack, true) : 'comprobación final'}`;
+        return { tipo: 'Tu ruta', detalle: e.ruta ? nombreError(e.ruta, pack, true) : 'Comprobación final' };
       case 'pregunta':
-        return 'Pregunta de Tecu';
+        return { tipo: 'Pregunta de Tecu', detalle: e.aprobado ? 'Respondida' : '' };
       case 'visual':
-        return 'Actividad con la balanza';
+        return { tipo: 'Balanza', detalle: e.datos?.ecuacion ? htmlEcuacion(e.datos.ecuacion) : '' };
       case 'practica':
-        return `Práctica: ${ej}`;
+        return { tipo: 'Práctica con pistas', detalle: ej };
       case 'solucion':
-        return `Solución vista: ${ej}`;
+        return { tipo: 'Solución vista', detalle: ej };
       case 'comprobacion':
-        return `Comprobación: ${ej}`;
+        return { tipo: 'Comprobación sin ayuda', detalle: ej };
       case 'dominio':
-        return 'Tema dominado';
+        return { tipo: 'Tema dominado', detalle: '' };
       case 'duda':
-        return 'Duda para Tecu';
+        return { tipo: 'Duda para Tecu', detalle: e.datos?.texto ? `«${e.datos.texto}»` : '' };
       default:
-        return 'Actividad';
+        return { tipo: 'Actividad', detalle: ej };
     }
   }
 
-  function avisoPendientes(n) {
-    const abierto = state.abrirPendientes || Boolean(contenido.querySelector('.est-aviso-pendientes details')?.open);
-    let lista = [];
+  /** Tarjeta de la cola en Inicio: se monta una vez y se conserva entre renders (no corta su animación). */
+  function montarColaInicio(host) {
+    const m = { tipo: 'cola', clave: 'cola-inicio', host, instancia: null, destruido: false };
     try {
-      lista = store.pendientes();
-    } catch {
-      lista = [];
+      m.instancia = montarCola(host, { store, red, describir: describirParaCola, nivelTitulo: 2 });
+    } catch (error) {
+      console.error(error);
     }
-    const visibles = lista.slice(-8).reverse();
-    const resto = lista.length - visibles.length;
-    return html`<section class="est-aviso-pendientes" id="est-aviso-pendientes" tabindex="-1" aria-labelledby="est-pend-titulo">
-      <span class="est-aviso-pendientes__icono">${ico('reloj')}</span>
-      <div class="est-aviso-pendientes__cuerpo">
-        <h2 class="titulo-3" id="est-pend-titulo">${n} ${n === 1 ? 'actividad guardada' : 'actividades guardadas'} en tu cel,
-          pendientes de sincronizar</h2>
-        <p class="texto-sec">${state.red.enLinea
-          ? 'Ya hay internet: se están enviando a tu maestra o maestro.'
-          : 'Se envían solas en cuanto haya internet. No se pierde nada.'}</p>
-        <details class="est-detalles" ${attr('open', abierto)}>
-          <summary>Ver cuáles</summary>
-          <ul class="est-lista-pendientes">
-            ${visibles.map((e) => html`<li>${describirEvento(e)}</li>`)}
-            ${resto > 0 ? html`<li>y ${plural(resto, 'más', 'más')}</li>` : ''}
-          </ul>
-        </details>
-      </div>
-    </section>`;
+    return m;
   }
 
   function vistaInicio() {
@@ -1038,13 +1008,17 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     const actual = materias.find((m) => m.disponible) || { nombre: pack.materia, tema: 'Ecuaciones lineales' };
     const proximas = materias.filter((m) => !m.disponible);
     const dudas = dudasPendientes().length;
-    state.pendientesMostrados = n;
+    // Con pendientes aparece la tarjeta de la cola; ya en pantalla, se queda (aunque llegue a 0)
+    // para que se vea "Todo sincronizado" al terminar. Se quita al salir de Inicio.
+    if (n) state.colaInicio = true;
+    const conCola = state.colaInicio;
     return {
       clave: 'inicio',
+      montaje: conCola ? { clave: 'cola-inicio', crear: (host) => montarColaInicio(host) } : null,
       html: html`<div class="pantalla pila est-inicio">
         <h1 class="titulo-1" data-titulo>¡Hola, ${nombreVisible}!</h1>
         ${tecuDice(state.red.enLinea ? 'normal' : 'sin-senal', html`<p>${pack.tecu.saludo}</p>`, { tamano: 76 })}
-        ${n ? avisoPendientes(n) : ''}
+        ${conCola ? html`<div class="est-montaje est-cola-inicio" data-montaje="cola-inicio"></div>` : ''}
         ${dudas
           ? html`<p class="est-nota">${ico('reloj')}<span>${dudas === 1 ? 'Tienes 1 duda' : `Tienes ${dudas} dudas`}
               esperando señal. Tecu te contesta en cuanto haya internet.</span></p>`
@@ -1073,9 +1047,6 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
             </section>`
           : ''}
       </div>`,
-      despues: () => {
-        state.abrirPendientes = false;
-      },
     };
   }
 
@@ -2085,14 +2056,94 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     return kb ? String(kb) : '';
   }
 
+  /** "908 KB" o "1.2 MB" (1 KB = 1024 bytes), en formato es-MX. */
+  function formatearPeso(bytes) {
+    const kb = Math.max(0, Number(bytes) || 0) / 1024;
+    if (kb >= 1000) return `${(kb / 1024).toLocaleString('es-MX', { maximumFractionDigits: 1 })} MB`;
+    return `${kb.toLocaleString('es-MX', { maximumFractionDigits: kb < 100 ? 1 : 0 })} KB`;
+  }
+
+  /**
+   * Pregunta al service worker qué tiene guardado (archivos y peso). Una vez cada 10 s como
+   * mucho; si no contesta (todavía se instala o el navegador no lo soporta), se dice así.
+   */
+  async function revisarSinConexion() {
+    const previo = state.sinConexion;
+    if (previo?.cargando || (previo && Date.now() - previo.hora < 10000)) return;
+    const soporta = 'serviceWorker' in navigator && window.isSecureContext !== false;
+    if (!soporta) {
+      state.sinConexion = { cargando: false, datos: null, sinSoporte: true, hora: Date.now() };
+      if (state.pantalla === 'descargas') render();
+      return;
+    }
+    state.sinConexion = { cargando: true, datos: previo?.datos ?? null, hora: Date.now() };
+    let datos = null;
+    try {
+      // estadoSinConexion() espera a navigator.serviceWorker.ready, que no llega si aún no hay uno.
+      datos = await Promise.race([estadoSinConexion(), pausa(6000).then(() => null)]);
+    } catch (error) {
+      console.error(error);
+    }
+    state.sinConexion = { cargando: false, datos: Number(datos?.archivos) > 0 ? datos : null, hora: Date.now() };
+    if (state.pantalla === 'descargas') render();
+  }
+
+  /** Tarjeta "App lista sin internet · 42 archivos · 908 KB" (lo que guarda el service worker). */
+  function tarjetaSinConexion() {
+    const sc = state.sinConexion;
+    const d = sc?.datos;
+    let estado;
+    let icono;
+    let titulo;
+    let detalle;
+    if (d && d.completo !== false) {
+      estado = 'lista';
+      icono = 'check';
+      titulo = 'App lista sin internet';
+      detalle = `${plural(Number(d.archivos), 'archivo', 'archivos')} · ${formatearPeso(d.bytes)} guardados en tu cel`;
+    } else if (d) {
+      const faltan = Array.isArray(d.faltantes) ? d.faltantes.length : Math.max(0, Number(d.total) - Number(d.archivos));
+      estado = 'incompleta';
+      icono = 'descargar';
+      titulo = 'Casi lista sin internet';
+      detalle = `${plural(Number(d.archivos), 'archivo', 'archivos')} · ${formatearPeso(d.bytes)} guardados; ${
+        faltan === 1 ? 'falta 1' : `faltan ${faltan}`
+      }. Ábrela con internet para completarla.`;
+    } else if (!sc || sc.cargando) {
+      estado = 'revisando';
+      icono = 'reloj';
+      titulo = 'Revisando lo guardado…';
+      detalle = 'Un momento: Tecu revisa qué tiene en tu cel.';
+    } else if (sc.sinSoporte) {
+      estado = 'no';
+      icono = 'info';
+      titulo = 'Este navegador no la guarda';
+      detalle = 'Ábrela en Chrome, con internet, para que funcione sin señal.';
+    } else {
+      estado = 'pendiente';
+      icono = 'descargar';
+      titulo = 'Guardando la app en tu cel…';
+      detalle = 'Déjala abierta unos segundos con internet. Cuando termine, funciona sin señal.';
+    }
+    return html`<section class="tarjeta est-sin-conexion" data-estado="${estado}" aria-labelledby="est-sc-titulo">
+      <span class="est-sin-conexion__icono">${ico(icono)}</span>
+      <div class="est-sin-conexion__cuerpo">
+        <h2 class="titulo-3" id="est-sc-titulo">${titulo}</h2>
+        <p class="est-sin-conexion__detalle">${detalle}</p>
+      </div>
+    </section>`;
+  }
+
   function vistaDescargas() {
     const proximas = (pack.materias || []).filter((m) => !m.disponible);
     const enLinea = state.red.enLinea;
     return {
       clave: 'descargas',
+      despues: () => revisarSinConexion(),
       html: html`<div class="pantalla pila est-descargas">
         <h1 class="titulo-1" data-titulo>Descargas</h1>
         <p class="texto-sec">Lo que está guardado en tu cel para aprender sin internet.</p>
+        ${tarjetaSinConexion()}
         <article class="tarjeta pila est-paquete" aria-labelledby="est-paquete-titulo">
           <h2 class="titulo-3" id="est-paquete-titulo">Ecuaciones lineales\u00a0· ${pack.grado}</h2>
           <dl class="est-datos">
@@ -2234,9 +2285,8 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   function reiniciar() {
     generacion += 1;
     destruirMontado({ conservarBorrador: false });
-    clearTimeout(temporizadorSync);
     try {
-      store.reiniciar();
+      store.reiniciar(); // la cola se entera (evento 'reinicio') y cancela lo que tuviera programado
     } catch (error) {
       console.error(error);
     }
@@ -2249,8 +2299,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       repaso: null,
       repasoCompleto: false,
       borradorChat: '',
-      abrirPendientes: false,
-      sync: null,
+      colaInicio: false,
     });
     ultimaClave = null;
     render();
@@ -2262,16 +2311,6 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     ir: (el) => ir(el.dataset.pantalla),
     aprender: () => ir('aprender'),
     conexion: () => cambiarRed(state.red.enLinea),
-    verPendientes: () => {
-      const n = contarPendientes();
-      if (!n) {
-        aviso('Todo tu avance ya llegó a tu maestra o maestro.', { tipo: 'exito' });
-        return;
-      }
-      state.abrirPendientes = true;
-      ir('inicio');
-      enfocar('#est-aviso-pendientes');
-    },
     siguienteDiag: () => siguienteDiag(),
     diagNoSe: async () => {
       const ok = await confirmar({
@@ -2585,7 +2624,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   window.addEventListener('offline', alCambiarRed);
 
   try {
-    store.suscribir?.(() => {
+    store.suscribir?.((cambio) => {
       renderBarra();
       // ¿Alguien reinició la demo desde otra pestaña? Entonces empezamos de cero aquí también.
       if (progresoGuardado && !state.reproduciendo && leerProgresoGuardado() == null) {
@@ -2596,8 +2635,10 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         state.pantalla = 'inicio';
         state.repaso = null;
         state.mensaje = null;
+        state.colaInicio = false;
         render();
-      } else if (state.pantalla === 'inicio' && !state.sync && contarPendientes() !== state.pendientesMostrados) {
+      } else if (state.pantalla === 'inicio' && !state.colaInicio && cambio?.tipo !== 'progreso' && contarPendientes()) {
+        // Llegó algo pendiente estando en Inicio: aparece la tarjeta de la cola (luego se pinta sola).
         render();
       }
     });
@@ -2647,8 +2688,6 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   render();
   ajustarMargenes();
 
-  if (red.enLinea()) {
-    if (contarPendientes()) programarSync(true, 900);
-    contestarDudasPendientes();
-  }
+  // Con red, lo pendiente de otra sesión lo sube la cola sola (con anuncios); aquí, las dudas.
+  if (red.enLinea()) contestarDudasPendientes();
 }

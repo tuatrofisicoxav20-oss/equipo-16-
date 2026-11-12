@@ -117,17 +117,23 @@
   margin-inline-start: auto;
 }
 
-/* Chips de la barra: compactos, pero con el objetivo táctil completo (44 px de alto). */
-.est-red,
-.est-pendientes {
+/* Lugares fijos de la barra: la conexión se vuelve a pintar; la cola (js/ui/cola.js) se monta
+   una sola vez y se pinta sola (estilos en css/cola.css). */
+.est-barra__red,
+.est-barra__cola {
+  display: flex;
+  align-items: center;
+}
+
+/* Chip de conexión: compacto, pero con el objetivo táctil completo (44 px de alto). */
+.est-red {
   gap: 0.25rem;
   padding-inline: 0.5rem 0.625rem;
   font-size: 0.8125rem;
   white-space: nowrap;
 }
 
-.est-red .icono,
-.est-pendientes .icono {
+.est-red .icono {
   width: 1.125rem;
   height: 1.125rem;
 }
@@ -140,14 +146,6 @@
 .est-red[aria-disabled='true'] {
   border-style: dashed;
   cursor: not-allowed;
-}
-
-/* "Sincronizando 3 de 12…" en dos renglones cortos para no empujar lo demás */
-.est-pendientes[data-estado='sincronizando'] {
-  max-width: 8.5rem;
-  min-height: var(--objetivo, 2.75rem);
-  line-height: 1.15;
-  white-space: normal;
 }
 
 /* Girar (sincronizando, buscando actualización). El kit lo apaga con movimiento reducido. */
@@ -326,49 +324,9 @@
   font-weight: 700;
 }
 
-.est-aviso-pendientes {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--espacio-3, 0.75rem);
-  padding: var(--espacio-3, 0.75rem) var(--espacio-4, 1rem);
-  border: var(--borde-control, 2px) dashed var(--color-acento-fuerte, #8a5400);
-  border-radius: var(--radio-grande, 1.25rem);
-  background: var(--color-acento-suave, #fff3d4);
-}
-
-.est-aviso-pendientes:focus {
-  outline: 3px solid var(--color-foco, #3b2fc0);
-  outline-offset: 2px;
-}
-
-.est-aviso-pendientes__icono {
-  flex: none;
-  color: var(--color-acento-fuerte, #8a5400);
-}
-
-.est-aviso-pendientes__icono .icono {
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-.est-aviso-pendientes__cuerpo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-1, 0.25rem);
+/* La tarjeta de la cola de sincronización (js/ui/cola.js, estilos en css/cola.css) */
+.est-cola-inicio {
   min-width: 0;
-}
-
-.est-aviso-pendientes__cuerpo > * {
-  margin: 0;
-}
-
-.est-lista-pendientes {
-  margin: 0;
-  padding-inline-start: 1.25rem;
-}
-
-.est-lista-pendientes li + li {
-  margin-top: 0.125rem;
 }
 
 /* Materias que todavía no están (no se pueden abrir) */
@@ -825,6 +783,51 @@ html.reducir-movimiento .est-girando {
 
 .est-peso {
   font-size: var(--texto-grande, 1.125rem);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lo que guarda el service worker: "App lista sin internet · 42 archivos · 908 KB" */
+.est-sin-conexion {
+  --sc-tono: var(--color-info, #1f5ea8);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3, 0.75rem);
+  border-color: var(--sc-tono);
+  border-inline-start: 0.375rem solid var(--sc-tono);
+}
+
+.est-sin-conexion[data-estado='lista'] {
+  --sc-tono: var(--color-exito, #196c3f);
+}
+
+.est-sin-conexion:is([data-estado='incompleta'], [data-estado='no']) {
+  --sc-tono: var(--color-alerta, #9c4a05);
+}
+
+.est-sin-conexion__icono {
+  flex: none;
+  color: var(--sc-tono);
+  line-height: 0;
+}
+
+.est-sin-conexion__icono .icono {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.est-sin-conexion__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1, 0.25rem);
+  min-width: 0;
+}
+
+.est-sin-conexion__cuerpo > * {
+  margin: 0;
+}
+
+.est-sin-conexion__detalle {
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 

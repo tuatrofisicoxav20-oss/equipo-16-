@@ -1,0 +1,655 @@
+/*
+ * Modo presentación (?vista=pitch) · js/views/pitch.js
+ *
+ * Para proyector: 1366×768 y 1920×1080 sin scroll. La pantalla se reparte en tres franjas:
+ *   1. cabecera: marca + guion (6 pasos) + acciones (modo libre, QR, reiniciar, atajos);
+ *   2. barra: la nota del paso para quien presenta + reproducir a Ana/Luis + modo avión;
+ *   3. escenario: dos teléfonos (iframes de 360×740 escalados con transform, el factor
+ *      --pitch-escala lo calcula pitch.js con el espacio libre) y el panel docente.
+ * Si no cabe (letra grande, zoom, ventana chica) nada se tapa: los teléfonos se achican y,
+ * en el peor caso, la página hace scroll.
+ *
+ * Solo tokens del kit (styles.css). Nada depende solo del color: el paso actual lleva
+ * círculo relleno + barra + negritas; el hecho, una palomita; los chips, icono + texto.
+ * Las animaciones (giro de "ocupado") se apagan solas con movimiento reducido (kit, sección 8).
+ * La diapositiva «El problema» la estiliza css/diapositiva.css y el modo libre css/libre.css.
+ */
+
+/* Medidas ---------------------------------------------------------------- */
+.app--pitch.pitch {
+  /* Texto de los controles: 15 px en 1366, crece hasta 20 px en 1920 (en rem: respeta la letra grande). */
+  --pitch-texto: clamp(0.9375rem, 0.2rem + 0.85vw, 1.25rem);
+  --pitch-chico: clamp(0.8125rem, 0.1rem + 0.8vw, 1.0625rem);
+  --pitch-hueco: clamp(0.5rem, 0.15rem + 0.5vw, 1rem);
+  --pitch-margen: clamp(0.75rem, 0.15rem + 0.9vw, 1.5rem);
+  /* Teléfonos (px: pitch.js las lee para calcular la escala). */
+  --pitch-escala: 0.6;
+  --pitch-bisel: 7px;
+  --pitch-bisel-v: 13px;
+  --pitch-separacion-celular: 6px;
+  --pitch-marco: #1d2b33;
+  --pitch-marco-borde: #3c4d56;
+  --pitch-marco-texto: #ffffff;
+  --pitch-marco-texto-sec: #c9d6db;
+
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--pitch-hueco);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--pitch-hueco) var(--pitch-margen);
+  font-size: var(--pitch-texto);
+}
+
+html.alto-contraste .app--pitch.pitch {
+  --pitch-marco: #000000;
+  --pitch-marco-borde: #000000;
+  --pitch-marco-texto-sec: #ffffff;
+}
+
+/* Los controles de la presentación usan su propia escala de texto (no la de las diapositivas). */
+.pitch-cabecera,
+.pitch-barra,
+.pitch-celular__pie,
+.pitch-computadora__barra,
+.pitch-qr {
+  --texto-base: var(--pitch-texto);
+  --texto-chico: var(--pitch-chico);
+}
+
+.pitch .boton {
+  padding-inline: 0.75rem;
+}
+
+/* Tecla del atajo junto al texto de un botón: solo en pantallas anchas. */
+.pitch-tecla {
+  display: none;
+  font-size: 0.75em;
+}
+
+@media (min-width: 100rem) {
+  .pitch-tecla {
+    display: inline-block;
+  }
+}
+
+/* «QR para el jurado» y «Atajos»: el texto completo solo si hay espacio (el nombre accesible siempre lo trae). */
+.pitch-largo {
+  display: none;
+}
+
+@media (min-width: 100rem) {
+  .pitch-largo {
+    display: inline;
+  }
+}
+
+/* 1. Cabecera ------------------------------------------------------------- */
+.pitch-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pitch-hueco) calc(1.5 * var(--pitch-hueco));
+}
+
+.pitch-marca {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pitch-marca .tecu {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.pitch-titulo {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  color: var(--color-primario);
+  font-size: calc(1.2 * var(--pitch-texto));
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.pitch-titulo__sub {
+  color: var(--color-texto-sec);
+  font-size: var(--pitch-chico);
+  font-weight: 700;
+}
+
+.pitch-guion {
+  flex: 1 1 34rem;
+  min-width: 0;
+}
+
+.pitch-acciones {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Guion: un botón por paso (número + título), con conector entre pasos */
+.pitch-pasos {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pitch-paso {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Conector con el paso anterior: punteado si falta, sólido si ya se llegó */
+.pitch-paso + .pitch-paso::before {
+  content: '';
+  position: absolute;
+  top: calc(0.25rem + 1rem - 1px);
+  right: calc(50% + 1.375rem);
+  left: calc(-50% + 1.375rem);
+  border-top: var(--borde-control) dashed var(--color-borde);
+}
+
+.pitch-paso:is([data-estado='hecho'], [data-estado='actual'])::before {
+  border-top-style: solid;
+  border-top-color: var(--color-primario);
+}
+
+.pitch-paso__boton {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1875rem;
+  min-width: 0;
+  min-height: var(--objetivo);
+  margin: 0;
+  padding: 0.25rem 0.25rem 0.4375rem;
+  border: var(--borde-control) solid transparent;
+  border-radius: var(--radio);
+  background: transparent;
+  color: var(--color-texto-sec);
+  font-size: var(--pitch-chico);
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .pitch-paso__boton:hover {
+    border-color: var(--color-borde-suave);
+    background: var(--color-superficie);
+    color: var(--color-texto);
+  }
+}
+
+.pitch-paso__titulo {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.pitch-paso__num {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: var(--borde-control) solid var(--color-borde);
+  border-radius: 50%;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-size: var(--pitch-chico);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hecho: borde y número del color de la marca + palomita (no solo color) */
+.pitch-paso[data-estado='hecho'] .pitch-paso__boton {
+  color: var(--color-texto);
+}
+
+.pitch-paso[data-estado='hecho'] .pitch-paso__num {
+  border-color: var(--color-primario);
+  background: var(--color-primario-suave);
+  color: var(--color-primario);
+}
+
+.pitch-paso__hecho {
+  position: absolute;
+  right: -0.5rem;
+  bottom: -0.375rem;
+  display: grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  background: var(--color-exito);
+  color: #ffffff;
+  box-shadow: 0 0 0 2px var(--color-superficie);
+}
+
+.pitch-paso__hecho .icono {
+  width: 0.75rem;
+  height: 0.75rem;
+  stroke-width: 3.5;
+}
+
+/* Actual: círculo relleno + barra debajo + negritas */
+.pitch-paso__boton[aria-current='step'] {
+  color: var(--color-texto);
+  font-weight: 900;
+}
+
+.pitch-paso__boton[aria-current='step'] .pitch-paso__num {
+  border-color: var(--color-primario);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+  box-shadow: 0 0 0 3px var(--color-primario-suave);
+}
+
+.pitch-paso__boton[aria-current='step']::after {
+  content: '';
+  position: absolute;
+  right: 20%;
+  bottom: 0.0625rem;
+  left: 20%;
+  height: 0.1875rem;
+  border-radius: 0.1875rem;
+  background: var(--color-primario);
+}
+
+/* El director está preparando la escena de este paso */
+.pitch-paso__boton[aria-busy='true'] .pitch-paso__num::after {
+  content: '';
+  position: absolute;
+  inset: -0.4375rem;
+  border: 0.1875rem solid transparent;
+  border-top-color: var(--color-acento-fuerte);
+  border-right-color: var(--color-acento-fuerte);
+  border-radius: 50%;
+  animation: ui-girar 0.9s linear infinite;
+}
+
+/* 2. Nota del paso y controles ---------------------------------------------- */
+.pitch-principal {
+  display: grid;
+  grid-template-rows: auto minmax(18rem, 1fr);
+  gap: var(--pitch-hueco);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.pitch-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--pitch-hueco);
+}
+
+.pitch-nota {
+  display: flex;
+  flex: 1 1 26rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.3125rem 0.75rem;
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-inline-start: 0.3125rem solid var(--color-acento);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  font-size: var(--pitch-chico);
+  line-height: 1.35;
+}
+
+.pitch-nota__texto {
+  margin: 0;
+}
+
+.pitch-nota__paso {
+  font-weight: 900;
+}
+
+.pitch-nota__texto kbd {
+  font-size: 0.8125em;
+}
+
+/* Lo que va haciendo el director: siempre ocupa su renglón (el escenario no brinca). */
+.pitch-nota__aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.35em;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-texto-sec);
+  font-weight: 700;
+}
+
+.pitch-nota__aviso > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pitch-nota__aviso .icono {
+  width: 1.15em;
+  height: 1.15em;
+  color: var(--color-info);
+}
+
+.pitch-controles {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Modo avión: el interruptor del kit dentro de una caja del tamaño de un botón */
+.pitch-avion.interruptor {
+  --pista-ancho: 3rem;
+  --pista-alto: 1.75rem;
+  justify-content: flex-start;
+  gap: 0.5em;
+  padding: 0.25rem calc(var(--pista-ancho) + 1.25rem) 0.25rem 0.75rem;
+  border: var(--borde-control) solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-size: var(--pitch-texto);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.pitch-avion.interruptor::before {
+  right: 0.625rem;
+}
+
+.pitch-avion.interruptor::after {
+  right: calc(0.625rem + var(--pista-ancho) - var(--pista-alto) + 5px);
+}
+
+.pitch-avion[aria-checked='true'] {
+  border-color: var(--color-primario);
+  background: var(--color-primario-suave);
+}
+
+.pitch-avion .icono {
+  flex: none;
+}
+
+.pitch-avion__detalle {
+  font-weight: 700;
+}
+
+.pitch-avion[aria-busy='true'] {
+  cursor: progress;
+}
+
+@media (hover: hover) {
+  .pitch-avion.interruptor:hover {
+    border-color: var(--color-texto);
+  }
+}
+
+/* 3. Escenario: teléfonos y panel docente ------------------------------------ */
+.pitch-escenario {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--pitch-hueco) calc(1.5 * var(--pitch-hueco));
+  min-width: 0;
+  min-height: 0;
+  /* Lo de adentro no estira la fila: pitch.js escala los teléfonos al espacio que quede. */
+  contain: size;
+}
+
+/* Con la diapositiva encima (css/diapositiva.css), lo de abajo sigue vivo pero no asoma por sus esquinas. */
+.pitch-escenario.diapositiva-anfitrion > [inert] {
+  opacity: 0;
+}
+
+.pitch-celulares {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--pitch-hueco);
+  min-height: 0;
+}
+
+.pitch-celular {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pitch-separacion-celular);
+  width: calc(360px * var(--pitch-escala) + 2 * var(--pitch-bisel));
+  margin: 0;
+}
+
+/* Marco del teléfono: bisel oscuro, bocina arriba */
+.pitch-celular__marco {
+  position: relative;
+  box-sizing: content-box;
+  width: calc(360px * var(--pitch-escala));
+  height: calc(740px * var(--pitch-escala));
+  padding: var(--pitch-bisel-v) var(--pitch-bisel);
+  border-radius: calc(36px * var(--pitch-escala) + var(--pitch-bisel));
+  background: var(--pitch-marco);
+  box-shadow: inset 0 0 0 1px var(--pitch-marco-borde), 0 10px 26px rgb(21 37 45 / 0.28);
+}
+
+.pitch-celular__marco::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--pitch-bisel-v) / 2 - 2px);
+  left: 50%;
+  width: 2.75rem;
+  height: 4px;
+  margin-left: -1.375rem;
+  border-radius: 999px;
+  background: var(--pitch-marco-borde);
+}
+
+.pitch-celular__pantalla {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: calc(28px * var(--pitch-escala));
+  background: var(--color-fondo);
+}
+
+.pitch-celular__pantalla > iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 360px;
+  height: 740px;
+  border: 0;
+  background: var(--color-fondo);
+  transform: scale(var(--pitch-escala));
+  transform-origin: 0 0;
+}
+
+/* Nombre y estado debajo de cada teléfono (dos renglones reservados: el teléfono no brinca) */
+.pitch-celular__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem 0.375rem;
+  width: 100%;
+  min-height: calc(2 * 1.75rem + 0.25rem);
+  text-align: center;
+}
+
+.pitch-celular__nombre {
+  color: var(--color-texto);
+  font-size: var(--pitch-texto);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.pitch-celular__chips {
+  display: contents;
+}
+
+.pitch-chip {
+  min-height: 1.75rem;
+  padding: 0.0625rem 0.5rem;
+  font-size: var(--pitch-chico);
+  white-space: nowrap;
+}
+
+/* Panel docente dentro de una «computadora»: barra de título + pantalla */
+.pitch-computadora {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--pitch-bisel) var(--pitch-bisel);
+  border-radius: 0.875rem;
+  background: var(--pitch-marco);
+  box-shadow: inset 0 0 0 1px var(--pitch-marco-borde), 0 10px 26px rgb(21 37 45 / 0.22);
+}
+
+.pitch-computadora__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.125rem 0.75rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.25rem 0.3125rem;
+  color: var(--pitch-marco-texto);
+  font-size: var(--pitch-chico);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.pitch-computadora__titulo,
+.pitch-computadora__detalle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.pitch-computadora__detalle {
+  color: var(--pitch-marco-texto-sec);
+  font-weight: 700;
+}
+
+.pitch-computadora__titulo .icono,
+.pitch-computadora__detalle .icono {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+.pitch-computadora__pantalla {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  background: var(--color-fondo);
+}
+
+.pitch-computadora__pantalla > iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--color-fondo);
+  transform-origin: 0 0;
+}
+
+/* QR para el jurado -------------------------------------------------------- */
+.pitch-qr {
+  width: min(40rem, calc(100% - 2 * var(--espacio-4)));
+  text-align: center;
+}
+
+.pitch-qr .fila--fin {
+  justify-content: center;
+}
+
+.pitch-qr__codigo {
+  display: grid;
+  place-items: center;
+}
+
+.pitch-qr__codigo svg {
+  width: min(52vh, 24rem);
+  height: auto;
+  border: var(--borde-fino) solid var(--color-borde-suave);
+}
+
+.pitch-qr__url {
+  font-family: ui-monospace, 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
+  font-size: var(--pitch-chico);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.pitch-qr__aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: var(--borde-fino) solid var(--color-alerta);
+  border-radius: var(--radio);
+  background: var(--color-alerta-suave);
+  color: var(--color-alerta);
+  font-size: var(--pitch-chico);
+  font-weight: 700;
+  text-align: start;
+}
+
+/* Colores forzados (alto contraste de Windows): los marcos se dibujan con borde */
+@media (forced-colors: active) {
+  .pitch-celular__marco,
+  .pitch-computadora {
+    border: 2px solid CanvasText;
+  }
+
+  .pitch-paso__boton[aria-current='step'] {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  .pitch-paso__boton[aria-current='step']::after,
+  .pitch-paso__hecho {
+    forced-color-adjust: none;
+    background: CanvasText;
+    color: Canvas;
+  }
+}
+
+/* Impresión: el escenario en vivo no se imprime */
+@media print {
+  .pitch-escenario,
+  .pitch-controles,
+  .pitch-acciones {
+    display: none !important;
+  }
+}

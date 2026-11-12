@@ -1,0 +1,393 @@
+/*
+ * Modo presentación (?vista=pitch): diapositiva «El problema» (js/ui/diapositiva.js)
+ * y ayuda de atajos del presentador (js/ui/atajos.js).
+ *
+ * La diapositiva tapa el escenario: position: absolute; inset: 0 dentro del contenedor que le
+ * pasan (al que se le pone .diapositiva-anfitrion). Todo se mide con SU tamaño: es un contenedor
+ * de consultas (container-type: size) y --u vale 1 % de su alto, sin pasar de 0.55 % de su ancho.
+ * Así la cifra se lee igual de grande en 1366×768 que en 1920×1080 y, si el contenedor es angosto
+ * o vertical, todo se apila. Solo tokens del kit; nada depende solo del color.
+ */
+
+/* Contenedor que la recibe -------------------------------------------------- */
+.diapositiva-anfitrion {
+  isolation: isolate; /* el z-index de la diapositiva no compite con las barras fijas de la página */
+  min-height: 18rem; /* si el contenedor llega vacío, la diapositiva igual se ve */
+}
+
+.diapositiva-anfitrion--relativo {
+  position: relative; /* solo si el contenedor era static */
+}
+
+/* Diapositiva --------------------------------------------------------------- */
+/* Capa cuadrada que tapa todo el escenario (lo de abajo no se asoma por las esquinas);
+   la tarjeta redondeada es .diapositiva__lienzo. */
+.diapositiva {
+  --u: min(0.8vh, 0.45vw); /* respaldo para navegadores sin container queries */
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  container: diapositiva / size;
+  animation: diapositiva-aparece 0.35s var(--curva) both;
+}
+
+@supports (width: 1cqb) {
+  .diapositiva {
+    --u: min(1cqb, 0.55cqi);
+  }
+}
+
+.diapositiva :is(h1, h2, h3, h4, h5, h6, p, ul) {
+  margin: 0;
+}
+
+.diapositiva__lienzo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    'cabeza cabeza'
+    'problema solucion';
+  gap: calc(3 * var(--u)) calc(6 * var(--u));
+  width: 100%;
+  min-height: 100%;
+  margin: auto; /* centra sin recortar si el contenido no cabe */
+  padding: calc(4.5 * var(--u) + 0.5rem) calc(6 * var(--u)) calc(4.5 * var(--u));
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio-grande);
+  background:
+    radial-gradient(75% 95% at 100% 0%, var(--color-primario-suave) 0%, transparent 70%),
+    var(--color-superficie);
+  box-shadow: inset 0 0.5rem 0 var(--color-acento); /* franja de mango arriba */
+}
+
+/* Arriba: «El problema» a la izquierda y, si hace falta, la nota del presentador a la derecha */
+.diapositiva__cabeza {
+  grid-area: cabeza;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(1.5 * var(--u)) calc(4 * var(--u));
+}
+
+.diapositiva__titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  color: var(--color-alerta);
+  font-size: clamp(1rem, calc(3.4 * var(--u)), 2.25rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.diapositiva__titulo .icono {
+  width: 1.3em;
+  height: 1.3em;
+}
+
+/* El dato: «Solo» · 25.4 % · «de las escuelas…» · Fuente */
+.diapositiva__problema {
+  grid-area: problema;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: calc(2.4 * var(--u));
+  min-width: 0;
+}
+
+.diapositiva__dato {
+  display: flex;
+  flex-direction: column;
+  gap: calc(0.8 * var(--u));
+}
+
+.diapositiva__antes {
+  font-size: clamp(1.25rem, calc(5.6 * var(--u)), 3.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.diapositiva__cifra {
+  color: var(--color-primario);
+  font-size: clamp(4rem, calc(25 * var(--u)), 15rem);
+  font-weight: 900;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+  white-space: nowrap;
+}
+
+.diapositiva__unidad {
+  font-size: 0.55em;
+  letter-spacing: 0;
+}
+
+.diapositiva__despues {
+  max-width: 24em;
+  font-size: clamp(1.25rem, calc(5.2 * var(--u)), 3.25rem);
+  font-weight: 800;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+/* «internet» subrayado con marcatextos de mango (el texto no cambia de color) */
+.diapositiva__enfasis {
+  font-weight: inherit;
+  background: linear-gradient(transparent 58%, rgb(245 165 36 / 0.55) 58%);
+  background: linear-gradient(transparent 58%, color-mix(in srgb, var(--color-acento) 55%, transparent) 58%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.diapositiva__fuente {
+  color: var(--color-texto-sec);
+  font-size: clamp(1rem, calc(3 * var(--u)), 1.875rem);
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.diapositiva__fuente-etiqueta {
+  color: var(--color-texto);
+  font-weight: 900;
+}
+
+/* Otras estadísticas del archivo (si las hubiera), en chico y con su fuente */
+.diapositiva__mas {
+  display: grid;
+  gap: calc(1.5 * var(--u));
+  padding: calc(2 * var(--u)) 0 0;
+  border-top: var(--borde-fino) solid var(--color-borde-suave);
+  font-size: clamp(1rem, calc(3.4 * var(--u)), 2rem);
+  font-weight: 700;
+  list-style: none;
+}
+
+.diapositiva__mas .diapositiva__fuente {
+  font-size: 0.8em;
+}
+
+/* La respuesta: Tecu + la frase del producto + Continuar */
+.diapositiva__solucion {
+  grid-area: solucion;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(2.4 * var(--u));
+  padding: calc(3.5 * var(--u)) calc(4 * var(--u));
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio-grande);
+  background: var(--color-superficie-2);
+  text-align: center;
+}
+
+.diapositiva__tecu {
+  width: clamp(5.5rem, calc(27 * var(--u)), 18rem);
+  aspect-ratio: 1;
+}
+
+.diapositiva__tecu .tecu {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(-1); /* Tecu atento señala con el ala: que apunte hacia la cifra */
+}
+
+.diapositiva__producto {
+  font-size: clamp(1.125rem, calc(4.3 * var(--u)), 2.75rem);
+  font-weight: 700;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.diapositiva__producto strong {
+  font-weight: 900;
+}
+
+.diapositiva__marca {
+  color: var(--color-primario);
+}
+
+.diapositiva__continuar {
+  align-self: flex-end;
+  min-height: max(var(--objetivo), 2.3em);
+  padding-inline: 1.25em;
+  font-size: clamp(1.125rem, calc(3.4 * var(--u)), 2rem);
+}
+
+/* Nota para quien presenta (fuente vacía): recuadro discreto en la esquina */
+.diapositiva__nota {
+  display: grid;
+  gap: 0.15rem;
+  max-width: 23rem;
+  margin-inline-start: auto;
+  padding: 0.5rem 0.75rem;
+  border: 2px dashed var(--color-alerta);
+  border-radius: var(--radio);
+  background: var(--color-alerta-suave);
+  color: var(--color-texto);
+  font-size: clamp(0.8125rem, calc(2.1 * var(--u)), 1.0625rem);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.diapositiva__nota-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-alerta);
+  font-weight: 900;
+}
+
+.diapositiva__nota-titulo .icono {
+  width: 1.2em;
+  height: 1.2em;
+}
+
+.diapositiva__nota code {
+  font-size: 0.95em;
+  overflow-wrap: anywhere;
+}
+
+/* Contenedor angosto o vertical: una sola columna (con scroll si hace falta) */
+@container diapositiva (max-width: 44rem) or (orientation: portrait) {
+  .diapositiva__lienzo {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      'cabeza'
+      'problema'
+      'solucion';
+  }
+
+  .diapositiva__nota {
+    margin-inline-start: 0;
+  }
+}
+
+/* Entrada sutil: aparece y cada bloque sube un poco, en orden de lectura */
+@keyframes diapositiva-aparece {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes diapositiva-sube {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}
+
+.diapositiva__cabeza {
+  animation: diapositiva-sube 0.45s var(--curva) 0.05s both;
+}
+
+.diapositiva__antes,
+.diapositiva__cifra {
+  animation: diapositiva-sube 0.55s var(--curva) 0.12s both;
+}
+
+.diapositiva__despues,
+.diapositiva__fuente,
+.diapositiva__mas {
+  animation: diapositiva-sube 0.55s var(--curva) 0.22s both;
+}
+
+.diapositiva__solucion {
+  animation: diapositiva-sube 0.55s var(--curva) 0.34s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diapositiva,
+  .diapositiva * {
+    animation: none !important;
+  }
+}
+
+html.reducir-movimiento .diapositiva,
+html.reducir-movimiento .diapositiva * {
+  animation: none !important;
+}
+
+/* Alto contraste y colores forzados */
+html.alto-contraste .diapositiva {
+  background: #ffffff;
+}
+
+html.alto-contraste .diapositiva__lienzo {
+  border: 3px solid #000000;
+  background: #ffffff;
+}
+
+html.alto-contraste .diapositiva__solucion {
+  border: 2px solid #000000;
+  background: #ffffff;
+}
+
+html.alto-contraste .diapositiva__enfasis {
+  background: none;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+
+@media (forced-colors: active) {
+  .diapositiva__lienzo,
+  .diapositiva__solucion,
+  .diapositiva__nota {
+    border: 2px solid CanvasText;
+  }
+
+  .diapositiva__nota {
+    border-style: dashed;
+  }
+
+  .diapositiva__enfasis {
+    text-decoration: underline;
+  }
+}
+
+@media print {
+  .solo-presentador {
+    display: none !important;
+  }
+}
+
+/* Ayuda de atajos (<dialog class="dialogo dialogo--ancho atajos">) ------------- */
+.atajos__titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.atajos__intro {
+  margin: 0;
+  color: var(--color-texto-sec);
+}
+
+.atajos__tablas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  align-items: start;
+  gap: var(--espacio-4) var(--espacio-5);
+}
+
+.atajos__tabla th[scope='row'] {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.atajos__tabla kbd {
+  min-width: 2.25em;
+  font-size: 1rem;
+}
