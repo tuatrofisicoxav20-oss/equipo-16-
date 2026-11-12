@@ -554,10 +554,14 @@ function fueraDeLugar(eq, ladoX) {
   return W;
 }
 
-/** Pasa términos al otro lado. modo: correcto | sin_cambio_signo | solo_un_lado | inversa_div | inversa_mul */
+/**
+ * Pasa términos al otro lado.
+ * modo: correcto | sin_cambio_signo | solo_un_lado | opera_un_lado | inversa_div | inversa_mul
+ */
 function transponer(eq, ops) {
   const quitar = { L: new Set(), R: new Set() };
-  for (const op of ops) quitar[op.lado].add(op.i);
+  // opera_un_lado: la operación se hizo solo del otro lado y el término sigue en el suyo.
+  for (const op of ops) if (op.modo !== 'opera_un_lado') quitar[op.lado].add(op.i);
   const nuevo = {
     L: eq.L.filter((_, i) => !quitar.L.has(i)).map((t) => ({ ...t })),
     R: eq.R.filter((_, i) => !quitar.R.has(i)).map((t) => ({ ...t })),
@@ -565,7 +569,7 @@ function transponer(eq, ops) {
   let inversa = null;
   for (const op of ops) {
     const destino = otroLado(op.lado);
-    if (op.modo === 'correcto') nuevo[destino].push({ c: op.t.c.neg(), x: op.t.x });
+    if (op.modo === 'correcto' || op.modo === 'opera_un_lado') nuevo[destino].push({ c: op.t.c.neg(), x: op.t.x });
     else if (op.modo === 'sin_cambio_signo') nuevo[destino].push({ c: op.t.c, x: op.t.x });
     else if (op.modo === 'inversa_div' || op.modo === 'inversa_mul') inversa = { op, destino };
     // solo_un_lado: el término desaparece y no llega al otro lado
@@ -574,6 +578,11 @@ function transponer(eq, ops) {
     const { op, destino } = inversa;
     const f = forma(nuevo[destino]);
     if (!f.a.isZero()) return null;
+    // Con 0 del otro lado, "lo pasó dividiendo" o "multiplicando" da 0: no se distingue de
+    // quitarlo de un lado (−4x + 12 = 0 → −4x = 0). Con ±1, "lo pasó multiplicando" deja el
+    // mismo número (5x − 9 = 1 → 5x = 9): lo más probable es que solo olvidó el 1.
+    if (f.b.isZero()) return null;
+    if (op.modo === 'inversa_mul' && f.b.abs().eq(1)) return null;
     const k = op.t.c.abs();
     if (op.modo === 'inversa_div') nuevo[destino] = [{ c: f.b.div(k), x: false }];
     else nuevo[destino] = [{ c: f.b.mul(k), x: false }];
@@ -612,6 +621,19 @@ function malDeTransposicion(modo, w) {
         detalle: {
           variante: 'quita_de_un_lado',
           ...base,
+          operacion: `${w.t.c.isNeg() ? 'sumar' : 'restar'} ${fmtTerminoSinSigno(w.t)}`,
+        },
+      };
+    case 'opera_un_lado':
+      // 3x + 5 = 20 → 3x + 5 = 20 − 5 (el método de la balanza hecho de un solo lado). Aquí
+      // `lado` es donde SÍ se hizo la operación y `otroLado` donde faltó: ahí sigue el término.
+      return {
+        tipo: TIPOS.UN_SOLO_LADO,
+        detalle: {
+          variante: 'opera_un_lado',
+          ...base,
+          lado: base.otroLado,
+          otroLado: base.lado,
           operacion: `${w.t.c.isNeg() ? 'sumar' : 'restar'} ${fmtTerminoSinSigno(w.t)}`,
         },
       };
@@ -861,24 +883,40 @@ const tieneX = (terms) => terms.some((t) => t.x && !t.c.isZero());
  * Las variantes cuya aritmética no cabe en enteros seguros se omiten.
  *
  * `fantasma`: el renglón sale de pasar términos hacia el lado donde no había
- * ninguna x (3x = 15 → −15 = −3x, x + 4 = 10 → 4 − 10 = x). Es un camino
- * legítimo (5 + 20 = −3x), pero sus reglas de error citan términos que el
+ * ninguna x (3x = 15 → −15 = −3x, x + 4 = 10 → 4 − 10 = x) o, con x en los dos
+ * lados, de juntar las x a contracorriente: en el lado que el camino escolar no
+ * elige, donde el coeficiente queda negativo (5x + 2 = 2x + 14 → −12 = −3x). Es un
+ * camino legítimo (5 + 20 = −3x), pero sus reglas de error citan términos que el
  * estudiante no movió y coeficientes que no existen ("el −3 que multiplica a la
  * x"); clasificar() solo lo acepta si el estudiante escribió el renglón tal cual.
  * `final`: error del último paso (dividir); ver divisiones().
- * @returns {{eq: object, mal: {tipo: string, detalle: object}|null, ops: number, fantasma: boolean, final: boolean, cuenta?: string}[]}
+ * `literal`: la regla describe términos que deben seguir a la vista (opera_un_lado:
+ * "el 5 sigue en el lado izquierdo"); no explica un despeje ni una respuesta x = v.
+ * `mezcla`: junta términos que no estaban del mismo lado en el renglón anterior.
+ * @returns {{eq: object, mal: {tipo: string, detalle: object}|null, ops: number, fantasma: boolean, final: boolean, literal?: boolean, mezcla?: boolean, cuenta?: string}[]}
  */
 export function candidatos(eq) {
   const out = [];
   const inicios = [{ eq, mal: null, ops: 0 }, ...sinDesborde(() => fusiones(eq), []).map((f) => ({ ...f, ops: 1 }))];
   for (const ini of inicios) {
+    const xEnLosDos = tieneX(ini.eq.L) && tieneX(ini.eq.R);
+    const ladoEscolar = xEnLosDos ? sinDesborde(() => elegirLadoX(ini.eq), 'L') : null;
     for (const ladoX of ['L', 'R']) {
       const haciaVacio = !tieneX(ini.eq[ladoX]) && tieneX(ini.eq[otroLado(ladoX)]);
+      const contracorriente = xEnLosDos && ladoX !== ladoEscolar;
       const W = fueraDeLugar(ini.eq, ladoX);
+      if (!ini.mal) {
+        // Hacer la operación de un solo lado y dejar el término donde estaba (3x + 5 = 20 − 5):
+        // una operación por renglón, como en la balanza, así que solo con un término.
+        for (const w of W) {
+          const Q = sinDesborde(() => transponer(ini.eq, [{ ...w, modo: 'opera_un_lado' }]));
+          if (Q) out.push({ eq: Q, mal: malDeTransposicion('opera_un_lado', w), ops: 1, fantasma: haciaVacio, final: false, literal: true });
+        }
+      }
       for (const mask of mascaras(W.length)) {
         if (mask === 0 && ladoX === 'R') continue; // ya se generó con ladoX = L
         const T = W.filter((_, k) => mask & (1 << k));
-        const fantasma = haciaVacio && T.length > 0;
+        const fantasma = T.length > 0 && (haciaVacio || (contracorriente && T.some((w) => w.t.x)));
         const variantes = [{ ops: T.map((w) => ({ ...w, modo: 'correcto' })), mal: ini.mal }];
         if (!ini.mal) {
           T.forEach((w, k) => {
@@ -908,7 +946,7 @@ export function candidatos(eq) {
             if (!base.mal) {
               // Después de pasar términos, solo tiene sentido juntar del lado de las x.
               for (const f of fusiones(Q, [ladoX])) {
-                const fb = { eq: f.eq, mal: f.mal, ops: base.ops + 1, fantasma, final: false };
+                const fb = { eq: f.eq, mal: f.mal, ops: base.ops + 1, fantasma, final: false, mezcla: T.length > 0 };
                 out.push(fb, ...divisiones(fb));
               }
             }
