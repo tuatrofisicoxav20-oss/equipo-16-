@@ -717,11 +717,11 @@ function detalleDe(r, motivo, dias, ref, pack) {
     let contexto = '';
     if (r.actividad && LUGAR[r.actividad]) {
       const ruta = nombreCorto(r.ruta, pack);
-      contexto = ` (iba en ${LUGAR[r.actividad]}${ruta ? ` de ${ruta}` : ''})`;
+      contexto = `; se quedó en ${LUGAR[r.actividad]}${ruta ? ` (ruta de ${ruta})` : ''}`;
     } else if (conteo(diag.hechos) && !diag.terminado) {
-      contexto = ` (dejó el diagnóstico en ${conteo(diag.hechos)} de ${conteo(diag.total) || TOTAL_DIAGNOSTICO})`;
+      contexto = `; dejó el diagnóstico en ${conteo(diag.hechos)} de ${conteo(diag.total) || TOTAL_DIAGNOSTICO}`;
     } else if (!conteo(diag.hechos) && !diag.terminado) {
-      contexto = ' (todavía no hace el diagnóstico)';
+      contexto = '; todavía no hace el diagnóstico';
     }
     return `No entra desde hace ${dias} días${contexto}`;
   }

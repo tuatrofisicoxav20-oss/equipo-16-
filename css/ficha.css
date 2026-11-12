@@ -77,8 +77,14 @@
   overflow-wrap: anywhere;
 }
 
+.ficha__vivo {
+  gap: 0.4em;
+  padding-inline: 0.5rem 0.5625rem;
+}
+
 .ficha__vivo::before {
   content: '';
+  flex: none;
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
@@ -146,11 +152,17 @@
   padding: var(--espacio-5) var(--espacio-4);
 }
 
-/* Resumen: estado, última actividad y ruta ---------------------------------- */
+/* Resumen: estado, última actividad y ruta ----------------------------------
+   Celular: estado y última actividad lado a lado (o uno sobre otro si no caben)
+   y la ruta a lo ancho; escritorio: los tres en un renglón. */
 .ficha-resumen {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   gap: var(--espacio-3);
+}
+
+.ficha-resumen > :last-child {
+  grid-column: 1 / -1;
 }
 
 .ficha-resumen__dato {
@@ -162,10 +174,6 @@
   border: var(--borde-fino) solid var(--color-borde-suave);
   border-radius: var(--radio);
   background: var(--color-superficie);
-}
-
-.ficha-resumen__dato:first-child {
-  grid-column: 1 / -1;
 }
 
 .ficha-resumen__dato--ruta {
@@ -219,7 +227,7 @@
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 1.4fr);
   }
 
-  .ficha-resumen__dato:first-child {
+  .ficha-resumen > :last-child {
     grid-column: auto;
   }
 }
@@ -459,6 +467,11 @@
   font-weight: 900;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
+}
+
+.ficha-cifra__valor--texto {
+  font-size: var(--texto-grande);
+  font-weight: 800;
 }
 
 .ficha-cifra__unidad {
@@ -706,10 +719,25 @@
   .ficha__imprimir {
     flex: 1 1 100%;
   }
+
+  /* A la vista solo «Imprimir hoja» (cabe en un renglón); el lector de pantalla
+     oye el nombre completo, que contiene el texto visible (WCAG 2.5.3). */
+  .ficha__imprimir-resto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 /* Muy angosto (320 px): sin avatar, para que el nombre y "Cerrar" quepan en un renglón. */
-@media (max-width: 22.5rem) {
+@media (max-width: 21.25rem) {
   .ficha__avatar {
     display: none;
   }

@@ -131,7 +131,12 @@ const DUDAS = {
   ],
   [TIPOS.NO_CLASIFICADO]: ['no entiendo nada de esto', 'no sé cómo empezar', '¿qué es la x?'],
 };
-const DUDAS_GENERALES = ['¿qué es la x?', 'dime cuánto vale x', 'no le entiendo a este tema', '¿para qué sirven las ecuaciones?'];
+const DUDAS_GENERALES = [
+  '¿qué es la x?',
+  'dime cuánto vale x',
+  'no le entiendo a este tema',
+  '¿para qué sirven las ecuaciones?',
+];
 
 /* ------------------------------------------------------------------ */
 /* Calendario                                                          */
@@ -338,8 +343,13 @@ function historia(ctx, perfil, rng) {
   const bitacora = crearBitacora();
   const apoyo = elegirApoyo(rng, perfil.estado);
   const items = diagnosticar(ctx, perfil, rng, apoyo);
-  items.forEach((item, i) => bitacora.agregar(eventoDiagnostico(ctx, item, i), rng.int(120, 330)));
-  if (perfil.etapa !== 'parcial') {
+  const conRuta = perfil.etapa !== 'parcial';
+  items.forEach((item, i) => {
+    // Del último ejercicio pasa directo a "Ver mi resultado" (la ruta): ahí no escribe dudas.
+    const chat = !conRuta || i < items.length - 1;
+    bitacora.agregar(eventoDiagnostico(ctx, item, i), rng.int(120, 330), { chat });
+  });
+  if (conRuta) {
     const ruta = asignarRuta(ctx, perfil, items);
     bitacora.agregar(eventoRuta(ctx, ruta), rng.int(15, 45), { pegado: true });
     recorrerRuta(ctx, perfil, ruta, bitacora, rng, apoyo);
@@ -421,7 +431,10 @@ function cuantosHizo(rng, donde, total) {
 /** Un error de otro tipo (clasificado) en uno de los ejercicios que le salieron bien. */
 function errorSecundario(ctx, dominante, libres, rng) {
   const opciones = libres.flatMap((i) =>
-    TIPOS_DIAGNOSTICABLES.filter((t) => t !== dominante && escribirConError(ctx, ctx.ecuaciones[i], t)).map((tipo) => ({ i, tipo })),
+    TIPOS_DIAGNOSTICABLES.filter((t) => t !== dominante && escribirConError(ctx, ctx.ecuaciones[i], t)).map((tipo) => ({
+      i,
+      tipo,
+    })),
   );
   return opciones.length ? rng.pick(opciones) : null;
 }
@@ -467,7 +480,7 @@ function practicar(ctx, ruta, bitacora, rng, apoyo, ej, numero) {
   const mal = rng.chance(ayuda.falla) ? escribirConError(ctx, ej.ecuacion, ruta.tipo) : null;
   if (mal) bitacora.agregar(eventoPractica(ctx, ruta, ej, mal, rng.int(0, pistas), false, datos), rng.int(150, 330));
   const pidio = rng.chance(ayuda.solucion);
-  if (pidio) bitacora.agregar(eventoSolucion(ruta, ej, pistas, datos), rng.int(60, 150));
+  if (pidio) bitacora.agregar(eventoSolucion(ruta, ej, pistas, datos), rng.int(60, 150), { chat: false });
   const bien = eventoPractica(ctx, ruta, ej, escribirBien(ctx, ej.ecuacion), pistas, pidio, datos);
   bitacora.agregar(bien, rng.int(90, 240), { pegado: pidio });
 }
@@ -487,7 +500,9 @@ function comprobar(ctx, perfil, ruta, bitacora, rng, apoyo) {
   const fallas = perfil.etapa === 'dominado' ? Number(rng.chance(0.35)) : rng.int(minimo, maximo);
   if (rng.chance(0.5)) bitacora.corte();
   for (let intento = 1; intento <= fallas; intento++) {
-    const renglones = escribirConError(ctx, ruta.comprobacion.ecuacion, ruta.tipo) ?? escribirBien(ctx, ruta.comprobacion.ecuacion).slice(0, 1);
+    // Falla con el error de su ruta; si el motor no puede escribirlo ahí, la deja sin terminar.
+    const ej = ruta.comprobacion.ecuacion;
+    const renglones = escribirConError(ctx, ej, ruta.tipo) ?? escribirBien(ctx, ej).slice(0, 1);
     bitacora.agregar(eventoComprobacion(ctx, ruta, intento, renglones), rng.int(180, 420), { chat: false });
     despuesDeFallar(ctx, ruta, bitacora, rng, apoyo);
     if (rng.chance(0.5)) bitacora.corte();
@@ -495,7 +510,13 @@ function comprobar(ctx, perfil, ruta, bitacora, rng, apoyo) {
   if (perfil.etapa !== 'dominado') return;
   const aprobada = eventoComprobacion(ctx, ruta, fallas + 1, escribirBien(ctx, ruta.comprobacion.ecuacion));
   bitacora.agregar(aprobada, rng.int(180, 400), { chat: false });
-  const dominio = { tipo: 'dominio', ruta: ruta.tipo, ejercicio: aprobada.ejercicio, aprobado: true, datos: { intentos: fallas + 1 } };
+  const dominio = {
+    tipo: 'dominio',
+    ruta: ruta.tipo,
+    ejercicio: aprobada.ejercicio,
+    aprobado: true,
+    datos: { intentos: fallas + 1 },
+  };
   bitacora.agregar(dominio, 1, { pegado: true });
 }
 

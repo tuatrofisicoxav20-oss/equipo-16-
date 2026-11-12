@@ -79,6 +79,8 @@ const entero = (v) => {
 };
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 const minuscula = (s) => (s ? s[0].toLowerCase() + s.slice(1) : '');
+/** Cierra la oración sin duplicar el punto («con Camila T.», no «con Camila T..»). */
+const conPunto = (s) => (/[.!?…]$/.test(s) ? s : `${s}.`);
 
 function aFecha(valor) {
   if (valor === null || valor === undefined || valor === '') return null;
@@ -632,7 +634,7 @@ function htmlCerteza(error, info, d) {
     const otras = (Array.isArray(error.alternativas) ? error.alternativas : [])
       .filter((t) => t !== error.tipo && d.pack?.errores?.[t])
       .map((t) => minuscula(infoError(t, d.pack).nombre));
-    return html`<span class="ficha-certeza ficha-certeza--media">${ico('info')}<span><strong>Probable.</strong> ${otras.length ? `También podría ser: ${otras.join(', ')}. ` : ''}Confírmalo con ${d.nombre}.</span></span>`;
+    return html`<span class="ficha-certeza ficha-certeza--media">${ico('info')}<span><strong>Probable.</strong> ${otras.length ? `También podría ser: ${otras.join(', ')}. ` : ''}Confírmalo con ${conPunto(d.nombre)}</span></span>`;
   }
   return html`<span class="ficha-certeza ficha-certeza--alta">${ico('check')}<span>Alta: el renglón coincide con este error.</span></span>`;
 }
@@ -694,15 +696,20 @@ function htmlAtoro(d, ids) {
 }
 
 function htmlCifra(etiqueta, valor, unidad = '') {
+  const esTexto = !/^\d/.test(String(valor));
   return html`
     <div class="ficha-cifra">
       <dt>${etiqueta}</dt>
-      <dd><span class="ficha-cifra__valor">${valor}</span>${unidad ? html`<span class="ficha-cifra__unidad">${unidad}</span>` : ''}</dd>
+      <dd><span class="ficha-cifra__valor${esTexto ? ' ficha-cifra__valor--texto' : ''}">${valor}</span>${unidad
+        ? html`<span class="ficha-cifra__unidad">${unidad}</span>`
+        : ''}</dd>
     </div>`;
 }
 
 function htmlErroresPorTipo(d, ids) {
   if (!d.errores.length) {
+    // Sin actividad no hay errores, pero tampoco hay nada que celebrar todavía.
+    if (!d.historial.total) return html`<p class="ficha__nota">Sin datos todavía.</p>`;
     return html`<p class="ficha-positivo">${ico('exito')}<span>Sin errores registrados.</span></p>`;
   }
   const max = Math.max(...d.errores.map((e) => e.n));
@@ -820,7 +827,7 @@ function htmlFicha(est) {
       ? html`
           <div class="ficha__pie">
             ${est.mensajePie ? html`<p class="ficha__error" role="alert">${ico('alerta')}<span>${est.mensajePie}</span></p>` : ''}
-            <button type="button" class="boton boton--primario ficha__imprimir" data-act="imprimir" data-foco="imprimir">${ico('imprimir')}<span>Imprimir hoja para este estudiante</span></button>
+            <button type="button" class="boton boton--primario ficha__imprimir" data-act="imprimir" data-foco="imprimir">${ico('imprimir')}<span>Imprimir hoja<span class="ficha__imprimir-resto"> para este estudiante</span></span></button>
           </div>`
       : ''}`;
 }

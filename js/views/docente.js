@@ -39,7 +39,7 @@ import { resumirAlumnos, resumirGrupo, aQuienLlamar, gruposDeRefuerzo } from '..
 /* Constantes                                                          */
 /* ------------------------------------------------------------------ */
 
-const GRUPO = '1.º A';
+const GRUPO = '1.º A';
 const MATERIA = 'Matemáticas';
 const TITULO = `Panel docente · ${GRUPO} · ${MATERIA}`;
 const MAX_LLAMADAS = 6;
@@ -57,9 +57,9 @@ const NOMBRES_EN_VIVO = { ana: 'Ana', luis: 'Luis', invitado: 'Invitado (QR)' };
 
 /** Secciones: navegación del panel y destinos del modo presentación ('enfocar'). */
 const SECCIONES = [
-  { clave: 'repetido', corto: 'Lo que más se repite' },
+  { clave: 'repetido', corto: 'Lo más repetido' },
   { clave: 'llamar', corto: 'A quién llamar' },
-  { clave: 'mapa', corto: 'Mapa de dificultades' },
+  { clave: 'mapa', corto: 'Mapa' },
   { clave: 'grupos', corto: 'Grupos de refuerzo' },
 ];
 const CLAVES_SECCION = new Set(SECCIONES.map((s) => s.clave));
@@ -122,6 +122,19 @@ const oracion = (texto) => {
   const t = String(texto ?? '').trim();
   return !t || /[.!?…:)]$/.test(t) ? t : `${t}.`;
 };
+
+/** Un término dentro de un texto: 3x, x, x/4, −5, (−3), 25/3. */
+const TERMINO = String.raw`\(?[−-]?(?:\d+(?:\/\d+)?x?|x(?:\/\d+)?)\)?`;
+/** Una cuenta o ecuación escrita en el texto: «6x + 3 = x + 28», «12 ÷ (−3)». */
+const RE_ECUACION = new RegExp(`${TERMINO}(?: [+−÷·×=-] ${TERMINO})+`, 'g');
+
+/** Texto seguro con sus ecuaciones en una sola pieza (no se parten a mitad de renglón). */
+function conEcuaciones(texto) {
+  return crudo(esc(texto).replace(RE_ECUACION, (ecuacion) => `<span class="docente-ec math">${ecuacion}</span>`));
+}
+
+/** «Sofía M.» nunca se parte entre renglones (el apellido no queda solo). */
+const nombreFijo = (nombre) => String(nombre ?? '').replace(/ (?=\S+$)/, ' ');
 
 /** «Ana», «Ana y Luis», «Ana, Luis y Sofía M.» */
 function enLista(textos) {
@@ -761,7 +774,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
 
   function indicadorEnVivo() {
     const u = state.ultimaSync;
-    const quienes = u ? enLista(u.alumnos.map((id) => state.datos.porId.get(id)?.nombre || nombreEnVivo(id))) : '';
+    const quienes = u ? enLista(u.alumnos.map((id) => nombreFijo(state.datos.porId.get(id)?.nombre || nombreEnVivo(id)))) : '';
     return html`
       <div class="docente-vivo">
         <span class="chip chip--exito docente-vivo__chip"><span class="docente-vivo__punto" aria-hidden="true"></span>En vivo</span>
@@ -774,7 +787,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
   }
 
   function notaSimulado() {
-    const vivos = state.datos.enVivo.map((id) => state.datos.porId.get(id)?.nombre || nombreEnVivo(id));
+    const vivos = state.datos.enVivo.map((id) => nombreFijo(state.datos.porId.get(id)?.nombre || nombreEnVivo(id)));
     return html`
       <p class="docente-nota">
         ${ico('info')}
@@ -788,9 +801,9 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
       <div class="docente-encabezado">
         <h1 class="titulo-1" id="docente-titulo">${TITULO}</h1>
         <p class="docente-tema">
-          ${ico('libro')}<span><strong>${state.pack.tema || 'Ecuaciones lineales con una incógnita'}</strong>${
-            hoy ? html`<span class="docente-tema__fecha"> · ${hoy}</span>` : ''
-          }</span>
+          ${ico('libro')}<strong>${state.pack.tema || 'Ecuaciones lineales con una incógnita'}</strong>${
+            hoy ? html`<span class="docente-tema__fecha"><span aria-hidden="true">· </span>${hoy}</span>` : ''
+          }
         </p>
         ${notaSimulado()}
       </div>`;
@@ -856,20 +869,20 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
             <span class="docente-principal__icono">${ico(info.icono)}</span>
             <div class="pila pila--chica">
               <h3 class="titulo-2 docente-principal__nombre" id="docente-t-principal">${info.nombre}${marcaNuevo('repetido')}</h3>
-              ${state.compacto ? '' : html`<p>${info.resumen}</p>`}
+              ${state.compacto ? '' : html`<p>${conEcuaciones(info.resumen)}</p>`}
             </div>
           </div>
           ${barraDato(
             n,
             total,
             html`<strong>${n} de ${total}</strong> estudiantes lo tienen como error principal (${porcentaje(n, total)} %)${
-              veces ? html` · ${plural(veces, 'vez', 'veces')} en el grupo` : ''
+              veces && !state.compacto ? html` · ${plural(veces, 'vez', 'veces')} en el grupo` : ''
             }`,
           )}
           ${ejemplo
             ? html`
                 <p class="docente-ejemplo">
-                  <span class="docente-ejemplo__etiqueta">Así se ve <span class="texto-sec">(${ejemplo.nombre})</span>:</span>
+                  <span class="docente-ejemplo__etiqueta">Así se ve <span class="texto-sec">(${nombreFijo(ejemplo.nombre)})</span>:</span>
                   <span class="docente-ejemplo__renglon">${htmlEcuacion(ejemplo.anterior)}</span>
                   <span class="docente-ejemplo__flecha">${ico('siguiente')}<span class="solo-lector">, y escribió:</span></span>
                   <span class="docente-ejemplo__renglon docente-ejemplo__renglon--error">${ico('error')}${htmlEcuacion(ejemplo.texto)}</span>
@@ -879,7 +892,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
             ? html`
                 <div class="docente-accion">
                   <h4 class="docente-accion__titulo">${ico('grupo')} Para toda la clase</h4>
-                  <p>${info.actividadGrupo}</p>
+                  <p>${conEcuaciones(info.actividadGrupo)}</p>
                 </div>`
             : ''}
         </article>
@@ -912,6 +925,9 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
   function seccionIndicadores() {
     const g = state.datos.grupo;
     const total = Number(g.total) || state.datos.resumenes.length;
+    const revisar = cuantos(g.porRevisar);
+    const erroresRevisar = cuantos(g.erroresPorRevisar);
+    const de = html`<span class="docente-kpi__de"> de ${total}</span>`;
     const kpi = (clave, nombreIcono, valor, etiqueta, detalle) => html`
       <div class="tarjeta docente-kpi"${resalte(`kpi:${clave}`)}>
         <dt class="docente-kpi__etiqueta">${ico(nombreIcono)} ${etiqueta}${marcaNuevo(`kpi:${clave}`)}</dt>
@@ -922,16 +938,16 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
       <section class="docente-indicadores" aria-labelledby="docente-t-indicadores">
         <h2 class="titulo-3 docente-indicadores__titulo" id="docente-t-indicadores">Indicadores de la semana</h2>
         <dl class="docente-kpis">
-          ${kpi('activos', 'grupo', html`${cuantos(g.activosSemana)}<span class="docente-kpi__de"> de ${total}</span>`, 'Activos esta semana', 'entraron a Tecu en los últimos 7 días')}
-          ${kpi('dominados', 'trofeo', cuantos(g.dominados), 'Temas dominados', 'aprobaron la comprobación sin ayuda')}
+          ${kpi('activos', 'grupo', html`${cuantos(g.activosSemana)}${de}`, 'Activos esta semana', 'entraron a Tecu en los últimos 7 días')}
+          ${kpi('dominados', 'trofeo', html`${cuantos(g.dominados)}${de}`, 'Temas dominados', 'aprobaron la comprobación sin ayuda')}
           ${kpi(
             'revisar',
             'pregunta',
-            cuantos(g.porRevisar),
+            revisar,
             'Por revisar',
-            cuantos(g.erroresPorRevisar) > cuantos(g.porRevisar)
-              ? `estudiantes con errores que Tecu no pudo clasificar (${cuantos(g.erroresPorRevisar)} en total): revísalos en clase`
-              : 'estudiantes con errores que Tecu no pudo clasificar: revísalos en clase',
+            `${revisar === 1 ? 'estudiante' : 'estudiantes'} con errores que Tecu no pudo clasificar${
+              erroresRevisar > revisar ? ` (${erroresRevisar} errores)` : ''
+            }: revísalos en clase`,
           )}
         </dl>
       </section>`;
@@ -976,13 +992,13 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
           <span class="chip ${motivo.clase}">${ico(motivo.icono)} ${motivo.texto}</span>
           ${marcaNuevo(`llamada:${r.id}`)}
         </div>
-        ${item.detalle ? html`<p class="docente-llamada__porque">${oracion(item.detalle)}</p>` : ''}
-        ${explicacion ? html`<p class="docente-llamada__explicacion">${explicacion}</p>` : ''}
+        ${item.detalle ? html`<p class="docente-llamada__porque">${conEcuaciones(oracion(item.detalle))}</p>` : ''}
+        ${explicacion ? html`<p class="docente-llamada__explicacion">${conEcuaciones(explicacion)}</p>` : ''}
         ${sugerencia
           ? html`
               <div class="docente-llamada__plan">
                 <p class="docente-llamada__plan-titulo">${ico('reloj')} En 15 minutos</p>
-                <p>${sugerencia}</p>
+                <p>${conEcuaciones(sugerencia)}</p>
               </div>`
           : ''}
         <button type="button" class="boton boton--secundario docente-llamada__boton" data-act="ficha" data-id="${r.id}"
@@ -1053,19 +1069,24 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
         <div class="tabla-desplazable docente-tabla" tabindex="0" role="region" aria-label="Mapa de dificultades (se desplaza a los lados)" data-foco="tabla">
           <table class="docente-mapa">
             <caption>
-              Veces que cada estudiante cometió cada tipo de error (${plural(filas.length, 'estudiante')}; los celulares en vivo van primero).
-              Ordenado por ${nombreColumna(columna)}, ${textoDireccion(columna, dir)}.
+              ${state.compacto
+                ? html`Veces que cada estudiante cometió cada error. En vivo primero; luego, por ${nombreColumna(columna)} (${textoDireccion(columna, dir)}).`
+                : html`Veces que cada estudiante cometió cada tipo de error (${plural(filas.length, 'estudiante')}; los celulares en vivo van primero).
+                    Ordenado por ${nombreColumna(columna)}, ${textoDireccion(columna, dir)}.`}
               <span class="docente-mapa__ayuda">Toca un nombre para ver su ficha o un encabezado para ordenar.</span>
             </caption>
             <thead>
               <tr>
-                ${encabezadoOrdenable('nombre', html`<span>Estudiante</span>`, { clase: 'docente-th--nombre' })}
-                ${encabezadoOrdenable('estado', html`<span>Estado</span>`, { clase: 'docente-th--estado' })}
+                ${encabezadoOrdenable('nombre', html`<span class="docente-orden__texto">Estudiante</span>`, { clase: 'docente-th--nombre' })}
+                ${encabezadoOrdenable('estado', html`<span class="docente-orden__texto">Estado</span>`, { clase: 'docente-th--estado' })}
                 ${tipos.map((t) => {
                   const i = infoError(t);
-                  return encabezadoOrdenable(t, html`${ico(i.icono)}<span>${i.corto}</span>`, { tono: i.tono, clase: 'docente-th--error' });
+                  return encabezadoOrdenable(t, html`${ico(i.icono)}<span class="docente-orden__texto">${i.corto}</span>`, {
+                    tono: i.tono,
+                    clase: 'docente-th--error',
+                  });
                 })}
-                ${state.compacto ? '' : encabezadoOrdenable('total', html`<span>Total</span>`, { clase: 'docente-th--total' })}
+                ${state.compacto ? '' : encabezadoOrdenable('total', html`<span class="docente-orden__texto">Total</span>`, { clase: 'docente-th--total' })}
               </tr>
             </thead>
             <tbody>
@@ -1081,7 +1102,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
                 <dl>
                   ${tipos.map((t) => {
                     const i = infoError(t);
-                    return html`<div data-tono="${i.tono}"><dt>${ico(i.icono)} ${i.corto}: ${i.nombre}</dt><dd>${i.resumen}</dd></div>`;
+                    return html`<div data-tono="${i.tono}"><dt>${ico(i.icono)} ${i.corto}: ${i.nombre}</dt><dd>${conEcuaciones(i.resumen)}</dd></div>`;
                   })}
                 </dl>
               </details>`}
@@ -1144,7 +1165,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
   function tarjetaGrupo(g) {
     const info = infoError(g.tipo);
     const nombre = g.nombre || info.nombre;
-    const nombres = g.integrantes.map((a) => (a.enVivo ? `${a.nombre} (en vivo)` : a.nombre));
+    const nombres = g.integrantes.map((a) => nombreFijo(a.enVivo ? `${a.nombre} (en vivo)` : a.nombre));
     return html`
       <li class="tarjeta tarjeta--tono docente-grupo" data-tono="${info.tono}"${resalte(`grupo:${g.tipo}`)}>
         <div class="docente-grupo__cabeza">
@@ -1157,7 +1178,7 @@ export async function montarDocente(raiz, { compacto = false } = {}) {
           : html`
               <div class="docente-grupo__bloque">
                 <h4 class="docente-grupo__subtitulo">Actividad sugerida</h4>
-                <p>${g.actividad || info.actividadGrupo}</p>
+                <p>${conEcuaciones(g.actividad || info.actividadGrupo)}</p>
               </div>
               ${g.ejercicios.length
                 ? html`

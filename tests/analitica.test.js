@@ -625,7 +625,7 @@ describe('aQuienLlamar', () => {
     const [atoro, revisar, inactivo, sinDiag] = aQuienLlamar(clase(), pack, { ahora: AHORA });
     assert.equal(atoro.detalle, 'Falló 2 veces la comprobación sin ayuda de Signos');
     assert.equal(revisar.detalle, `Tecu no pudo clasificar su error en ${PRACTICA[0]}`);
-    assert.equal(inactivo.detalle, 'No entra desde hace 9 días (iba en la práctica de Inversa)');
+    assert.equal(inactivo.detalle, 'No entra desde hace 9 días; se quedó en la práctica (ruta de Inversa)');
     assert.equal(sinDiag.detalle, 'No ha empezado el diagnóstico');
     for (const l of [atoro, revisar, inactivo, sinDiag]) assert.ok(!l.detalle.includes('\n'));
   });
@@ -695,7 +695,7 @@ describe('aQuienLlamar', () => {
     const despues = aQuienLlamar(resumenes, pack, { ahora: AHORA + 8 * DIA });
     assert.equal(despues.length, 1);
     assert.equal(despues[0].motivo, 'inactivo');
-    assert.match(despues[0].detalle, /^No entra desde hace 9 días \(iba en la pregunta de Tecu de Signos\)$/);
+    assert.equal(despues[0].detalle, 'No entra desde hace 9 días; se quedó en la pregunta de Tecu (ruta de Signos)');
   });
 });
 

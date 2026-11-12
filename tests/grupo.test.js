@@ -194,7 +194,9 @@ describe('Estados del grupo (deducidos de los eventos)', () => {
         assert.equal(aprobada.aprobado, true, id);
         assert.equal(dominio[0].ejercicio, aprobada.ejercicio);
         assert.equal(dominio[0].datos.intentos, comprobaciones.length);
-        assert.equal(eventos.at(-1), dominio[0], `${id}: nada después del dominio`);
+        assert.equal(eventos[eventos.indexOf(dominio[0]) - 1], aprobada, `${id}: el dominio sigue a la comprobación`);
+        const despues = eventos.slice(eventos.indexOf(dominio[0]) + 1);
+        assert.ok(despues.every((e) => e.tipo === 'duda'), `${id}: después del dominio solo puede escribirle a Tecu`);
         assert.ok(Date.parse(dominio[0].fecha) > Date.parse(aprobada.fecha));
       } else {
         assert.equal(dominio.length, 0, id);
@@ -289,7 +291,9 @@ describe('Ruta y ayudas', () => {
       assert.equal(ruta.datos.correctos, correctos);
       assert.equal(ruta.datos.total, DIAGNOSTICO.length);
       assert.equal(ruta.datos.titulo, pack.errores[ruta.ruta].ruta.titulo);
-      assert.equal(eventos.indexOf(ruta), DIAGNOSTICO.length, `${id}: la ruta llega justo después del diagnóstico`);
+      const diag = diagnosticos(eventos);
+      assert.equal(eventos[eventos.indexOf(ruta) - 1], diag.at(-1), `${id}: la ruta llega justo después del diagnóstico`);
+      assert.ok(diag.every((e) => eventos.indexOf(e) < eventos.indexOf(ruta)), id);
       const plan = construirRuta(ruta.ruta, `${id}:${ruta.ruta}`, DIAGNOSTICO);
       assert.deepEqual(ruta.datos.ejercicios, plan.practica.map((e) => e.ecuacion));
       for (const p of eventos.filter((e) => e.tipo === 'practica' && !e.datos.extra)) {

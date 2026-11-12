@@ -105,8 +105,9 @@
 
 .docente-tema {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--espacio-2);
+  gap: var(--espacio-1) var(--espacio-2);
   font-size: var(--texto-grande);
 }
 
@@ -181,6 +182,11 @@
 
 .docente-seccion__nota {
   color: var(--color-texto-sec);
+}
+
+/* Ecuaciones dentro de un texto: en una sola pieza («6x + 3 = x + 28» no se parte) */
+.docente-ec {
+  white-space: nowrap;
 }
 
 .docente .vacio {
@@ -887,6 +893,25 @@ html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > t
 /* ------------------------------------------------------------------ */
 /* Pantallas angostas (tableta vertical y celular)                     */
 /* ------------------------------------------------------------------ */
+
+/* Si no caben en un renglón: marca y "En vivo" arriba; las secciones en una tira abajo. */
+@media (max-width: 72.49rem) {
+  .docente-nav {
+    order: 1;
+    flex-basis: 100%;
+    margin-inline: calc(-1 * var(--espacio-3));
+  }
+
+  .docente-nav ul {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .docente-nav a {
+    white-space: nowrap;
+  }
+}
 
 @media (max-width: 47.99rem) {
   .docente {
