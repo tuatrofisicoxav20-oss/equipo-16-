@@ -1,0 +1,11 @@
+{
+  "estadisticas": [
+    {
+      "id": "internet-escuelas-veracruz",
+      "texto": "Solo 25.4 % de las escuelas de educación básica de Veracruz tiene internet.",
+      "valor": 25.4,
+      "fuente": "",
+      "nota": "Dato de la propuesta del equipo. Copia aquí la fuente exacta que aparece en docs/ antes de presentar; si este campo queda vacío, el modo pitch avisa al presentador."
+    }
+  ]
+}

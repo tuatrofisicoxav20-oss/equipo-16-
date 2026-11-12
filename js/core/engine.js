@@ -584,7 +584,8 @@ function fusiones(eq) {
     });
     out.push(mk([{ c: total, x: true }], 'todo_a_x', textoOriginal));
     out.push(mk([{ c: total, x: false }], 'todo_a_numero', textoOriginal));
-    if (terms.length > 2) {
+    // Pares x + número: solo en lados cortos (en lados largos se vuelve combinatorio).
+    if (terms.length > 2 && xs.length * cs.length <= 6) {
       for (const [tx, ix] of xs) {
         for (const [tc, ic] of cs) {
           const resto = terms.filter((_, i) => i !== ix && i !== ic);
@@ -687,13 +688,32 @@ function divisiones(base) {
  * siguiendo la estrategia escolar (pasar términos, reducir, dividir), con a lo
  * más un error típico en el camino. Cada candidato trae su error (o null).
  */
+/**
+ * Subconjuntos de términos a mover. Con pocos términos probamos todos; con
+ * muchos (alguien del jurado escribe 9 términos) solo los que un estudiante
+ * real haría: todos a la vez, uno solo o todos menos uno. Así un celular de
+ * gama baja responde en milisegundos y no en segundos.
+ */
+const MAX_TERMINOS_EXHAUSTIVO = 4;
+
+function mascaras(n) {
+  const todas = (1 << n) - 1;
+  if (n <= MAX_TERMINOS_EXHAUSTIVO) return Array.from({ length: todas + 1 }, (_, i) => i);
+  const out = new Set([0, todas]);
+  for (let k = 0; k < n; k++) {
+    out.add(1 << k);
+    out.add(todas & ~(1 << k));
+  }
+  return [...out];
+}
+
 export function candidatos(eq) {
   const out = [];
   const inicios = [{ eq, mal: null, ops: 0 }, ...fusiones(eq).map((f) => ({ ...f, ops: 1 }))];
   for (const ini of inicios) {
     for (const ladoX of ['L', 'R']) {
       const W = fueraDeLugar(ini.eq, ladoX);
-      for (let mask = 0; mask < 1 << W.length; mask++) {
+      for (const mask of mascaras(W.length)) {
         if (mask === 0 && ladoX === 'R') continue; // ya se generó con ladoX = L
         const T = W.filter((_, k) => mask & (1 << k));
         const variantes = [{ ops: T.map((w) => ({ ...w, modo: 'correcto' })), mal: ini.mal }];

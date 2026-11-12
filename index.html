@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tecu Aprende</title>
+  <meta name="description" content="Aprende ecuaciones paso por paso con Tecu, aunque no tengas internet.">
+  <meta name="theme-color" content="#0b5d7a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icono-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/tecu.css">
+  <link rel="stylesheet" href="css/balanza.css">
+  <link rel="stylesheet" href="css/cuaderno.css">
+  <link rel="stylesheet" href="css/estudiante.css">
+  <script>
+    // Aplica las preferencias de accesibilidad antes de pintar (sin parpadeo).
+    (function () {
+      try {
+        var p = JSON.parse(localStorage.getItem('tecu:prefs') || '{}');
+        var h = document.documentElement;
+        if (p.texto && p.texto !== 'normal') h.setAttribute('data-texto', p.texto);
+        if (p.contraste) h.classList.add('alto-contraste');
+        if (p.movimiento === 'reducido') h.classList.add('reducir-movimiento');
+      } catch (e) { /* sin almacenamiento: valores por defecto */ }
+    })();
+  </script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <div id="app" class="app">
+    <p class="cargando" role="status">Cargando Tecu…</p>
+  </div>
+  <div id="anuncios" class="solo-lector" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="alertas" class="solo-lector" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="avisos" class="avisos" aria-hidden="true"></div>
+  <noscript><p class="cargando">Tecu Aprende necesita JavaScript para funcionar.</p></noscript>
+</body>
+</html>
