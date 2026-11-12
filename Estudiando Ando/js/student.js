@@ -1,5 +1,5 @@
 /* =========================================================
-   Tecu Aprende · módulo del estudiante
+   Estudiando Ando · módulo del estudiante
    Pantallas: inicio, aprender, diagnóstico, tutor,
    comprobación sin ayuda, progreso y descargas.
    ========================================================= */
@@ -114,11 +114,11 @@
         <div class="hero__body">
           <p class="eyebrow eyebrow--inverse">${st.grade} · Matemáticas</p>
           <h1 id="page-title" tabindex="-1">Hola, ${st.name}</h1>
-          <p class="hero__say" id="tecu-say">${say}</p>
+          <p class="hero__say" id="tutor-say">${say}</p>
           <div class="hero__actions">
             <a class="btn btn--inverse" href="#/aprender">${icon('play', 18)}Continuar lección</a>
-            <a class="btn btn--ghost-inverse" href="#/tutor">${icon('chat', 18)}Preguntarle a Tecu</a>
-            ${ui.speakButton('tecu-say', 'Escuchar a Tecu')}
+            <a class="btn btn--ghost-inverse" href="#/tutor">${icon('chat', 18)}Preguntarle a Estudiando Ando</a>
+            ${ui.speakButton('tutor-say', 'Escuchar a Estudiando Ando')}
           </div>
         </div>
       </section>
@@ -225,7 +225,7 @@
           <div class="lesson" aria-live="polite">${lessonContent(lesson, p.format)}</div>
           <p class="muted small">No hay una sola forma correcta de aprender: prueba varias y quédate con la que te ayude a entender.</p>
           <div class="cluster">
-            <a class="btn btn--primary" href="#/tutor">${icon('chat', 18)}Practicar con Tecu</a>
+            <a class="btn btn--primary" href="#/tutor">${icon('chat', 18)}Practicar con Estudiando Ando</a>
             <a class="btn btn--secondary" href="#/comprobar">${icon('target', 18)}Comprobar sin ayuda</a>
           </div>`
       })}
@@ -356,11 +356,11 @@
   /* ---------- Tutor ---------- */
   function chatLog() {
     const p = S.progress();
-    return html`<div class="chat" id="chat-log" role="log" aria-live="polite" aria-label="Conversación con Tecu" tabindex="0">
+    return html`<div class="chat" id="chat-log" role="log" aria-live="polite" aria-label="Conversación con Estudiando Ando" tabindex="0">
       ${p.chat.map((m) => (m.from === 'me'
         ? html`<div class="msg msg--me"><p class="msg__bubble"><span class="sr-only">Tú: </span>${m.text}</p>${m.status === 'queued' ? html`<p class="msg__status">${icon('clock', 14)}En espera: se enviará cuando haya internet</p>` : ''}</div>`
-        : html`<div class="msg msg--tecu">${mascot({ size: 36, face: true, mood: m.kind === 'hint' ? 'think' : 'happy' })}<div class="msg__body"><p class="msg__bubble" id="m-${m.id}"><span class="sr-only">Tecu: </span>${m.text}</p>${TA.state.prefs.voice ? html`<button type="button" class="btn btn--ghost btn--xs" data-action="speak" data-id="m-${m.id}">${icon('volume', 14)}Escuchar</button>` : ''}</div></div>`))}
-      ${TA.state.ui.typing ? html`<div class="msg msg--tecu">${mascot({ size: 36, face: true, mood: 'think' })}<p class="msg__bubble msg__bubble--typing">Tecu está pensando…</p></div>` : ''}
+        : html`<div class="msg msg--tutor">${mascot({ size: 36, face: true, mood: m.kind === 'hint' ? 'think' : 'happy' })}<div class="msg__body"><p class="msg__bubble" id="m-${m.id}"><span class="sr-only">Estudiando Ando: </span>${m.text}</p>${TA.state.prefs.voice ? html`<button type="button" class="btn btn--ghost btn--xs" data-action="speak" data-id="m-${m.id}">${icon('volume', 14)}Escuchar</button>` : ''}</div></div>`))}
+      ${TA.state.ui.typing ? html`<div class="msg msg--tutor">${mascot({ size: 36, face: true, mood: 'think' })}<p class="msg__bubble msg__bubble--typing">Estudiando Ando está pensando…</p></div>` : ''}
     </div>`;
   }
 
@@ -388,7 +388,7 @@
     const online = TA.net.isOnline();
     const support = S.supportLevel();
     return html`
-      ${ui.pageHeader({ title: 'Tecu, tu tutor', lead: online ? 'Te guía con preguntas y pistas; no hace la tarea por ti.' : 'Sin internet: usa las pistas y ejercicios guardados. Tus preguntas se envían después.' })}
+      ${ui.pageHeader({ title: 'Tu tutor', lead: online ? 'Te guía con preguntas y pistas; no hace la tarea por ti.' : 'Sin internet: usa las pistas y ejercicios guardados. Tus preguntas se envían después.' })}
       ${online ? '' : ui.netBanner('student')}
       <div class="grid grid--tutor">
         <section class="card chat-card" aria-labelledby="chat-t">
@@ -417,13 +417,13 @@
             id: 'c-support', title: 'Nivel de ayuda', titleIcon: 'trend',
             body: html`<p><strong>${support.label}.</strong> ${support.text}</p>
               <div class="meter-steps" aria-hidden="true">${[3, 2, 1].map((n) => html`<span class="${n >= support.n ? 'is-on' : ''}"></span>`)}</div>
-              <p class="muted small">Tecu reduce su ayuda conforme demuestras más autonomía.</p>`
+              <p class="muted small">Estudiando Ando reduce su ayuda conforme demuestras más autonomía.</p>`
           })}
           ${ui.card({
-            id: 'c-rules', title: 'Cómo usar bien a Tecu', titleIcon: 'shield', className: 'is-secondary',
+            id: 'c-rules', title: 'Cómo usar bien a Estudiando Ando', titleIcon: 'shield', className: 'is-secondary',
             body: html`<ul class="list-icons">
               <li>${icon('bulb', 18)}<span>Primero preguntas y pistas; la solución, solo si la pides.</span></li>
-              <li>${icon('shield', 18)}<span>Tecu puede equivocarse: compara con tu libro o pregunta a tu maestra o maestro.</span></li>
+              <li>${icon('shield', 18)}<span>Estudiando Ando puede equivocarse: compara con tu libro o pregunta a tu maestra o maestro.</span></li>
               <li>${icon('target', 18)}<span>Para avanzar demuestras que entendiste, sin ayuda.</span></li>
             </ul>`
           })}
@@ -440,7 +440,7 @@
     const result = p.check && !draft.retake ? p.check : null;
     const header = ui.pageHeader({
       title: 'Comprueba lo aprendido',
-      lead: `3 ejercicios nuevos, sin pistas ni ayuda de Tecu. Así sabremos si ya dominas ${result ? result.skillName : skill}.`,
+      lead: `3 ejercicios nuevos, sin pistas ni ayuda de Estudiando Ando. Así sabremos si ya dominas ${result ? result.skillName : skill}.`,
       back: { href: '#/inicio', label: 'Volver al inicio' }
     });
 
@@ -450,7 +450,7 @@
           <div class="card__head"><h2 class="card__title" id="chk-res" tabindex="-1">${icon(result.passed ? 'star' : 'trend', 20)}<span>${result.passed ? '¡Dominio demostrado!' : `Resolviste ${result.score} de 3 sin ayuda`}</span></h2></div>
           <p>${result.passed
             ? html`Resolviste los 3 ejercicios por tu cuenta. Registramos tu dominio de <strong>${result.skillName}</strong> y se abrió la siguiente etapa de tu ruta.`
-            : 'Vas por buen camino. Tu ruta se ajustó: practica un poco más con Tecu y vuelve a intentarlo cuando te sientas listo o lista.'}</p>
+            : 'Vas por buen camino. Tu ruta se ajustó: practica un poco más con Estudiando Ando y vuelve a intentarlo cuando te sientas listo o lista.'}</p>
           <ul class="review">
             ${data.check.map((c, i) => {
               const ok = result.results[i];
@@ -459,7 +459,7 @@
             })}
           </ul>
           <div class="cluster">
-            ${result.passed ? html`<a class="btn btn--primary" href="#/aprender">${icon('play', 18)}Siguiente etapa</a>` : html`<a class="btn btn--primary" href="#/tutor">${icon('chat', 18)}Practicar con Tecu</a>`}
+            ${result.passed ? html`<a class="btn btn--primary" href="#/aprender">${icon('play', 18)}Siguiente etapa</a>` : html`<a class="btn btn--primary" href="#/tutor">${icon('chat', 18)}Practicar con Estudiando Ando</a>`}
             <button type="button" class="btn btn--secondary" data-action="check-retake">${icon('reset', 18)}Intentar con otros ejercicios</button>
           </div>
           ${TA.net.isOnline() ? '' : html`<p class="muted small">${icon('clock', 14)} Resultado guardado en tu equipo; tu maestra lo verá al sincronizar.</p>`}
@@ -526,7 +526,7 @@
           ${ui.card({
             id: 'c-recs', title: 'Recomendaciones para ti', titleIcon: 'spark',
             body: html`<ul class="list-icons">
-              ${cur >= 0 ? html`<li>${icon('target', 18)}<span>Practica <strong>${data.skills[cur].name.toLowerCase()}</strong> con Tecu y luego haz la comprobación sin ayuda.</span></li>` : ''}
+              ${cur >= 0 ? html`<li>${icon('target', 18)}<span>Practica <strong>${data.skills[cur].name.toLowerCase()}</strong> con Estudiando Ando y luego haz la comprobación sin ayuda.</span></li>` : ''}
               <li>${icon('sync', 18)}<span>Repasa lo que ya dominas cada semana: recordar activamente ayuda a no olvidar.</span></li>
               <li>${icon('pen', 18)}<span>Cuando te equivoques, escribe en qué paso fue. Así encuentras tu propio error.</span></li>
             </ul>`
@@ -576,12 +576,12 @@
             <div class="row__main"><p class="row__title">${k.name}</p><p class="row__sub">${k.detail} · ${k.mb} MB</p></div>
             ${packageAction(k, p.packages[k.id])}
           </li>`)}</ul>
-          <p class="muted small">La conversación libre con Tecu siempre necesita internet; las pistas y ejercicios descargados no.</p>`
+          <p class="muted small">La conversación libre con Estudiando Ando siempre necesita internet; las pistas y ejercicios descargados no.</p>`
         })}
         <div class="stack">
           ${ui.card({
             id: 'c-store', title: 'Espacio en tu equipo', titleIcon: 'phone',
-            body: html`<p class="big tabnum">${used} MB <span class="muted">usados por Tecu Aprende</span></p>
+            body: html`<p class="big tabnum">${used} MB <span class="muted">usados por Estudiando Ando</span></p>
               <div class="bar bar--brand" aria-hidden="true"><span style="--w:${Math.round((used / 52) * 100)}%"></span></div>
               <p class="muted small">Tu equipo tiene 3.1 GB libres. Puedes quitar paquetes cuando termines un tema.</p>`
           })}
@@ -667,16 +667,16 @@
         if (p.hints < tutor.hints.length) p.hints += 1;
         const text = p.hints <= tutor.hints.length ? `Pista ${p.hints}: ${tutor.hints[p.hints - 1]}` : 'Ya usaste las 3 pistas. Intenta resolverlo y cuéntame tu resultado.';
         S.pushMessage('me', 'Dame una pista');
-        S.pushMessage('tecu', text, { kind: 'hint' });
+        S.pushMessage('tutor', text, { kind: 'hint' });
       } else if (kind === 'alt') {
         S.pushMessage('me', 'Explícalo de otra forma');
-        S.pushMessage('tecu', tutor.alt);
+        S.pushMessage('tutor', tutor.alt);
       } else if (kind === 'everyday') {
         S.pushMessage('me', 'Dame un ejemplo cotidiano');
-        S.pushMessage('tecu', tutor.everyday);
+        S.pushMessage('tutor', tutor.everyday);
       } else {
         S.pushMessage('me', 'Te explico cómo lo hice');
-        S.pushMessage('tecu', 'Adelante: escribe paso a paso qué hiciste. Explicarlo te ayuda a encontrar tus propios errores.');
+        S.pushMessage('tutor', 'Adelante: escribe paso a paso qué hiciste. Explicarlo te ayuda a encontrar tus propios errores.');
         TA.save();
         TA.render();
         TA.focus.to('#chat-input');
@@ -780,7 +780,7 @@
         TA.render();
         TA.focus.to('#chat-input');
         S.scrollChat();
-        TA.announce('Guardé tu pregunta. Tecu la responderá cuando haya internet.');
+        TA.announce('Guardé tu pregunta. Estudiando Ando la responderá cuando haya internet.');
         return;
       }
       S.pushMessage('me', text);
@@ -791,7 +791,7 @@
       S.scrollChat();
       setTimeout(() => {
         TA.state.ui.typing = false;
-        S.pushMessage('tecu', S.tutorReply(text));
+        S.pushMessage('tutor', S.tutorReply(text));
         TA.save();
         if (TA.route().view === 'tutor') { TA.render(); S.scrollChat(); }
       }, TA.prefersReducedMotion() ? 200 : 700);
@@ -817,7 +817,7 @@
           answered += 1;
           const prev = TA.state.studentId;
           TA.state.studentId = id;
-          chat.push({ id: TA.util.uid(), from: 'tecu', text: S.tutorReply(m.text), status: 'sent' });
+          chat.push({ id: TA.util.uid(), from: 'tutor', text: S.tutorReply(m.text), status: 'sent' });
           TA.state.studentId = prev;
         }
       });

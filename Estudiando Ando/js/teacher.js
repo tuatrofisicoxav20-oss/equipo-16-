@@ -1,5 +1,5 @@
 /* =========================================================
-   Tecu Aprende · módulo docente
+   Estudiando Ando · módulo docente
    Pantallas: grupo (mapa de aprendizaje), alertas, alumnos,
    planeación y datos/privacidad.
    Las alertas de la IA son apoyos para decidir, nunca
