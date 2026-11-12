@@ -165,32 +165,38 @@ const ALA_DER_SENALA =
   'C108 59.4 102.5 60.6 97.5 62.2 C94.2 63.2 91.6 64.4 89.5 65.6 Z';
 
 const PLUMAS_ALA = ['M20.5 84 Q24 87 27.5 84.5', 'M21.5 91 Q24.5 93.5 27 91.5'];
+const PLUMAS_ALA_ARRIBA = ['M12.5 52 Q16 55 19.5 53'];
+const PLUMAS_ALA_SENALA = ['M99 67.5 Q102 70.5 105 68.5'];
 
 function espejo(d) {
   // Refleja un trazo con coordenadas absolutas respecto al eje vertical x = 60.
   return d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${+(120 - Number(x)).toFixed(2)} ${y}`);
 }
 
-function alas(estado) {
-  const arriba = estado === 'feliz';
-  const izq = arriba ? ALA_IZQ_ARRIBA : ALA_IZQ_ABAJO;
-  const der = estado === 'atento' ? ALA_DER_SENALA : espejo(izq);
-  const lineas = [];
-  if (!arriba) lineas.push(...PLUMAS_ALA);
-  if (!arriba && estado !== 'atento') lineas.push(...PLUMAS_ALA.map(espejo));
-  if (arriba) lineas.push('M12.5 52 Q16 55 19.5 53', ...['M12.5 52 Q16 55 19.5 53'].map(espejo));
-  if (estado === 'atento') lineas.push('M99 67.5 Q102 70.5 105 68.5');
-  const plumas = lineas.length
+/** Cada ala va en su propio grupo junto con sus plumas, para que se animen juntas. */
+function ala(lado, contorno, plumas) {
+  const lineas = plumas.length
     ? `<g fill="none" stroke="${C.contorno}" stroke-width="1.3" stroke-linecap="round" opacity=".55">` +
-      lineas.map((d) => `<path d="${d}"/>`).join('') +
+      plumas.map((d) => `<path d="${d}"/>`).join('') +
       `</g>`
     : '';
-  const estilo = `fill="${C.cafeOscuro}" stroke="${C.contorno}" stroke-width="2.4" stroke-linejoin="round"`;
   return (
-    `<path class="tecu__ala tecu__ala--izq" d="${izq}" ${estilo}/>` +
-    `<path class="tecu__ala tecu__ala--der" d="${der}" ${estilo}/>` +
-    plumas
+    `<g class="tecu__ala tecu__ala--${lado}">` +
+    `<path d="${contorno}" fill="${C.cafeOscuro}" stroke="${C.contorno}" stroke-width="2.4" stroke-linejoin="round"/>` +
+    lineas +
+    `</g>`
   );
+}
+
+function alas(estado) {
+  if (estado === 'feliz') {
+    return ala('izq', ALA_IZQ_ARRIBA, PLUMAS_ALA_ARRIBA) + ala('der', espejo(ALA_IZQ_ARRIBA), PLUMAS_ALA_ARRIBA.map(espejo));
+  }
+  const derecha =
+    estado === 'atento'
+      ? ala('der', ALA_DER_SENALA, PLUMAS_ALA_SENALA)
+      : ala('der', espejo(ALA_IZQ_ABAJO), PLUMAS_ALA.map(espejo));
+  return ala('izq', ALA_IZQ_ABAJO, PLUMAS_ALA) + derecha;
 }
 
 function ojoAbierto({ x, y }, { dx = 0, dy = 0, iris = 12.5, pupila = 7 }) {

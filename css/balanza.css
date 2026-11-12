@@ -229,6 +229,12 @@
   stroke-dasharray: 4 3;
 }
 
+.balanza__contorno--alerta {
+  stroke: var(--color-alerta, #9c4a05);
+  stroke-width: 2;
+  stroke-dasharray: 2 3;
+}
+
 .balanza__etiqueta rect {
   fill: var(--color-superficie, #ffffff);
   stroke: var(--color-texto-sec, #4f5d68);
@@ -356,8 +362,16 @@
 
 .balanza__ajuste {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.balanza__ajuste-control {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
   gap: var(--espacio-2, 0.5rem);
 }
 
@@ -375,7 +389,8 @@
 }
 
 .balanza__ajuste-valor {
-  min-width: 3ch;
+  min-width: 3.2ch;
+  white-space: nowrap;
   text-align: center;
   font-family: var(--fuente-math, var(--fuente, system-ui, sans-serif));
   font-size: 1.625rem;

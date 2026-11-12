@@ -33,9 +33,9 @@ const G = Object.freeze({
   py: 178,
   brazo: 92, // distancia del pivote al centro de cada platillo
   borde: 142, // altura del borde de los platillos en reposo
-  celda: 25, // espacio por pieza (la pieza mide 22)
+  celda: 26, // espacio por pieza (la pieza mide 22)
   hueco: 8, // separación entre grupos
-  anchoUtil: 128,
+  anchoUtil: 132,
   altoUtil: 104,
   angMax: 12,
 });
@@ -105,7 +105,7 @@ function sustitucion(terminos, v) {
       const abs = Math.abs(t.c);
       let cuerpo;
       if (!t.x) cuerpo = String(abs);
-      else if (abs === 1) cuerpo = v < 0 || i > 0 || t.c < 0 ? entre : String(v);
+      else if (abs === 1) cuerpo = v < 0 ? entre : String(v);
       else cuerpo = `${abs}·${entre}`;
       if (i === 0) return t.c < 0 ? `${MENOS}${cuerpo}` : cuerpo;
       return `${t.c < 0 ? ` ${MENOS} ` : ' + '}${cuerpo}`;
@@ -315,11 +315,12 @@ const ALTO_ETIQUETA = 21; // espacio fijo (sin escalar) para la etiqueta de un g
 
 /**
  * Acomoda bloques de piezas sobre un platillo, en repisas que crecen hacia arriba.
- * Usa una sola repisa (más legible) salvo que varias permitan piezas más grandes.
+ * Usa una sola repisa (se lee en orden, como la expresión) mientras la escala sea
+ * al menos `minUna`; si no, la opción que deje las piezas más grandes.
  * Las etiquetas no se encogen: su espacio se reserva aparte de la escala.
  * @returns {{colocadas: {p, x, y, s}[], contornos: object[], s: number}}
  */
-function acomodar(bloquesEntrada, cx) {
+function acomodar(bloquesEntrada, cx, { minUna = 0.7 } = {}) {
   const C = G.celda;
   const bloques = bloquesEntrada
     .filter((b) => b.piezas.length)
@@ -380,7 +381,7 @@ function acomodar(bloquesEntrada, cx) {
   const varias = enRepisas();
   const sUna = probar(una);
   const sVarias = varias.length > 1 ? probar(varias) : 0;
-  const repisas = sVarias > sUna + 0.01 ? varias : una;
+  const repisas = sUna >= minUna || sVarias <= sUna + 0.01 ? una : varias;
   const s = probar(repisas);
 
   const colocadas = [];
@@ -406,7 +407,16 @@ function acomodar(bloquesEntrada, cx) {
       if (b.contorno || b.etiqueta) {
         const alto = b.h * s;
         const xc = x + ((b.w - b.base) * s) / 2;
-        contornos.push({ x: xc, y: base - alto, w: b.base * s, h: alto, etiqueta: b.etiqueta, contorno: b.contorno, clase: b.clase });
+        contornos.push({
+          x: xc,
+          y: base - alto,
+          w: b.base * s,
+          h: alto,
+          etiqueta: b.etiqueta,
+          contorno: b.contorno,
+          alerta: b.alerta,
+          clase: b.clase,
+        });
       }
       x += (b.w + G.hueco) * s;
     }
@@ -462,7 +472,12 @@ export function montarBalanza(contenedor, opciones = {}) {
   const { modo, ladoX } = cfg;
   const ladoN = otro(ladoX);
   const unLado = modo === 'quitar' && Boolean(unLadoPedido);
-  const t = { ...TEXTOS[modo], ...(modo === modoPedido ? textos : {}) };
+  // Los textos del paquete se usan solo si son para este modo (no si hubo que cambiarlo).
+  const propios = modo === modoPedido && textos ? textos : {};
+  const t = {
+    instruccion: propios.instruccion || TEXTOS[modo].instruccion,
+    cierre: propios.cierre || TEXTOS[modo].cierre,
+  };
   const solEntera = an.solucion && an.solucion.d === 1 ? an.solucion.n : null;
   if (modo === 'comprobar' && solEntera === null) {
     console.warn(`[balanza] La solución de «${texto}» no es entera: no se podrá equilibrar con la caja.`);
@@ -490,7 +505,7 @@ export function montarBalanza(contenedor, opciones = {}) {
       acciones: 0,
       intentos: 0,
       quitadas: 0,
-      desequilibrio: null, // { lado, grupo, pieza } de la pesa quitada de un solo lado
+      desequilibrio: null, // { grupo, pieza }: la pesa quitada de un solo platillo
       probasteUnLado: false,
       grupos,
       reparto: null,
@@ -645,14 +660,14 @@ export function montarBalanza(contenedor, opciones = {}) {
     if (modo === 'repartir' && lado === ladoN && st.reparto) {
       const piezas = grupos.flatMap((g) => g.piezas);
       const { n, porGrupo, sobran } = st.reparto;
-      const armar = (cols) => {
+      const armar = (cols, etiquetas) => {
         const bloques = [];
         for (let i = 0; i < n; i++) {
           bloques.push({
             piezas: piezas.slice(i * porGrupo, (i + 1) * porGrupo),
             cols,
             contorno: true,
-            etiqueta: String(porGrupo),
+            etiqueta: etiquetas ? String(porGrupo) : '',
             clase: st.reparto.ok ? 'balanza__etiqueta--exito' : '',
           });
         }
@@ -660,20 +675,28 @@ export function montarBalanza(contenedor, opciones = {}) {
           bloques.push({
             piezas: piezas.slice(n * porGrupo),
             cols: Math.min(sobran, cols),
-            etiqueta: `sobran ${sobran}`,
+            contorno: true,
+            alerta: true,
+            etiqueta: etiquetas ? `sobran ${sobran}` : '',
             clase: 'balanza__etiqueta--alerta',
           });
         }
         return bloques;
       };
-      // Prueba varias formas de grupo (columnas) y se queda con la de piezas más grandes.
-      let mejor = null;
-      for (let cols = 1; cols <= Math.min(porGrupo, 5); cols++) {
-        const bloques = armar(cols);
-        const { s } = acomodar(bloques, CX[lado]);
-        if (!mejor || s > mejor.s + 0.001) mejor = { s, bloques };
+      // Prueba varias formas de grupo (columnas), con y sin etiquetas, y se queda
+      // con la de piezas más grandes. Las etiquetas solo van si caben con holgura.
+      const mejor = { true: null, false: null };
+      for (const etiquetas of [true, false]) {
+        for (let cols = 1; cols <= Math.min(porGrupo, 5); cols++) {
+          const bloques = armar(cols, etiquetas);
+          const { s } = acomodar(bloques, CX[lado], { minUna: 2 });
+          if (!mejor[etiquetas] || s > mejor[etiquetas].s + 0.001) mejor[etiquetas] = { s, bloques };
+        }
       }
-      return mejor.bloques;
+      // Al acertar, las etiquetas ("cuánto le toca a cada caja") importan más que el tamaño.
+      const minimo = st.reparto.ok ? 0.5 : 0.7;
+      const conEtiquetas = mejor.true.s >= minimo || mejor.true.s >= mejor.false.s - 0.05;
+      return (conEtiquetas ? mejor.true : mejor.false).bloques;
     }
     return grupos.map((g) => ({ piezas: g.piezas, cols: 5 }));
   }
@@ -682,7 +705,7 @@ export function montarBalanza(contenedor, opciones = {}) {
     let out = '';
     for (const c of contornos) {
       if (c.contorno) {
-        out += `<rect class="balanza__contorno" x="${r1(c.x)}" y="${r1(c.y)}" width="${r1(c.w)}" height="${r1(c.h)}" rx="7"/>`;
+        out += `<rect class="balanza__contorno${c.alerta ? ' balanza__contorno--alerta' : ''}" x="${r1(c.x)}" y="${r1(c.y)}" width="${r1(c.w)}" height="${r1(c.h)}" rx="7"/>`;
       }
       if (c.etiqueta) out += etiquetaSVG(c.x + c.w / 2, c.y - 11, c.etiqueta, c.clase);
     }
@@ -741,7 +764,7 @@ export function montarBalanza(contenedor, opciones = {}) {
     raiz.classList.toggle('balanza--equilibrio', eq === true);
     raiz.classList.toggle('balanza--inclinada', eq === false);
     for (const lado of LADOS) {
-      const acomodo = acomodar(bloquesDe(lado), CX[lado]);
+      const acomodo = acomodar(bloquesDe(lado), CX[lado], { minUna: modo === 'repartir' ? 2 : 0.7 });
       sincronizar(platos[lado].piezas, acomodo.colocadas, animar);
       platos[lado].marcas.innerHTML = marcasDe(lado, acomodo);
     }
@@ -797,18 +820,20 @@ export function montarBalanza(contenedor, opciones = {}) {
     return html`
       <div class="balanza__ajuste" role="group" aria-labelledby="${uid}-ajuste ${uid}-valor">
         <span class="balanza__ajuste-nombre" id="${uid}-ajuste">${nombre}</span>
-        <button type="button" class="boton boton--secundario boton--icono balanza__paso" data-act="menos" data-foco="menos"
-          aria-label="${menos}"${attr('aria-disabled', minimo, 'true')}${attr('data-motivo', minimo, motivoMin)}>${MENOS}</button>
-        <output class="balanza__ajuste-valor math" id="${uid}-valor">${valor}</output>
-        <button type="button" class="boton boton--secundario boton--icono balanza__paso" data-act="mas" data-foco="mas"
-          aria-label="${mas}"${attr('aria-disabled', maximo, 'true')}${attr('data-motivo', maximo, motivoMax)}>+</button>
+        <span class="balanza__ajuste-control">
+          <button type="button" class="boton boton--secundario boton--icono balanza__paso" data-act="menos" data-foco="menos"
+            aria-label="${menos}"${attr('aria-disabled', minimo, 'true')}${attr('data-motivo', minimo, motivoMin)}>${MENOS}</button>
+          <output class="balanza__ajuste-valor math" id="${uid}-valor">${valor}</output>
+          <button type="button" class="boton boton--secundario boton--icono balanza__paso" data-act="mas" data-foco="mas"
+            aria-label="${mas}"${attr('aria-disabled', maximo, 'true')}${attr('data-motivo', maximo, motivoMax)}>+</button>
+        </span>
       </div>`;
   }
 
   function boton(act, texto, { primario = false, motivo = '', foco = act, sub = '' } = {}) {
     return html`<button type="button" class="boton ${primario ? 'boton--primario' : 'boton--secundario'} boton--bloque"
       data-act="${act}" data-foco="${foco}"${attr('aria-disabled', Boolean(motivo), 'true')}${attr('data-motivo', Boolean(motivo), motivo)}><span>${texto}</span>${sub
-        ? html`<span class="balanza__subetiqueta">${sub}</span>`
+        ? html` <span class="balanza__subetiqueta">${sub}</span>`
         : ''}</button>`;
   }
 
@@ -840,7 +865,7 @@ export function montarBalanza(contenedor, opciones = {}) {
         minimo: st.grupos <= rango.min,
         maximo: st.grupos >= rango.max,
         motivoMin: 'Necesitas al menos 1 grupo.',
-        motivoMax: `Con más de ${rango.max} grupos no alcanza bien. Prueba con menos.`,
+        motivoMax: `${rango.max} grupos es lo más que puedes hacer aquí.`,
       })}${boton('repartir', 'Repartir', { primario: true })}`;
     }
     if (modo === 'separar') {
@@ -905,8 +930,8 @@ export function montarBalanza(contenedor, opciones = {}) {
       const quedan = cuantas(st.lados[ladoX], 'pesa');
       const eq = ecuacionViva().texto;
       narrar(
-        `Quitaste 1 pesa de cada platillo y la balanza sigue en equilibrio: ${eq}. ` +
-          (quedan ? `Quedan ${contar(quedan, 'pesa suelta', 'pesas sueltas')} junto a las cajas.` : ''),
+        `Quitaste 1 pesa de cada platillo y la balanza sigue en equilibrio: ${eq}.` +
+          (quedan ? ` Quedan ${contar(quedan, 'pesa suelta', 'pesas sueltas')} junto a las cajas.` : ''),
       );
     },
     'quitar-uno'() {

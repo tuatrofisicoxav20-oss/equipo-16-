@@ -43,9 +43,10 @@ html:has(.app--estudiante) {
 
 .est-barra__fila {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--espacio-2, 0.5rem);
+  gap: var(--espacio-1, 0.25rem) var(--espacio-2, 0.5rem);
 }
 
 .est-barra__marca {
@@ -66,8 +67,6 @@ html:has(.app--estudiante) {
 }
 
 .est-barra__app {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -109,9 +108,20 @@ html:has(.app--estudiante) {
   color: var(--color-exito, #196c3f);
 }
 
+/* "Sincronizando 3 de 12…" en dos renglones cortos para no empujar la marca */
 .est-pendientes[data-estado='sincronizando'] {
+  max-width: 10rem;
+  padding-inline: 0.5rem 0.625rem;
   background: var(--color-info-suave, #e3edfa);
   color: var(--color-info, #1f5ea8);
+  font-size: 0.8125rem;
+  line-height: 1.15;
+  white-space: normal;
+}
+
+.est-pendientes[data-estado='sincronizando'] .icono {
+  width: 1rem;
+  height: 1rem;
 }
 
 @media (hover: hover) {
@@ -951,7 +961,14 @@ html.reducir-movimiento .est-girando {
 /* ------------------------------------------------------------------ */
 
 /* Muestra "Aa" arriba y el nombre abajo; la palomita del kit queda junto a la muestra */
+.est-segmentado-texto {
+  flex-wrap: nowrap;
+}
+
 .est-segmentado-texto button {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: var(--texto-chico, 0.875rem);
   display: grid;
   grid-template-columns: auto auto;
   grid-template-areas:

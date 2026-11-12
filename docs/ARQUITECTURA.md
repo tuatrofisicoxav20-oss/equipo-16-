@@ -164,6 +164,10 @@ montarBalanza(contenedor, {
 }) → { destruir(), reiniciar(), resolver() → Promise }   // resolver(): completa la meta paso a paso (modo pitch)
 ```
 
+`resumen` de `onCompletar`: `{ modo, ecuacion, final, acciones, intentos, ms, ... }`. Si la ecuación no sirve para
+el modo pedido, la balanza usa `comprobar`; si no sirve para ninguno, muestra `.balanza--aviso` (la vista ofrece
+"Seguir sin la balanza").
+
 Metas por modo: **quitar** = dejar solas las cajas (pesas fuera del platillo de las x);
 **repartir** = elegir el número de grupos igual al número de cajas; **separar** = juntar cajas con cajas y dejar
 las pesas aparte (intentar juntar caja con pesa da retroalimentación); **comprobar** = encontrar el valor de la caja
@@ -180,15 +184,22 @@ montarCuaderno(contenedor, {
   validarEnVivo: boolean,   // ✓/⚠ por renglón al agregarlo (práctica y libre)
   onRevisar(resultado),     // { analisis, renglones, pistasUsadas, pidioSolucion }
   onPista(nivel), onSolucion(),
+  nivelTitulo = 2,          // nivel del encabezado del componente
 }) → {
-  escribirRenglon(texto, { animado = true, msPorLetra = 60 }) → Promise   // para reproducir en el pitch
-  revisar() → resultado
+  escribirRenglon(texto, { animado = true, msPorLetra = 60 }) → Promise<boolean>   // true si se agregó; se encadenan solas
+  revisar() → resultado | null | Promise   // null: no hay renglones o la entrada no se entiende (explica qué falta)
   renglones() → string[]    // solo los del estudiante (sin el enunciado)
   enfocar(), destruir()
 }
+// Exporta también, para vistas de solo lectura (panel docente, fichas):
+formatearEcuacion(texto) → string        // como se ve en el cuaderno (signo −, espacios)
+leerEcuacion(texto) → string             // versión para lector de pantalla ("3 x más 5 igual a 20")
+htmlEcuacion(texto) → string             // HTML con la clase .math
 ```
 
-`analisis` es lo que devuelve `analizarProcedimiento([ejercicio, ...renglones])`.
+La raíz del componente es `.cuaderno-panel` (la hoja rayada `.cuaderno` va adentro). Lo que no se entiende
+no entra al cuaderno: se queda en la entrada con el mensaje del motor. `analisis` es lo que devuelve
+`analizarProcedimiento([ejercicio, ...renglones])`.
 
 ### `js/views/estudiante.js`
 

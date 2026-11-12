@@ -30,6 +30,7 @@
     .guia-nota { margin: 0; color: var(--color-texto-sec); font-size: var(--texto-chico); max-width: 60rem; }
     .guia-muestra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--espacio-3); padding: var(--espacio-4); border: var(--borde-fino) dashed var(--color-borde-suave); border-radius: var(--radio); background: var(--color-superficie); }
     .guia-muestra--pila { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+    .guia-muestra > * { margin: 0; }
     .guia-muestra--fondo { background: var(--color-fondo); }
     .guia-columna { max-width: 26rem; }
     .guia-colores { display: grid; gap: var(--espacio-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr)); }
@@ -489,7 +490,7 @@
           </div>
           <label class="fila"><input type="checkbox" checked> Recordarme en este celular</label>
         </div>
-        <div class="guia-tabla">
+        <div class="guia-tabla" tabindex="0" role="region" aria-label="Tabla de ejemplo (se desplaza a los lados)">
           <table>
             <caption>Grupo de ejemplo</caption>
             <thead><tr><th scope="col">Alumno</th><th scope="col">Error principal</th><th scope="col">Ruta</th><th scope="col">Estado</th></tr></thead>
@@ -556,7 +557,7 @@
       ['--color-primario-hover', 'claro'], ['--color-primario-suave', 'texto'], ['--color-acento', 'acento'],
       ['--color-acento-suave', 'texto'], ['--color-exito', 'claro'], ['--color-alerta', 'claro'],
       ['--color-error', 'claro'], ['--color-info', 'claro'], ['--color-borde', 'grafico'],
-      ['--color-borde-suave', 'texto'], ['--color-foco', 'claro'], ['--color-deshabilitado', 'deshabilitado'],
+      ['--color-borde-suave', 'grafico'], ['--color-foco', 'claro'], ['--color-deshabilitado', 'deshabilitado'],
       ['--color-papel', 'texto'], ['--color-aviso-fondo', 'claro'],
     ];
 
@@ -737,7 +738,7 @@
       const clases = [...raiz.classList].join(' ');
       const texto = raiz.getAttribute('data-texto');
       for (const marco of document.querySelectorAll('iframe[data-layout]')) {
-        marco.srcdoc = `<!doctype html><html lang="es-MX" class="${clases}"${texto ? ` data-texto="${texto}"` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="../styles.css"></head><body>${CUERPOS[marco.dataset.layout]}</body></html>`;
+        marco.srcdoc = `<!doctype html><html lang="es-MX" class="${clases}"${texto ? ` data-texto="${texto}"` : ''}><head><meta charset="utf-8"><title>Vista previa: ${marco.dataset.layout}</title><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="../styles.css"></head><body>${CUERPOS[marco.dataset.layout]}</body></html>`;
       }
     }
 

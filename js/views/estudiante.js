@@ -187,10 +187,11 @@ const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
 /** Ecuación con − tipográfico (igual que el cuaderno). */
 function formatear(texto) {
-  const base = String(texto ?? '')
-    .replace(/[−‐-―﹣]/g, '-')
-    .replace(/X/g, 'x');
-  return bonito(base).replace(/([=(+·/]) − /g, (_, op) => (op === '=' || op === '+' ? `${op} −` : `${op}−`));
+  return bonito(
+    String(texto ?? '')
+      .replace(/[−‐-―﹣]/g, '-')
+      .replace(/X/g, 'x'),
+  );
 }
 
 /** Versión hablada para lectores de pantalla ("25/3" se leería "25 barra 3"). */
@@ -208,8 +209,13 @@ function paraLector(texto) {
     .trim();
 }
 
+/** Si no cabe en una línea se parte antes de un "=", nunca a media expresión (como el cuaderno). */
 function matematica(texto) {
-  return html`<span class="math cuaderno__texto" aria-hidden="true">${formatear(texto)}</span><span class="solo-lector">${paraLector(texto)}</span>`;
+  const visible = formatear(texto)
+    .split(' = ')
+    .map((lado) => lado.replace(/ /g, '\u00a0'))
+    .join(' = ');
+  return html`<span class="math cuaderno__texto" aria-hidden="true">${visible}</span><span class="solo-lector">${paraLector(texto)}</span>`;
 }
 const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
 const idMensaje = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -594,7 +600,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       contestarDudasPendientes();
       sincronizar({ avisar: true });
     } else if (antes.enLinea && !nuevo.enLinea) {
-      aviso('Sin internet. Todo lo que hagas se guarda en tu cel.', { tipo: 'info' });
+      anunciar('Sin internet. Todo lo que hagas se guarda en tu cel.');
     }
     notificarPadre();
   }
@@ -822,9 +828,18 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       ultimaClave = claveFoco;
       ultimaPantalla = state.pantalla;
       if (!primerRender) {
-        if (cambioPantalla) window.scrollTo({ top: 0, behavior: 'auto' });
-        if (puedeEnfocar()) enfocarTitulo(contenido);
-        else if (!cambioPantalla) desplazarA(contenido.querySelector('[data-titulo]'));
+        const titulo = contenido.querySelector('[data-titulo]') || contenido.querySelector('h1, h2');
+        const desplazar = cambioPantalla ? 'arriba' : vista.desplazar || 'arriba';
+        if (desplazar === 'arriba') window.scrollTo({ top: 0, behavior: 'auto' });
+        else if (desplazar === 'titulo') desplazarA(titulo);
+        if (titulo && puedeEnfocar()) {
+          if (desplazar === 'nada') {
+            if (!titulo.hasAttribute('tabindex')) titulo.setAttribute('tabindex', '-1');
+            titulo.focus({ preventScroll: true });
+          } else {
+            enfocarTitulo(contenido);
+          }
+        }
       }
     }
     primerRender = false;
@@ -1215,20 +1230,21 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
   }
 
 
-  /** Marca de cada renglón revisado (mismos textos que el cuaderno). */
+  /** Marca de cada renglón revisado (mismos textos que el cuaderno; el kit dibuja ✓/✗ en el margen). */
   function marcaRenglon(r, analisis) {
     const errorEn = analisis.estado === 'error' ? analisis.error.renglon : null;
-    if (r.ok === false) return { estado: 'error', texto: `Tecu no entiende este renglón: ${r.error?.mensaje || ''}`, icono: 'pregunta' };
-    if (r.despuesDelError) return { estado: 'despues', texto: `Revisa antes el renglón ${errorEn}`, icono: null };
+    if (r.ok === false) return { estado: 'error', texto: `Tecu no entiende este renglón: ${r.error?.mensaje || ''}` };
+    if (r.despuesDelError) return { estado: 'despues', texto: `Revisa antes el renglón ${errorEn}` };
     if (r.valido === false) {
-      return { estado: 'error', texto: r.tipo === 'numerica' ? 'Los dos lados no valen lo mismo' : 'Aquí cambió la solución', icono: 'alerta' };
+      return { estado: 'error', texto: r.tipo === 'numerica' ? 'Los dos lados no valen lo mismo' : 'Aquí cambió la solución' };
     }
     if (r.valido === true) {
       const texto = { calculo: 'Cuenta correcta', aproximado: 'Conserva la solución (redondeada)' }[r.nota] || 'Conserva la solución';
-      return { estado: 'ok', texto, icono: 'check' };
+      return { estado: 'ok', texto };
     }
-    return { estado: 'neutro', texto: '', icono: null };
+    return { estado: 'neutro', texto: '' };
   }
+
 
   /**
    * Procedimiento ya revisado, de solo lectura, con el renglón del error señalado.
@@ -1240,9 +1256,9 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       nivel === 2
         ? html`<h2 class="cuaderno__titulo titulo-3" id="est-proc-titulo">Tu procedimiento</h2>`
         : html`<h3 class="cuaderno__titulo titulo-3" id="est-proc-titulo">Tu procedimiento</h3>`;
-    return html`<section class="cuaderno est-proc" data-modo="lectura" aria-labelledby="est-proc-titulo">
+    return html`<section class="cuaderno-panel est-proc" data-modo="lectura" aria-labelledby="est-proc-titulo">
       ${titulo}
-      <div class="cuaderno__hoja">
+      <div class="cuaderno">
         <div class="cuaderno__enunciado">
           <p class="cuaderno__enunciado-texto">
             <span class="cuaderno__etiqueta">Ecuación<span class="solo-lector"> (renglón 1):</span></span>
@@ -1259,12 +1275,8 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
             return html`<li class="cuaderno__renglon" data-estado="${marca.estado}">
               <div class="cuaderno__fila">
                 <span class="cuaderno__num" aria-hidden="true">${n}</span>
-                <div class="cuaderno__contenido">
-                  <span class="solo-lector">Renglón ${n}: </span>${matematica(r.texto)}
-                  ${marca.texto
-                    ? html`<span class="cuaderno__estado">${marca.icono ? ico(marca.icono) : ''}<span>${marca.texto}</span></span>`
-                    : ''}
-                </div>
+                <div class="cuaderno__contenido"><span class="solo-lector">Renglón ${n}: </span>${matematica(r.texto)}</div>
+                ${marca.texto ? html`<span class="cuaderno__estado">${marca.texto}</span>` : ''}
               </div>
             </li>`;
           })}
@@ -1296,6 +1308,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       const ultimo = n >= totalDiag;
       return {
         clave: `revisado:${i}`,
+        desplazar: 'titulo',
         html: html`<div class="pantalla pila est-diag">
           ${encabezado}
           ${vistaProcedimiento(analisis, 2)}
@@ -1435,9 +1448,14 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         'Revisé tus ejercicios y encontré dónde cambió la solución, pero no reconocí el error. ' +
         'Se lo marqué a tu maestra o maestro para que lo revisen juntos. Mientras, te preparé una ruta general.';
     } else {
-      mensaje = `Resolviste ${resumen.correctos} de ${resumen.total} sin errores. Ya sé en qué te puedo ayudar: ${
-        tipos.length === 1 && resumen.conteo[tipos[0]] > 1 ? 'el error se repite, así que vamos directo a él.' : 'empecemos por lo que más se repitió.'
-      }`;
+      const inicio = resumen.correctos
+        ? `Resolviste bien ${resumen.correctos} de ${resumen.total}.`
+        : `¡Gracias por resolver los ${resumen.total}!`;
+      const foco =
+        tipos.length === 1 && resumen.conteo[tipos[0]] > 1
+          ? 'el mismo error se repite, así que vamos directo a él.'
+          : 'empecemos por lo que más se repitió.';
+      mensaje = `${inicio} Ya sé en qué te puedo ayudar: ${foco}`;
     }
 
     const ejercicios = diag().items.map((it, k) => {
@@ -1536,6 +1554,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     const enComprobacion = r.actividad === 'comprobacion';
     return {
       clave: `${viendo}:${cuerpo.clave}`,
+      desplazar: cuerpo.desplazar,
       montaje: cuerpo.montaje,
       despues: cuerpo.despues,
       html: html`<div class="pantalla pila est-ruta" data-tono="${info.tono}" data-actividad="${viendo}">
@@ -1634,6 +1653,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     const cierre = state.balanzaConCierre ? 'La balanza quedó en equilibrio.' : v.cierre;
     return {
       clave: completa ? 'completa' : 'activa',
+      desplazar: completa ? 'nada' : 'arriba',
       html: html`
         ${sobretitulo(r, 'visual')}
         <h2 class="titulo-2" id="est-act-titulo" ${attr('data-titulo', !completa)}>${ACTIVIDAD.visual.nombre}</h2>
@@ -1689,7 +1709,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     return m;
   }
 
-  function completarVisual(m, resumen, { automatico = false } = {}) {
+  function completarVisual(m, resumen) {
     const r = prog.ruta;
     if (!r) return;
     const v = m?.visual || infoRuta(r.tipo).visual;
@@ -1706,7 +1726,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       tipo: 'visual',
       ruta: r.tipo,
       aprobado: true,
-      datos: { modo: v?.modo, ecuacion: v?.ecuacion, resumen: copiaPlana(resumen), automatico, omitida: Boolean(m?.fallo) },
+      datos: { modo: v?.modo, ecuacion: v?.ecuacion, resumen: copiaPlana(resumen), omitida: Boolean(m?.fallo) },
     });
     guardar();
     render();
@@ -1727,6 +1747,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     const titulo = extra ? `Práctica extra · Nivel ${ej.nivel}` : `Práctica ${p.indice + 1} de 3 · Nivel ${ej.nivel}`;
     return {
       clave: `${p.indice}:${correcto ? 'bien' : 'escribiendo'}`,
+      desplazar: correcto ? 'nada' : 'arriba',
       html: html`
         ${sobretitulo(r, 'practica')}
         <h2 class="titulo-2" id="est-act-titulo" data-titulo>${titulo}</h2>
@@ -1826,7 +1847,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
     } else {
       r.actividad = 'comprobacion';
       r.comprobacion.fallo = null;
-      aviso(pack.tecu.dormido, { tipo: 'info' });
+      anunciar(pack.tecu.dormido);
     }
     guardar();
     render();
@@ -1841,6 +1862,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
       const analisis = analisisDe(c.ecuacion, c.fallo.renglones);
       return {
         clave: `fallo:${c.intentos}`,
+        desplazar: 'titulo',
         html: html`
           ${sobretitulo(r, 'comprobacion')}
           <h2 class="titulo-2" id="est-act-titulo">${ACTIVIDAD.comprobacion.nombre}</h2>
@@ -2068,7 +2090,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         <h1 class="titulo-1" data-titulo>Descargas</h1>
         <p class="texto-sec">Lo que está guardado en tu cel para aprender sin internet.</p>
         <article class="tarjeta pila est-paquete" aria-labelledby="est-paquete-titulo">
-          <h2 class="titulo-3" id="est-paquete-titulo">Ecuaciones lineales · ${pack.grado}</h2>
+          <h2 class="titulo-3" id="est-paquete-titulo">Ecuaciones lineales\u00a0· ${pack.grado}</h2>
           <dl class="est-datos">
             <div><dt>Peso</dt><dd class="est-peso">${pesoPaquete()}</dd></div>
             <div><dt>Estado</dt><dd class="est-guardado">${ico('check')}<span>Guardado en tu cel</span></dd></div>
@@ -2466,7 +2488,7 @@ export async function montarEstudiante(raiz, { alumno = 'invitado', nombre, embe
         await pausa(60);
       }
       if (!vivo()) return;
-      if (!r.visual.completa) completarVisual(m?.tipo === 'balanza' ? m : null, null, { automatico: true });
+      if (!r.visual.completa) completarVisual(m?.tipo === 'balanza' ? m : null, null);
       await pausa(t.lectura);
       if (!vivo()) return;
       siguienteActividad();

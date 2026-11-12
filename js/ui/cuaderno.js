@@ -79,16 +79,23 @@ function paraLector(texto) {
 }
 
 /**
- * Ecuación para la vista: si no cabe en una línea se parte antes de un "=",
- * nunca a media expresión ("5x + 2" / "= 2x + 14"). Al lector va la versión hablada.
+ * Ecuación para la vista. Cada lado es un bloque: si no cabe en una línea se
+ * parte antes de un "=" ("5x + 2" / "= 2x + 14"), luego entre términos y nunca a
+ * mitad de un número. Al lector de pantalla va la versión hablada.
  */
 function htmlMath(texto) {
-  const visible = formatear(texto)
+  const lados = formatear(texto)
     .split(' = ')
-    .map((lado) => lado.replace(/ /g, ' '))
-    .join(' = ');
-  return html`<span class="math cuaderno__texto" aria-hidden="true">${visible}</span><span class="solo-lector">${paraLector(texto)}</span>`;
+    .map((lado, i) => html`<span class="cuaderno__lado">${i ? `= ${lado}` : lado}</span>`);
+  return html`<span class="math cuaderno__texto" aria-hidden="true">${lados.map((l, i) => (i ? html` ${l}` : l))}</span><span class="solo-lector">${paraLector(texto)}</span>`;
 }
+
+/**
+ * Para vistas de solo lectura que quieran verse igual que el cuaderno:
+ * formatearEcuacion('x=-4') → 'x = −4'; leerEcuacion('x = 25/3') → 'equis igual a 25 entre 3';
+ * htmlEcuacion(texto) → HTML seguro (lados que se parten antes del "=" + versión hablada).
+ */
+export { formatear as formatearEcuacion, paraLector as leerEcuacion, htmlMath as htmlEcuacion };
 
 const minuscula = (s) => (s ? s[0].toLowerCase() + s.slice(1) : s);
 
@@ -226,7 +233,7 @@ export function montarCuaderno(contenedor, opciones = {}) {
   raiz.dataset.modo = modo;
   raiz.setAttribute('aria-labelledby', ids.titulo);
   raiz.innerHTML = String(html`
-    <h${nivel} class="cuaderno__titulo titulo-3" id="${ids.titulo}">Tu procedimiento</h${nivel}>
+    <h${nivel} class="cuaderno__titulo titulo-3" id="${ids.titulo}">Tu procedimiento<span class="solo-lector"> para ${paraLector(ejercicio)}</span></h${nivel}>
     <p class="cuaderno__instruccion texto-sec" id="${ids.instruccion}">Escribe un paso por renglón, como en tu cuaderno.<span class="cuaderno__atajos"> Enter agrega el renglón; ${teclaMod} + Enter revisa.</span></p>
     <div class="cuaderno">
       <div class="cuaderno__enunciado">

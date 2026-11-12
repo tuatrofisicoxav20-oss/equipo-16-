@@ -224,9 +224,11 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
-  /* Que la barra superior y la inferior no tapen lo enfocado (WCAG 2.4.11) */
-  scroll-padding-top: calc(var(--alto-barra) + var(--espacio-3));
-  scroll-padding-bottom: calc(var(--alto-nav) + var(--espacio-4));
+  /* Que las barras fijas no tapen lo enfocado (WCAG 2.4.11). Si el shell mide las barras
+     y llena --alto-barra-medida / --alto-nav-medida (en px), se usa la medida exacta;
+     si no, se reserva lo de una barra de dos renglones. */
+  scroll-padding-top: calc(var(--alto-barra-medida, calc(2 * var(--alto-barra))) + var(--espacio-3));
+  scroll-padding-bottom: calc(var(--alto-nav-medida, var(--alto-nav)) + var(--espacio-4));
 }
 
 body {
@@ -253,6 +255,13 @@ video {
 
 svg {
   flex-shrink: 0;
+}
+
+/* Iconos de js/ui/iconos.js: el tamaño viene en --icono (24 px de diseño = 1.5em) */
+.icono {
+  width: var(--icono, 1.5em);
+  height: var(--icono, 1.5em);
+  vertical-align: middle;
 }
 
 button,
@@ -678,6 +687,38 @@ html.alto-contraste .app--pitch {
   background: #ffffff;
 }
 
+/* Con poca altura (celular acostado, zoom de 400 %) las barras dejan de ser fijas
+   para no tapar media pantalla (WCAG 1.4.10). En el panel docente angosto, igual. */
+@media (max-height: 28rem) {
+  html {
+    scroll-padding-top: 0;
+    scroll-padding-bottom: 0;
+  }
+
+  .barra-superior,
+  .nav-inferior {
+    position: static;
+  }
+}
+
+@media (max-width: 40rem) {
+  .app--docente .barra-superior {
+    position: static;
+  }
+}
+
+/* Con letra grande en pantallas de menos de 720 px de alto, la barra superior crece
+   y taparía mucho: se queda arriba del contenido (la barra inferior sigue fija). */
+@media (max-height: 45rem) {
+  html[data-texto] .barra-superior {
+    position: static;
+  }
+
+  html[data-texto] {
+    scroll-padding-top: 0;
+  }
+}
+
 /* Mensaje de carga del shell */
 .cargando {
   display: flex;
@@ -793,6 +834,12 @@ html.alto-contraste .app--pitch {
 
 .boton:active {
   transform: translateY(1px) scale(0.98);
+}
+
+html.alto-contraste .boton--fantasma {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
 }
 
 .boton[aria-pressed='true'] {
@@ -975,7 +1022,7 @@ html.alto-contraste .insignia {
 
 .segmentado button {
   display: inline-flex;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
@@ -1111,7 +1158,7 @@ html.alto-contraste .insignia {
 .interruptor:is(:disabled, [aria-disabled='true'])::before {
   border-style: dashed;
   border-color: var(--color-borde);
-  background-color: var(--color-deshabilitado);
+  background: var(--color-deshabilitado);
 }
 
 .interruptor:is(:disabled, [aria-disabled='true'])::after {
@@ -1393,14 +1440,13 @@ html.alto-contraste .burbuja--tecu {
 .cuaderno {
   --renglon: 2.75rem;
   --margen: 2.5rem;
+  --linea-margen: linear-gradient(90deg, transparent calc(var(--margen) - 3px), var(--color-margen) calc(var(--margen) - 3px),
+      var(--color-margen) calc(var(--margen) - 1px), transparent calc(var(--margen) - 1px));
   position: relative;
   padding: var(--espacio-1) 0 var(--espacio-3);
   border: var(--borde-fino) solid var(--color-borde-suave);
   border-radius: var(--radio-grande);
-  background-color: var(--color-papel);
-  /* línea de margen */
-  background-image: linear-gradient(90deg, transparent calc(var(--margen) - 3px), var(--color-margen) calc(var(--margen) - 3px),
-      var(--color-margen) calc(var(--margen) - 1px), transparent calc(var(--margen) - 1px));
+  background: var(--linea-margen), var(--color-papel);
   box-shadow: var(--sombra);
   font-family: var(--fuente-math);
   font-variant-numeric: tabular-nums;
@@ -1463,7 +1509,7 @@ html.alto-contraste .burbuja--tecu {
 .cuaderno__renglon[data-estado='error'] {
   --marca: var(--i-x);
   --marca-color: var(--color-error);
-  background: var(--color-error-suave);
+  background: var(--linea-margen), var(--color-error-suave);
 }
 
 .cuaderno__renglon:is([data-estado='ok'], [data-estado='error'])::before {
@@ -1531,6 +1577,13 @@ html.alto-contraste .burbuja--tecu {
   margin: var(--espacio-3) var(--espacio-3) 0 calc(var(--margen) + var(--espacio-2));
 }
 
+:is(input, textarea).cuaderno__entrada::placeholder,
+.cuaderno__entrada :is(input, textarea)::placeholder {
+  font-family: var(--fuente);
+  font-size: var(--texto-base);
+  font-weight: 600;
+}
+
 :is(input, textarea).cuaderno__entrada:focus-visible,
 .cuaderno__entrada :is(input, textarea):focus-visible {
   border-color: var(--color-primario);
@@ -1538,18 +1591,16 @@ html.alto-contraste .burbuja--tecu {
 
 /* Teclas rápidas ----------------------------------------------------------- */
 .teclas-rapidas {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--objetivo), 1fr));
   gap: var(--espacio-2);
 }
 
 .tecla {
   display: inline-flex;
-  flex: 1 0 2.75rem;
   align-items: center;
   justify-content: center;
   min-width: var(--objetivo);
-  max-width: 4.5rem;
   min-height: 3rem;
   padding: 0.25rem 0.5rem;
   border: var(--borde-control) solid var(--color-borde);
@@ -1727,7 +1778,7 @@ html.alto-contraste .dialogo::backdrop {
 
 /* Avisos (toasts) ---------------------------------------------------------- */
 :root:has(.nav-inferior) {
-  --avisos-abajo: calc(var(--alto-nav) + var(--espacio-3));
+  --avisos-abajo: calc(var(--alto-nav-medida, var(--alto-nav)) + var(--espacio-3));
 }
 
 .avisos {

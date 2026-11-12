@@ -677,7 +677,19 @@ function opSegura(x, op, y) {
   }
 }
 
-/** Paso de división (o multiplicación) final, correcto y con sus errores típicos. */
+/** Número dentro de una cuenta: los negativos y las fracciones van entre paréntesis («8 ÷ (−2)», «4 ÷ (2/3)»). */
+function fmtOperando(fr, { primero = false } = {}) {
+  if (!fr.isInt() || (fr.isNeg() && !primero)) return `(${fmtNum(fr)})`;
+  return fmtNum(fr);
+}
+
+/**
+ * Paso de división (o multiplicación) final, correcto y con sus errores típicos.
+ * Los candidatos con error salen marcados `final`: describen el último paso
+ * ("dividiste solo los números", "restaste el 3") y no sirven para explicar un
+ * despeje que el estudiante terminó de otra forma (nivel 2 de clasificar).
+ * Heredan `fantasma` del renglón del que salen (ver candidatos()).
+ */
 function divisiones(base) {
   const d = formaDespejable(base.eq);
   if (!d) return [];
@@ -685,12 +697,18 @@ function divisiones(base) {
   if (a.eq(1)) return [];
   const correcto = b.div(a);
   const ops = base.ops + 1;
+  const fantasma = Boolean(base.fantasma);
   const out = [
     {
       eq: xIgual(correcto, ladoX),
       mal: base.mal,
       ops,
-      cuenta: Math.abs(a.n) === 1 && !a.isInt() ? `${fmtNum(b)} · ${fmtNum(new Fr(a.d * Math.sign(a.n)))}` : `${fmtNum(b)} ÷ ${fmtNum(a)}`,
+      fantasma,
+      final: false,
+      cuenta:
+        Math.abs(a.n) === 1 && !a.isInt()
+          ? `${fmtOperando(b, { primero: true })} · ${fmtOperando(new Fr(a.d * Math.sign(a.n)))}`
+          : `${fmtOperando(b, { primero: true })} ÷ ${fmtOperando(a)}`,
     },
   ];
   if (base.mal) return out;
@@ -713,15 +731,21 @@ function divisiones(base) {
     variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'resta', opSegura(b, 'sub', a)]);
     variantes.push([TIPOS.INVERSA_EQUIVOCADA, 'suma', opSegura(b, 'add', a)]);
   }
-  if (a.isNeg() || b.isNeg()) variantes.push([TIPOS.SIGNO_NEGATIVO, 'pierde_signo', correcto.neg()]);
+  const conNegativos = a.isNeg() || b.isNeg();
+  if (conNegativos) variantes.push([TIPOS.SIGNO_NEGATIVO, 'pierde_signo', correcto.neg()]);
   variantes.push([TIPOS.UN_SOLO_LADO, 'divide_solo_x', b]);
 
   for (const [tipo, variante, valor] of variantes) {
     if (!valor || valor.eq(correcto)) continue;
+    // −2x = −4 → x = −2: con negativos, "el resultado con el signo cambiado" es perder el
+    // signo (SIGNO_NEGATIVO), no "restaste el −2" (b − a coincide con −b/a por casualidad).
+    if (tipo === TIPOS.INVERSA_EQUIVOCADA && conNegativos && valor.eq(correcto.neg())) continue;
     out.push({
       eq: xIgual(valor, ladoX),
       mal: { tipo, detalle: { variante, ...comun, escrito: fmtNum(valor) } },
       ops,
+      fantasma,
+      final: true,
     });
   }
   // Divide (o multiplica) solo el lado de los números: 3x = 15 -> 3x = 5
@@ -733,6 +757,8 @@ function divisiones(base) {
       eq: ladoX === 'L' ? { L: X, R: N } : { L: N, R: X },
       mal: { tipo: TIPOS.UN_SOLO_LADO, detalle: { variante: 'divide_solo_numero', ...comun, escrito: fmtNum(correcto) } },
       ops,
+      fantasma,
+      final: true,
     });
   }
   // Quita el signo del coeficiente sin dividir: −2x = 8 -> 2x = 8
@@ -743,6 +769,8 @@ function divisiones(base) {
       eq: ladoX === 'L' ? { L: X, R: N } : { L: N, R: X },
       mal: { tipo: TIPOS.SIGNO_NEGATIVO, detalle: { variante: 'quita_signo_coef', ...comun, escrito: fmtCoefX(a.neg()) } },
       ops,
+      fantasma,
+      final: true,
     });
   }
   return out;
@@ -777,22 +805,33 @@ function sinDesborde(fn, siFalla = null) {
   }
 }
 
+const tieneX = (terms) => terms.some((t) => t.x && !t.c.isZero());
+
 /**
  * Todos los renglones que un estudiante podría escribir a partir de `eq`
  * siguiendo la estrategia escolar (pasar términos, reducir, dividir), con a lo
  * más un error típico en el camino. Cada candidato trae su error (o null).
  * Las variantes cuya aritmética no cabe en enteros seguros se omiten.
- * @returns {{eq: object, mal: {tipo: string, detalle: object}|null, ops: number, cuenta?: string}[]}
+ *
+ * `fantasma`: el renglón sale de pasar términos hacia el lado donde no había
+ * ninguna x (3x = 15 → −15 = −3x, x + 4 = 10 → 4 − 10 = x). Es un camino
+ * legítimo (5 + 20 = −3x), pero sus reglas de error citan términos que el
+ * estudiante no movió y coeficientes que no existen ("el −3 que multiplica a la
+ * x"); clasificar() solo lo acepta si el estudiante escribió el renglón tal cual.
+ * `final`: error del último paso (dividir); ver divisiones().
+ * @returns {{eq: object, mal: {tipo: string, detalle: object}|null, ops: number, fantasma: boolean, final: boolean, cuenta?: string}[]}
  */
 export function candidatos(eq) {
   const out = [];
   const inicios = [{ eq, mal: null, ops: 0 }, ...sinDesborde(() => fusiones(eq), []).map((f) => ({ ...f, ops: 1 }))];
   for (const ini of inicios) {
     for (const ladoX of ['L', 'R']) {
+      const haciaVacio = !tieneX(ini.eq[ladoX]) && tieneX(ini.eq[otroLado(ladoX)]);
       const W = fueraDeLugar(ini.eq, ladoX);
       for (const mask of mascaras(W.length)) {
         if (mask === 0 && ladoX === 'R') continue; // ya se generó con ladoX = L
         const T = W.filter((_, k) => mask & (1 << k));
+        const fantasma = haciaVacio && T.length > 0;
         const variantes = [{ ops: T.map((w) => ({ ...w, modo: 'correcto' })), mal: ini.mal }];
         if (!ini.mal) {
           T.forEach((w, k) => {
@@ -817,12 +856,12 @@ export function candidatos(eq) {
           try {
             const Q = transponer(ini.eq, v.ops);
             if (!Q) continue;
-            const base = { eq: Q, mal: v.mal, ops: ini.ops + T.length };
+            const base = { eq: Q, mal: v.mal, ops: ini.ops + T.length, fantasma, final: false };
             out.push(base, ...divisiones(base));
             if (!base.mal) {
               // Después de pasar términos, solo tiene sentido juntar del lado de las x.
               for (const f of fusiones(Q, [ladoX])) {
-                const fb = { eq: f.eq, mal: f.mal, ops: base.ops + 1 };
+                const fb = { eq: f.eq, mal: f.mal, ops: base.ops + 1, fantasma, final: false };
                 out.push(fb, ...divisiones(fb));
               }
             }
@@ -851,6 +890,11 @@ function coinciden(v1, v2) {
   if (directo) return true;
   const cruz = [v2[2], v2[3], v2[0], v2[1]];
   return v1.every((x, i) => x.eq(cruz[i]));
+}
+
+/** ¿El renglón del estudiante (vector vS) es el candidato? Uno fantasma solo vale escrito tal cual, sin voltear. */
+function esElCandidato(vS, c) {
+  return c.fantasma ? vS.every((x, i) => x.eq(c.vector[i])) : coinciden(vS, c.vector);
 }
 
 /**
@@ -896,7 +940,8 @@ function cuentaDe(cand, componente) {
 function buscarAritmetica(vS, correctos) {
   for (const cand of correctos) {
     const vC = cand.vector;
-    for (const orden of [vC, [vC[2], vC[3], vC[0], vC[1]]]) {
+    // Un candidato fantasma (−15 = −3x) no se compara volteado: citaría números que el estudiante no escribió.
+    for (const orden of cand.fantasma ? [vC] : [vC, [vC[2], vC[3], vC[0], vC[1]]]) {
       const difs = [];
       for (let i = 0; i < 4; i++) if (!orden[i].eq(vS[i])) difs.push(i);
       if (difs.length !== 1) continue;
@@ -905,6 +950,10 @@ function buscarAritmetica(vS, correctos) {
       // índice real dentro del candidato (por si estaba volteado)
       const iCand = orden === vC ? i : (i + 2) % 4;
       const cuenta = cuentaDe(cand, iCand);
+      // 3x + 5 = 20 → 3x + 5 = 25: sin ninguna cuenta a la vista, un cambio igual al término del
+      // otro lado (el 5) es pasarlo sin quitarlo, no un error al copiar.
+      const otro = vS[(i + 2) % 4];
+      if (!cuenta && !otro.isZero() && orden[i].sub(vS[i]).abs().eq(otro.abs())) continue;
       return {
         tipo: TIPOS.ARITMETICA,
         detalle: {
@@ -925,14 +974,19 @@ function buscarAritmetica(vS, correctos) {
   return null;
 }
 
+/**
+ * El candidato que mejor explica el renglón: menos pasos y, a igualdad, el de mayor prioridad.
+ * `empate`: otra regla de OTRO tipo lo explica con los mismos pasos (la prioridad decidió, no la evidencia).
+ */
 function elegir(lista) {
   const orden = [...lista].sort(
     (p, q) => p.ops - q.ops || PRIORIDAD.indexOf(p.mal.tipo) - PRIORIDAD.indexOf(q.mal.tipo),
   );
   const mejor = orden[0];
   const alternativas = [...new Set(orden.map((c) => c.mal.tipo))].filter((t) => t !== mejor.mal.tipo);
+  const empate = orden.some((c) => c.ops === mejor.ops && c.mal.tipo !== mejor.mal.tipo);
   // Copia: los candidatos viven en la memoria de clasificar() y no se deben poder modificar desde fuera.
-  return { tipo: mejor.mal.tipo, detalle: { ...mejor.mal.detalle }, ops: mejor.ops, alternativas };
+  return { tipo: mejor.mal.tipo, detalle: { ...mejor.mal.detalle }, ops: mejor.ops, alternativas, empate };
 }
 
 /**
@@ -962,7 +1016,9 @@ function candidatosClasificables(previa) {
     (c.mal ? conError : correctos).push(c);
   }
   correctos.sort((p, q) => p.ops - q.ops);
-  memo = { conError, correctos };
+  // Para los despejes ("x = 5") se usan solo los caminos no fantasma (ver candidatos()).
+  const sinFantasma = (lista) => lista.filter((c) => !c.fantasma);
+  memo = { conError, correctos, conErrorDespeje: sinFantasma(conError), correctosDespeje: sinFantasma(correctos) };
   if (conError.length + correctos.length <= MEMO_CANDIDATOS_POR_ENTRADA) {
     if (memoCandidatos.size >= MEMO_CANDIDATOS_MAX) memoCandidatos.delete(memoCandidatos.keys().next().value);
     memoCandidatos.set(llave, memo);
