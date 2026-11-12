@@ -1,203 +1,528 @@
+<div align="center">
+
 # EstudiandoAndo
 
-Un tutor que guía con preguntas en lugar de dar la respuesta, sigue funcionando cuando se va el internet y le muestra al docente en qué se atora cada estudiante.
+### Aprende a tu ritmo. Comprende de distintas maneras. Avanza con tu docente.
 
-**Reto 5 · Aprender a la jarocha** · Hackathon Veracruz Tech Week 2026 (11 y 12 de noviembre, Instituto Tecnológico de Veracruz) · Equipo 16, **Parfaite**
+**Reto 5: Aprender a la jarocha · Veracruz Tech Week Hackathon 2026**  
+**Equipo 16 — Parfaite**
 
-> **Estado: prototipo de demostración.** Corre completo en el navegador, en un solo archivo y sin conexión. Todavía no tiene un modelo de IA conectado: el tutor responde con reglas programadas y los datos del grupo son de ejemplo. En [Solución](#solución) decimos qué funciona de verdad y qué está simulado.
+[🌐 Abrir demostración](https://estudiandoandohackathon.vercel.app/#/inicio) · [💻 Ver repositorio](https://github.com/tuatrofisicoxav20-oss/estudiando_ando) · [📖 Cómo usarlo](#cómo-se-usa) · [🛠️ Instalación](#instalación-y-ejecución)
 
-## Ficha de entrega
+**Prototipo funcional · HTML, CSS y JavaScript · Sin dependencias de instalación · Datos de demostración**
 
-| Campo | Contenido |
+</div>
+
+> [!IMPORTANT]
+> **Estado del proyecto: prototipo desarrollado para un hackathon, no producto escolar en producción.** Para priorizar una demostración integral dentro del tiempo disponible, construimos una aplicación web autónoma en **HTML5, CSS3 y JavaScript**, contenida principalmente en un único archivo. Las interfaces, ejercicios, catálogo, navegación y persistencia local son funcionales. **No hay un modelo de IA generativa conectado, cuentas institucionales, backend ni sincronización real entre dispositivos.** Al final documentamos la arquitectura profesional propuesta para implementar esas capacidades.
+
+## Vista general
+
+EstudiandoAndo es una propuesta de plataforma educativa **web y móvil**, diseñada para que el estudiante **aprenda en lugar de limitarse a copiar respuestas** y para que el docente **identifique dificultades de aprendizaje antes de que se conviertan en rezago**.
+
+Nuestra solución une tres ideas: **aprendizaje adaptativo**, **acompañamiento pedagógico** y **seguimiento docente**, con una experiencia pensada para contextos de **conectividad limitada**, como diversas comunidades de Veracruz.
+
+**Nuestra premisa:** *la tecnología debe ayudar a razonar al estudiante y ofrecer información útil al docente; no sustituir el esfuerzo de uno ni el criterio profesional del otro.*
+
+### Vistas de la demostración
+
+| Biblioteca de aprendizaje | Seguimiento docente |
 |---|---|
-| **Proyecto** | EstudiandoAndo |
-| **Equipo** | Equipo 16 - Parfaite : `Sergio Eduardo Mendoza Da Silveira`, `Ares Juddá Rivera Soto`,`Jose emiliano gutierrez grajales` , `Joab Emanuel Martínez Celayos`,  `Leonardo Alfredo Alejandre Sánchez` |
-| **Repositorio** | `https://github.com/tuatrofisicoxav20-oss/estudiando_ando` |
-| **Demo** | `https://estudiandoandohackathon.vercel.app/#/inicio`
-| **Problema** | Estudiantes de Veracruz con poco tiempo y conexión intermitente resuelven la tarea pegándola en un chatbot: entregan, pero no aprenden. Su docente, con unos 120 alumnos, se entera cuando ya reprobaron. |
-| **Persona usuaria** | Alejandro, 15 años, recién entró a la prepa en una localidad rural; ayuda a su papá en la parcela y estudia en ratos cortos, con apagones y mala señal. Y Juan, su maestro, con cuatro grupos de unos 30 alumnos. |
-| **Solución** | Una app web para celular. El estudiante hace un diagnóstico corto, recibe una ruta según lo que le falta, practica con un tutor que solo da preguntas y pistas, y demuestra lo aprendido sin ayuda. El docente ve el avance del grupo por habilidad y recibe alertas que él revisa. El contenido va dentro de la app, así que funciona sin conexión. |
-| **Impacto esperado** | Que el estudiante resuelva por su cuenta lo que antes copiaba y que el docente detecte las dificultades antes del examen. Todavía no hay piloto; proponemos medirlo con un diagnóstico al inicio y una comprobación sin ayuda al final. |
+| [![Catálogo de materias en EstudiandoAndo](docs/capturas/catalogo.png)](docs/capturas/catalogo.png) | [![Panel del docente en EstudiandoAndo](docs/capturas/docente.png)](docs/capturas/docente.png) |
 
-## Problema
+Las capturas corresponden a la **versión HTML del prototipo**, con información académica ficticia. Puedes cambiar los modos **claro, oscuro y alto contraste** desde «Accesibilidad».
 
-Alejandro tiene 15 años y acaba de entrar a la prepa. Ayuda a su papá en la parcela, y en su localidad se va la luz y se cae la señal, así que estudia en ratos cortos. Para alcanzar a entregar, le pega el problema a un chatbot, copia la respuesta y la tarea queda lista. En el examen, cuando está solo, no sabe por dónde empezar.
+### Contenido incluido en la demostración
 
-Alejandro no es un caso aislado:
+| Recurso | Cantidad / alcance |
+|---|---|
+| Materias | **8** |
+| Cursos | **12** |
+| Lecciones | **24** |
+| Preguntas del catálogo | **72** — tres por lección |
+| Formas de abordar cada lección | **5**: dibujos, ejemplos, otra explicación, paso a paso y práctica con apoyo |
+| Perfiles de uso | **Estudiante** y **Docente** |
+| Presentación | Web adaptable y simulador de vista móvil/escritorio |
+| Accesibilidad configurable | Tema claro, oscuro, alto contraste, tamaño de texto, movimiento reducido y lectura en voz alta cuando el navegador la admite |
 
-- **Los estudiantes no están entendiendo.** En PISA 2025, solo 30 % de los estudiantes mexicanos de 15 años alcanzó el nivel básico (nivel 2) en matemáticas. El promedio de la OCDE es 65 % (OCDE, 2026).
-- **Ya estudian con IA.** 47 % usa chatbots para aprender al menos una vez por semana, 35 % para redactar borradores de trabajos y 34 % para resumir lo que tenía que leer (OCDE, 2026).
-- **Usada como atajo, la IA perjudica.** En un experimento con cerca de mil estudiantes de bachillerato en Turquía, quienes practicaron con un chatbot sin salvaguardas sacaron 17 % menos en el examen sin ayuda que quienes nunca lo usaron. Con un tutor diseñado para dar pistas en vez de respuestas, ese efecto se mitigó en gran parte (Bastani et al., 2025).
-- **En Veracruz la conexión falla.** 68.3 % de los hogares tiene internet, contra 78.3 % nacional; es el tercer estado más bajo (INEGI, 2026b). En las escuelas es peor: 25.4 % de los planteles de educación básica tiene conexión, contra 46.9 % nacional (Gobierno del Estado de Veracruz, 2025).
-- **Muchos trabajan desde chicos.** En Veracruz, 292 mil niñas, niños y adolescentes de 5 a 17 años realizan trabajo infantil. Es el tercer estado con más casos (INEGI, 2026a).
-- **El docente se entera tarde.** En secundaria hay 31 alumnos por docente, la relación más alta de la OCDE (Toribio, 2026). Y aun viéndolos a diario cuesta detectarlo: en un estudio con 429 estudiantes de medicina, a la sexta semana sus tutores habían identificado solo entre una cuarta y una tercera parte de quienes después reprobaron o abandonaron (O'Neill et al., 2016). Ese estudio es de universidad y de otro país, así que lo tomamos como indicio y no como medida de lo que pasa en Veracruz.
+> El catálogo es **contenido educativo de ejemplo**, creado para demostrar distintas asignaturas y niveles. **No es un catálogo oficial de la SEP ni está conectado actualmente con planes de estudio de escuelas.** Las puntuaciones del prototipo tampoco equivalen a calificaciones académicas.
 
-**El problema que atacamos:** el estudiante que estudia con poco tiempo y mala conexión solo tiene a la mano una herramienta que le hace la tarea, y su docente no ve a tiempo en qué se está atorando.
+## Contenido
 
-## Persona usuaria
+1. [Problema que buscamos resolver](#problema-que-buscamos-resolver)
+2. [Personas usuarias](#personas-usuarias)
+3. [Propuesta de solución](#propuesta-de-solución)
+4. [Cómo se usa](#cómo-se-usa)
+5. [Instalación y ejecución](#instalación-y-ejecución)
+6. [Tecnologías del prototipo](#tecnologías-del-prototipo)
+7. [Por qué se desarrolló en HTML](#por-qué-se-desarrolló-en-html)
+8. [Arquitectura propuesta para producción](#arquitectura-propuesta-para-producción)
+9. [Accesibilidad y diseño UX/UI](#accesibilidad-y-diseño-uxui)
+10. [Uso de inteligencia artificial y bitácora](#uso-de-inteligencia-artificial-y-bitácora)
+11. [Datos utilizados, fuentes y privacidad](#datos-utilizados-fuentes-y-privacidad)
+12. [Validación e impacto esperado](#validación-e-impacto-esperado)
+13. [Limitaciones y próximos pasos](#limitaciones-y-próximos-pasos)
+14. [Equipo](#equipo)
 
-| | Alejandro, estudiante | Juan, docente |
+---
+
+## Problema que buscamos resolver
+
+Tener acceso a recursos digitales o a un chatbot no garantiza que un estudiante comprenda los contenidos. Cuando una herramienta entrega rápidamente el resultado, puede resolver una tarea inmediata sin desarrollar el razonamiento necesario para resolver un problema nuevo por sí mismo.
+
+A la vez, en un grupo numeroso, el docente puede recibir actividades terminadas sin conocer **qué concepto domina cada estudiante, en qué paso se equivocó y qué apoyo necesita**. Cuando las dificultades se descubren únicamente mediante un examen, muchas oportunidades de intervención ya se perdieron.
+
+En Veracruz existe, además, una barrera concreta: la **disponibilidad desigual de internet en hogares y escuelas**. Por ello, una solución educativa debe considerar sesiones cortas, contenidos accesibles desde el celular y recursos que sigan funcionando cuando la conexión falla.
+
+### Evidencia que sustenta el problema
+
+| Evidencia | Dato y significado | Fuente |
 |---|---|---|
-| **Quién es** | 15 años, recién ingresó a la preparatoria en una localidad rural de Veracruz | Maestro de Alejandro, con cuatro grupos al día y unos 120 estudiantes |
-| **Su contexto** | Trabaja con su papá en la parcela. Hay apagones y la señal se cae. Estudia en ratos cortos, desde el celular | Con esa carga es muy difícil saber qué necesita cada estudiante |
-| **Qué hace hoy** | Le pega la tarea a un chatbot y copia la respuesta | Recibe tareas completas que no le dicen qué entendió cada quien. Se entera cuando ya reprobaron |
-| **Qué necesita** | Entender en poco tiempo, sin depender de la señal, y saber qué practicar | Ver a tiempo en qué proceso se complica su grupo y a quién buscar primero |
-| **Qué le da EstudiandoAndo** | Preguntas y pistas en lugar de respuestas, una ruta según lo que le falta y una comprobación sin ayuda | Un mapa del grupo por habilidad, alertas que él revisa y un canal para escribirle al estudiante |
+| Dificultades en matemáticas | En **PISA 2025**, solo **30 %** de estudiantes mexicanos evaluados de 15 años alcanzó por lo menos el nivel 2 de competencia matemática; **70 % quedó debajo**. El promedio OCDE que alcanzó ese nivel fue **65 %**. | [OCDE, PISA 2025: México](https://www.oecd.org/en/publications/pisa-2025-results-volume-i-country-notes_2d4ff9ea-en/mexico_85702d30-en.html) |
+| Uso de IA para aprender | **47 %** de estudiantes mexicanos evaluados declaró utilizar chatbots de IA para aprender al menos una vez por semana; **35 %** los usó para elaborar borradores y **34 %** para resumir textos. | [OCDE, PISA 2025: México](https://www.oecd.org/en/publications/pisa-2025-results-volume-i-country-notes_2d4ff9ea-en/mexico_85702d30-en.html) |
+| Riesgo de dependencia de respuestas | En un ensayo con estudiantes de bachillerato, el grupo que practicó con un asistente generativo sin salvaguardas obtuvo un **17 % menos** en la evaluación posterior sin asistencia respecto al control. Un diseño basado en acompañamiento pedagógico mitigó ese efecto. **Este resultado pertenece al estudio citado; no es una medición de nuestra aplicación.** | [Bastani et al., 2025, PNAS](https://doi.org/10.1073/pnas.2422633122) |
+| Brecha de conectividad en hogares | En 2025 tenían internet **68.3 % de los hogares de Veracruz**, frente a **78.3 % nacional**. | [INEGI, ENDUTIH 2025](https://www.inegi.org.mx/programas/endutih/2025/) |
+| Conectividad escolar | En los planteles del indicador de educación básica, la conexión a internet alcanzó **25.4 % en Veracruz** frente a **46.9 % nacional** en 2024. | [Plan Veracruzano de Desarrollo 2025–2030, tabla 6.1.8](https://repositorio.veracruz.gob.mx/programadegobierno/wp-content/uploads/sites/4/2025/05/Gaceta-Num-Ext.210_PVD.pdf) |
+| Dificultades no identificadas oportunamente | En una investigación de **429 estudiantes de medicina**, tras seis semanas los tutores habían identificado aproximadamente entre una cuarta y una tercera parte de quienes después reprobaron o abandonaron. **Es evidencia contextual de educación superior en otro entorno, no una estimación sobre docentes veracruzanos.** | [O'Neill et al., 2016](https://doi.org/10.1007/s10459-016-9677-6) |
 
-En el prototipo las cuentas de ejemplo se llaman Ximena y Diego y cursan 1.º de secundaria, porque el contenido cargado (ecuaciones lineales con una incógnita) es de ese grado. Lo elegimos como punto de partida porque es la base del álgebra que se usa en la prepa. La docente de ejemplo es la Profa. Aranda, con el grupo 1.º B.
+**Problema central:** falta una forma accesible de acompañar el proceso de comprensión de cada estudiante, incluso con conexión limitada, y de ofrecer al docente información oportuna sobre las dificultades de su grupo sin sustituir su juicio pedagógico.
 
-## Solución
+## Personas usuarias
 
-EstudiandoAndo tiene dos módulos que comparten la misma información.
+Diseñamos dos personas para orientar las decisiones de producto. **Son perfiles ficticios construidos a partir de las necesidades estudiadas, no personas reales ni casos documentados individualmente.**
 
-**Estudiante.** Un diagnóstico de cinco preguntas estima cuánto domina cada habilidad del tema. Con eso se arma su ruta: primero lo que le falta. Practica con un tutor que le hace preguntas y le da hasta tres pistas, cada una más directa que la anterior, en lugar de entregarle el resultado. Para avanzar tiene que resolver ejercicios sin ayuda y explicar qué hizo.
+| | Alejandro — estudiante | Juan — docente |
+|---|---|---|
+| **Perfil** | 15 años; inicia la preparatoria en una comunidad de Veracruz | Da clases a varios grupos; ejemplo de carga: cuatro grupos de aproximadamente 30 estudiantes |
+| **Contexto** | Ayuda a su familia, estudia en ratos cortos y la señal no siempre está disponible | Debe acompañar a muchos estudiantes con necesidades diferentes |
+| **Frustración** | Encuentra respuestas inmediatas, pero no siempre comprende cómo llegar a ellas | Las tareas entregadas no explican qué dificultad tuvo cada persona |
+| **Necesidad** | Explicaciones comprensibles, práctica adaptada, pistas y continuidad sin conexión | Detectar áreas de refuerzo, revisar avances y orientar oportunamente |
+| **Respuesta de EstudiandoAndo** | Biblioteca, cinco formas de aprender, ejercicios guiados y comprobación sin ayuda | Gráficas, reportes individuales, alertas revisables, planeación y retroalimentación |
 
-**Docente.** Ve el avance del grupo por habilidad, quién necesita apoyo y en qué. Las alertas son sugerencias: las puede marcar como revisadas, editar o descartar. Puede escribirle a un estudiante, y ese mensaje aparece en el inicio del estudiante.
+**Cuentas utilizadas en la demo:** Ximena R. y Diego M., estudiantes de ejemplo de **1.º de secundaria**, así como la Profa. Aranda y el grupo **1.º B**. Las personas usuarias del planteamiento y las cuentas ficticias del prototipo cumplen funciones distintas.
+
+## Propuesta de solución
+
+EstudiandoAndo propone un ciclo de aprendizaje en el que el estudiante identifica lo que sabe, recibe apoyo para comprender, practica y **demuestra sus conocimientos sin asistencia**. Los resultados permiten que el docente reconozca las necesidades del grupo y decida cómo intervenir.
 
 ```mermaid
 flowchart TD
-  A["Diagnóstico<br/>5 preguntas"] --> B["Dominio por habilidad<br/>(0 a 100)"]
-  B --> C["Ruta personalizada"]
-  C --> D["Tutor<br/>preguntas y pistas"]
-  D --> E["Comprobación sin ayuda"]
-  E -- "actualiza el dominio" --> B
-  B --> F["Panel docente<br/>grupo, alertas, estudiantes"]
-  F -- "mensajes al estudiante" --> C
+    A[Seleccionar contenido] --> B[Diagnóstico inicial]
+    B --> C[Identificar habilidades por reforzar]
+    C --> D[Explicaciones y práctica adaptada]
+    D --> E[Preguntas y pistas progresivas]
+    E --> F[Comprobación sin ayuda]
+    F --> G[Actualizar avance]
+    G --> H[Panel docente y alertas revisables]
+    H --> I[Retroalimentación y planeación]
+    I --> C
 ```
 
-Las cinco habilidades del tema son interpretar el enunciado, operaciones inversas, despejar la incógnita, comprobar la solución y plantear problemas. Una habilidad cuenta como dominada a partir de 70 de 100, y la ruta siempre apunta a la primera que esté por debajo.
+### Módulo del estudiante
 
-En nuestra propuesta, la IA conversacional entra cuando hay conexión, y las actividades y pistas preparadas funcionan siempre. En este prototipo solo está construido lo segundo.
+**1. Biblioteca por materia y nivel.** Permite explorar cursos y lecciones, filtrarlos y consultar sus objetivos. La demo incluye Matemáticas, Lengua y lectura, Ciencias, Historia, Inglés, Ciudadanía digital, Tecnología e Investigación.
 
-### Qué funciona hoy y qué está simulado
+**2. Diagnóstico y ruta de refuerzo.** La experiencia inicial de ecuaciones incluye un diagnóstico de cinco preguntas y un seguimiento por habilidades. En la demostración, el dominio inicial de las cuentas se precarga y los resultados de actividades pueden modificar la ruta local.
 
-| Parte | Funciona de verdad | Simulado o pendiente |
+**3. Cinco formas de aprender en las 24 lecciones.** Cada contenido puede consultarse mediante:
+
+- **Con dibujos:** diagramas, representaciones visuales y secuencias que se recorren paso a paso.
+- **Con ejemplos:** casos cotidianos que conectan los conceptos con situaciones concretas.
+- **Otra explicación:** reformulación del concepto, analogías y aclaración de errores comunes.
+- **Paso a paso:** instrucciones ordenadas y objetivos de comprensión.
+- **Practicar con apoyo:** tres preguntas por lección, pistas y revisión explicada.
+
+Estas opciones **no asignan estilos de aprendizaje fijos**. El estudiante puede alternar libremente entre recursos hasta encontrar una explicación útil.
+
+**4. Tutor orientado al razonamiento.** El tutor de ejemplo de ecuaciones propone preguntas, verifica ciertos valores y presenta pistas progresivas; no es un chatbot generativo libre. La idea de producción es orientar antes de revelar una solución y comprobar que el estudiante puede continuar sin ayuda.
+
+**5. Progreso y autonomía.** El estudiante puede consultar lecciones practicadas, porcentajes de aciertos, barras por asignatura y gráficas de evolución, diferenciando el progreso de un dominio pedagógico real.
+
+**6. Aprendizaje con conectividad limitada.** Los contenidos y las reglas locales están dentro del HTML. Una vez abierto el archivo, se puede continuar la interacción sin depender de servicios externos. La sincronización remota todavía es simulada.
+
+### Módulo del docente
+
+**1. Panel grupal.** Presenta indicadores y gráficas híbridas de barras y líneas, con tablas de datos alternativas, para identificar tendencias y habilidades que requieren refuerzo.
+
+**2. Seguimiento individual.** Permite revisar el avance de las cuentas de ejemplo, su participación en lecciones y resultados registrados en el navegador.
+
+**3. Detección y alertas para revisión.** Visualiza posibles dificultades y sugerencias de apoyo. Las alertas no son diagnósticos definitivos y el docente conserva la decisión de actuar, editarlas o descartarlas.
+
+**4. Retroalimentación.** Permite enviar mensajes educativos simulados, visibles cuando se regresa a la cuenta correspondiente en ese mismo navegador.
+
+**5. Planeación y biblioteca docente.** Ofrece objetivos, ejemplos, representaciones visuales, preguntas y una opción de asignar cursos al grupo de demostración. **Asignar no envía notificaciones ni genera registros institucionales reales.**
+
+### Principios pedagógicos
+
+El diseño se inspira en **Teaching at the Right Level (TaRL)**, **aprendizaje por dominio (Mastery Learning)**, **evaluación formativa**, **andamiaje pedagógico** y **metacognición**. En términos prácticos: partir de lo que el estudiante sabe, reforzar sus dificultades, proporcionar ayuda gradual y comprobar comprensión autónoma.
+
+**La IA no sustituye al docente.** Una futura IA conversacional trabajaría bajo límites pedagógicos y las alertas continuarían sujetas a revisión humana.
+
+### Qué funciona y qué no funciona aún
+
+| Capacidad | Situación actual del HTML | Versión profesional propuesta |
 |---|---|---|
-| **Tutor** | Reconoce cuando escribes un valor de x y lo comprueba sustituyéndolo en la ecuación. En el chat no da el resultado aunque se lo pidas. Tiene tres pistas escalonadas, y la solución completa solo se desbloquea después de la tercera | **No hay modelo de IA conectado.** Responde con reglas y frases preparadas, así que no entiende texto libre fuera de esos patrones. Revisa el resultado, no el procedimiento |
-| **Diagnóstico y ruta** | Cada respuesta ajusta el dominio de su habilidad y la ruta se reordena al terminar | El dominio inicial de Ximena y Diego viene precargado |
-| **Comprobación sin ayuda** | Tres ejercicios y una explicación escrita. Con tres de tres se registra el dominio y se abre la siguiente etapa | Son siempre los mismos tres ejercicios. La explicación se guarda, pero la app no la evalúa |
-| **Sin conexión** | La app no hace ninguna solicitud de red. Detecta cuando se cae la conexión, deja en espera las dudas que escribas y las contesta al volver | "Sincronizar" no envía nada a ningún servidor. No es instalable: publicada en la web, no abre sin conexión si no estaba ya abierta |
-| **Panel docente** | Muestra el avance real de Ximena y Diego en ese mismo navegador. Las alertas cambian de estado y los mensajes llegan al estudiante | Los demás estudiantes, los tres grupos, el texto de las alertas, los historiales y el "antes y después" son datos de ejemplo. "Generar nueva propuesta con IA" es un temporizador |
-| **Contenido** | Una lección por habilidad en cuatro formatos (paso a paso, visual, ejemplo cotidiano y audio) y dos dibujos interactivos (recta numérica y balanza) | Solo Matemáticas, ecuaciones lineales con una incógnita. Las demás materias y grados aparecen como "Próximamente" |
-| **Accesibilidad** | Texto ampliable, temas oscuro y de alto contraste, lectura en voz alta y uso con teclado. Cero fallos en la revisión automática con axe-core (14 pantallas, 3 temas) | Falta probar con lectores de pantalla y con personas usuarias. La lectura en voz alta depende de las voces que tenga el dispositivo |
-
-### En qué nos distinguimos
-
-Herramientas como Khanmigo o Gemini ya guían con preguntas, y otras como Kolibri funcionan sin conexión. No encontramos una que junte las tres cosas que buscamos: una tutoría que guía en lugar de responder, pensada para el currículo mexicano y la conexión que hay en Veracruz, y con el docente al centro, recibiendo la información de su grupo. Hoy el prototipo lo muestra con un solo tema.
+| Catálogo | 8 materias, 12 cursos, 24 lecciones y 72 preguntas precargadas | Planes, niveles, instituciones y contenidos administrables |
+| Cinco formas de aprendizaje | Recursos locales específicos por lección | Personalización más amplia según evidencias de comprensión |
+| Ejercicios | Selección de respuestas, pistas, revisión y registro local | Banco de preguntas variable, rúbricas y evaluación del procedimiento |
+| Tutor | Motor de reglas y respuestas programadas para la experiencia de ejemplo | IA generativa con límites, verificación de respuestas y supervisión |
+| Ruta y diagnóstico | Flujos y métricas locales, con habilidades precargadas | Motor de adaptación validado mediante pruebas pedagógicas |
+| Panel docente | Vista y registros de demostración en el mismo navegador | Usuarios, grupos, permisos y analítica persistente en servidor |
+| Comunicación | Comentarios locales visibles al cambiar de perfil | Mensajería segura entre cuentas autorizadas |
+| Sin internet | El HTML descargado funciona localmente; el sitio publicado debe estar cargado | PWA instalable, caché/IndexedDB y sincronización posterior |
+| Datos | Ficticios, persistidos localmente cuando el navegador lo permite | Datos reales únicamente con consentimiento, seguridad y gobernanza |
+| Accesibilidad | Controles y diseño orientados a buenas prácticas | Auditoría WCAG 2.2 AA, lectores de pantalla y pruebas con usuarios |
 
 ## Cómo se usa
 
-Este recorrido toma unos tres minutos y pasa por todo lo que funciona.
+### Acceso directo
 
-1. **Abre la app.** Entras como Ximena, de 1.º de secundaria. En *Tu camino para aprender*, su ruta marca "Reforzar: operaciones inversas".
-2. **Habla con el tutor** (menú *Tutor*). Escribe `dime la respuesta` y no la da. Escribe `x = 4` y te hace comprobarlo: 3(4) + 5 = 17. Pide pistas con *Dame una pista*. Escribe `x = 5` y te pide explicar qué hiciste.
-3. **Quita el internet.** Botón *Probar sin Wi-Fi*, o pon el dispositivo en modo avión con la app ya abierta. Las pistas y los ejercicios siguen funcionando. Si escribes una duda, queda "En espera". Con *Volver a conectar* se responde.
-4. **Comprueba sin ayuda.** *Inicio → Empezar comprobación*. Son tres ejercicios sin pistas y una explicación. Con 4, 7 y −3 se registra el dominio y la ruta avanza a la siguiente habilidad.
-5. **Pásate a docente** (botón *Docente*). *Grupo* muestra cómo va el 1.º B. En *Estudiantes → Ximena R.* ya aparece lo que acabas de hacer. *Apoyos* trae las alertas y *Mi clase*, la planeación.
-6. **Escríbele a un estudiante.** En la alerta de Ximena, *Retroalimentar*. Regresa con el botón *Estudiante*: el mensaje está en su inicio.
-7. **Mira otra dificultad.** *Más opciones → Estudiante de ejemplo → Diego*. Es el mismo tema, pero su ruta empieza en "Reforzar: interpretar el enunciado" y su tutor le plantea un problema escrito, no una ecuación.
-8. **Haz el diagnóstico.** *Más opciones → Recorrido guiado → paso 3*. El recorrido te regresa a la cuenta de Ximena. Contesta las cinco preguntas y mira cómo cambia su ruta.
-9. **Reinicia.** *Más opciones → Reiniciar* deja todo como al principio.
+Abre la [demostración publicada](https://estudiandoandohackathon.vercel.app/#/inicio) o descarga y abre `index.html` en un navegador moderno.
 
-Para proyectar, *Ver pantalla → Móvil* muestra la app dentro de un marco de celular; *Más opciones* solo aparece en la vista *Adaptable*. El botón *Accesibilidad* cambia el tamaño del texto y los colores, y activa la lectura en voz alta.
+### Recorrido sugerido: estudiante
 
-## Cómo abrilo
-Entrar a `https://estudiandoandohackathon.vercel.app/#/inicio`
+1. Entra en **Estudiante → Inicio** y revisa la ruta de aprendizaje.
+2. Abre **Aprender → Biblioteca de materias**. Filtra por materia o nivel y selecciona un curso.
+3. Entra a una lección y prueba las opciones **Con dibujos**, **Con ejemplos**, **Otra explicación**, **Paso a paso** y **Practicar con apoyo**. Cambiar de forma de estudio no debería borrar la selección que estés trabajando.
+4. Resuelve las **tres preguntas** de la lección y pide una pista cuando la necesites. Revisa la explicación de tus respuestas y el resultado guardado.
+5. Abre **Mi progreso** para consultar los avances de las materias.
+6. Visita **Tutor** para probar el acompañamiento guiado de ecuaciones. También puedes hacer el **diagnóstico** y la **comprobación sin ayuda** de ese recorrido.
+7. En **Estudiar sin internet**, explora los materiales y prueba la opción de simulación de desconexión.
 
-## Tecnologías
-HTML5, CSS3, JavaScript del navegador, SVG para gráficos y visualizaciones, almacenamiento local con localStorage y navegación del lado cliente mediante rutas con #. Vercel sirve los archivos estáticos; GitHub aloja el código fuente. No se utiliza framework ni API de IA en esta versión.
-No usa backend, base de datos, CDN, fuentes externas ni ningún modelo de IA.
+### Recorrido sugerido: docente
 
+1. Cambia de **Estudiante** a **Docente** usando el selector de perfil de la demo.
+2. Abre **Grupo** para ver indicadores, tendencias y dificultades de la clase.
+3. Ve a **Estudiantes** y consulta el progreso individual de Ximena o Diego.
+4. Revisa **Apoyos / Alertas** y utiliza una recomendación para retroalimentar al estudiante.
+5. Abre **Mi clase → Biblioteca** para explorar materias, preparar una clase, ver sus dibujos y preguntas o asignar un curso de ejemplo.
+6. Regresa a **Estudiante** para observar el mensaje o la actividad asociada en el mismo navegador.
 
-## Uso de IA (bitácora breve)
-Durante la preparación del prototipo se utilizó asistencia de IA para organizar flujos, redactar lenguaje más sencillo, elaborar diagramas e interfaces y proponer ajustes de accesibilidad. La IA integrada que se ve en el prototipo utiliza respuestas simuladas y no requiere token/API externa. Las sugerencias pedagógicas deben ser revisadas y validadas por el equipo y por docentes antes de cualquier uso real.
+### Presentación para jurado
 
-## Qué datos usamos
+Para una demostración breve, recomendamos seguir este orden:
 
-### Datos públicos, para sustentar el problema
+**Problema → Biblioteca y cinco formas de aprender → Ejercicio con pistas → Mi progreso → Panel docente → Retroalimentación → Modo sin conexión → Alcance real del prototipo.**
 
-| Dato | Fuente | Dónde lo usamos |
-|---|---|---|
-| 30 % alcanzó al menos el nivel 2 en matemáticas (OCDE: 65 %). Muestra: 7,843 estudiantes de 297 escuelas | OCDE (2026), nota de México de PISA 2025 | App y pitch |
-| 47 % usa chatbots para aprender cada semana (OCDE: 46 %); 40 % para investigar un tema, 35 % para redactar borradores y 34 % para resumir | OCDE (2026) | App y pitch |
-| 17 % menos en el examen sin ayuda tras practicar con un chatbot sin salvaguardas | Bastani et al. (2025) | App |
-| Hogares con internet en 2025: Veracruz 68.3 %, nacional 78.3 % | INEGI (2026b), ENDUTIH 2025 | App y pitch |
-| Planteles de educación básica con internet en 2024: Veracruz 25.4 %, nacional 46.9 %. En media superior: 48.4 % y 54.1 % | Plan Veracruzano de Desarrollo 2025–2030, tabla 6.1.8, p. 74 | App |
-| 292 mil niñas, niños y adolescentes en trabajo infantil en Veracruz en 2025 | INEGI (2026a), ENTI 2025 | Pitch |
-| Abandono en media superior: 11.3 % en el ciclo 2023–2024 | SEP (2025) | Pitch |
-| Los tutores identificaron a entre 1/4 y 1/3 de quienes después reprobaron o abandonaron | O'Neill et al. (2016) | App y pitch |
-| 31 alumnos por docente en secundaria | OCDE, *Panorama de la Educación 2026*, citado por Toribio (2026) | Pitch |
+La aplicación también incluye un **asistente de navegación** que explica cómo llegar a una sección desde la pantalla actual y puede guiar paso a paso por los controles disponibles.
 
-Todas las cifras se cotejaron contra su fuente el 11 de noviembre de 2026. La última la leímos en la nota periodística, no en el informe de la OCDE.
+## Instalación y ejecución
 
-### Datos dentro del prototipo
+### Opción A — Usar el HTML sin instalar nada
 
-Todo lo que se ve en la demo es ficticio y se escribió para la demostración: 16 perfiles de estudiantes en tres grupos (dos de ellos, Ximena y Diego, con estado completo), cuatro alertas, historiales por semana, rachas y minutos de estudio. No usamos datos reales de ningún estudiante, docente ni escuela.
+**Requisitos:** navegador moderno (Chrome, Edge o Firefox). No es necesario tener Node.js, React, Python ni instalar paquetes npm.
 
-El contenido son cinco lecciones, cinco preguntas de diagnóstico, tres ejercicios de comprobación y dos problemas guiados. El tema corresponde a 1.º de secundaria (Fase 6) en los materiales de la SEP (SEP, s. f.). Se redactó para el prototipo y todavía no pasa por revisión docente.
+1. Clona el repositorio o descarga el ZIP del proyecto.
+2. Localiza el archivo `index.html`.
+3. Haz doble clic en `index.html` para abrirlo en tu navegador.
+4. Utiliza la aplicación con los datos de demostración.
 
-### Datos personales
+```bash
+# Opcional: clonar el proyecto
+git clone https://github.com/tuatrofisicoxav20-oss/estudiando_ando.git
+cd estudiando_ando
+```
 
-La app no pide nombre, correo ni cuenta, y no envía nada a ningún servidor. Lo que respondes se guarda solo en tu navegador (`localStorage`, clave `estudiando-ando:state-v2`) y se borra con *Reiniciar* o limpiando los datos del sitio. Una versión real con menores de edad necesitaría el consentimiento de madres, padres o tutores y un aviso de privacidad. Eso todavía no existe.
+> Si tu navegador restringe algunas funciones de `file://`, usa un servidor estático local. El estado se guarda mediante `localStorage` cuando está disponible; si se bloquea, los cambios pueden conservarse solo durante la sesión.
 
-## Bitácora de IA
+### Opción B — Servidor local (opcional)
 
-Usamos IA para investigar, para revisar nuestra propuesta y para documentar. Dentro del prototipo, en cambio, todavía no corre ningún modelo. Todas las entradas son del 11 de noviembre de 2026.
+Con Python instalado:
 
-| Fila y hora | Herramienta | Para qué | Qué nos dio | Qué hicimos con eso |
-|---|---|---|---|---|
-| **1** · ≈16:00 | Claude con búsqueda web | Investigar cuánta gente estudia con IA en México y Veracruz, cómo la usa y si afecta el aprendizaje, cruzando varias fuentes | Un informe con cifras, el nivel de confianza de cada una y una lista de cifras que no conviene usar | Tomamos el 47 % de PISA y el 68.3 % de la ENDUTIH. No usamos las cifras de universitarios ni la idea de un tutor por WhatsApp |
-| **2** · ≈17:30 | Claude con búsqueda web | Revisar nuestra propuesta escrita y comprobar cada cifra | Confirmó los datos, avisó que el estudio de Bastani ya estaba publicado en PNAS y marcó siete observaciones | Le pedimos releer el documento y retiró tres observaciones que el texto ya resolvía. Actualizamos la cita de Bastani y definimos una persona concreta |
-| **3** · ≈17:50 | Claude con búsqueda web | Saber cuánto tarda un docente en detectar que un estudiante va mal | Que ese promedio no está medido. Lo que hay son indicios: grupos grandes y juicios docentes que fallan más con quien más batalla | Usamos el dato de 31 alumnos por docente. En la app, las alertas se presentan como sugerencias que el docente revisa, edita o descarta |
-| **4** · ≈18:40 | Claude | Escribir un prompt para que un asistente de código convirtiera nuestra maqueta en una demo funcional | Un plan en seis fases: motor de reglas que revisa el procedimiento, ruta adaptativa, app instalable, panel docente, modo de presentación e IA opcional | 
-| **5** · ≈23:30 | Claude con búsqueda web y un navegador de pruebas | Redactar este README | Leyó el código completo, lo ejecutó en Chromium (cero solicitudes de red, cero errores de JavaScript, cero fallos de axe-core) y cotejó cada cifra con su fuente | De ahí sale la tabla de qué funciona hoy y qué está simulado |
+```bash
+python -m http.server 5500
+```
 
-**Dónde se equivocó la IA y cómo lo notamos**
+Abre **http://localhost:5500/**.
 
-- No entendió la pregunta de la fila 3: pensó que hablábamos de detectar trabajos hechos con IA o fallas de seguridad. Se lo aclaramos y volvió a empezar.
-- En la fila 2 marcó como fallas cosas que nuestro documento ya resolvía. Al pedirle que lo releyera renglón por renglón, las retiró.
-- En esa misma revisión agregó a la propuesta cosas que no habíamos decidido, como un grupo piloto de comparación. Lo señaló ella misma y no lo adoptamos como compromiso.
+También puedes usar una extensión como **Live Server** en VS Code. **No uses `npm run dev`: esta versión HTML no tiene `package.json` ni un proceso de compilación.**
 
-## Impacto esperado
+### Opción C — Publicar en Vercel
 
-Buscamos que Alejandro deje de recibir respuestas y empiece a construirlas, y que su maestro vea a tiempo en qué proceso se complica su grupo para intervenir antes de que repruebe.
+1. Asegúrate de que `index.html` esté en la **raíz** del repositorio.
+2. Importa el repositorio desde Vercel.
+3. Selecciona **Framework Preset: Other**.
+4. Deja el **Build Command vacío** y publica el directorio raíz del proyecto.
+5. Despliega y abre la URL resultante.
 
-Todavía no medimos nada de esto, porque no hay piloto. Esto es lo que esperamos y cómo lo comprobaríamos:
+**Nota sobre conexión:** la app HTML no solicita contenido educativo externo durante su uso, pero **no es una PWA instalable**. Para abrir desde cero la URL publicada sin internet se requeriría un *service worker* y recursos previamente almacenados; en el navegador, el uso sin red funciona cuando el archivo ya está abierto.
 
-| Lo que esperamos | Cómo lo mediríamos |
+### Estructura del prototipo
+
+```text
+estudiando_ando/
+├── index.html      # HTML, CSS, JavaScript, contenidos y datos de ejemplo
+├── vercel.json     # Configuración de despliegue estático
+├── README.md       # Problema, solución, uso, tecnologías y documentación
+└── docs/
+    └── capturas/   # Evidencia visual de la demostración (si se incluye)
+```
+
+## Tecnologías del prototipo
+
+| Tecnología | Uso actual |
 |---|---|
-| El estudiante resuelve solo lo que antes copiaba | Diagnóstico al inicio y comprobación sin ayuda al final, con ejercicios distintos |
-| Necesita cada vez menos ayuda | Pistas pedidas por ejercicio a lo largo de las semanas |
-| El docente detecta antes | Días entre el primer error repetido y la revisión de la alerta |
-| Sirve donde la señal falla | Sesiones completadas sin conexión en celulares reales |
+| **HTML5** | Estructura semántica de páginas, formularios, botones, lecciones y diálogos |
+| **CSS3** | Diseño responsivo, tarjetas, tipografía, temas, estados, contrastes y animaciones |
+| **JavaScript (vanilla)** | Navegación, interacciones, ejercicios, reglas del tutor, cambios de perfil y estado |
+| **SVG** | Gráficas híbridas, representaciones matemáticas, íconos y elementos visuales |
+| **`localStorage`** | Persistencia local de ajustes y avances cuando el navegador lo permite |
+| **Rutas con hash (`#/...`)** | Navegación del lado cliente sin configurar rutas de servidor |
+| **Git / GitHub** | Control de versiones y colaboración |
+| **Vercel** | Hosting y despliegue estático de la demostración |
 
-El primer paso sería un piloto con un grupo. Si es viable, se compararía la ruta adaptativa contra una secuencia igual para todos.
+**No se utilizan en esta versión:** React, TypeScript, Tailwind CSS, Node.js en servidor, base de datos, API externa de IA o sistema de autenticación. Tampoco hay sincronización real entre equipos.
 
-## Limitaciones y lo que sigue
+## Por qué se desarrolló en HTML
 
-1. **Conectar un modelo de lenguaje** que redacte las preguntas del tutor cuando haya conexión, mientras el código sigue comprobando las cuentas.
-2. **Revisar el procedimiento renglón por renglón** para saber en qué paso está el error. Hoy eso solo aparece como texto de ejemplo en las alertas.
-3. **Volverla instalable**, para que abra sin conexión desde el celular.
-4. **Sincronizar de verdad** el celular del estudiante con el del docente, con cuentas y consentimiento.
-5. **Más ejercicios y más temas.** Hoy la comprobación repite los mismos tres ejercicios y solo hay un tema.
-6. **Probarla con personas.** Está probada en Chromium de escritorio y en tamaño de celular emulado. Falta probarla en celulares reales, con estudiantes y con docentes.
+La elección de un **archivo HTML autocontenido** fue una **decisión consciente de alcance y tiempo**, no una afirmación de que sea la arquitectura definitiva.
 
-## Fuentes
+Durante un hackathon debíamos construir una experiencia demostrable en pocas horas: mostrar un ciclo educativo completo, representar ambos perfiles, preparar materiales accesibles y asegurar que el jurado pudiera abrir la aplicación sin instalar dependencias ni configurar servicios.
 
-Consultadas el 11 de noviembre de 2026.
+**Ventajas para el hackathon:**
 
-- Bastani, H., Bastani, O., Sungu, A., Ge, H., Kabakcı, Ö., & Mariman, R. (2025). Generative AI without guardrails can harm learning: Evidence from high school mathematics. *Proceedings of the National Academy of Sciences, 122*(26), e2422633122. https://doi.org/10.1073/pnas.2422633122
-- Gobierno del Estado de Veracruz. (2025). *Plan Veracruzano de Desarrollo 2025–2030*. https://repositorio.veracruz.gob.mx/programadegobierno/wp-content/uploads/sites/4/2025/05/PVD_2025-2030.pdf
-- Instituto Nacional de Estadística y Geografía. (2026a). *Encuesta Nacional de Trabajo Infantil (ENTI) 2025* (Comunicado de prensa 100/26). https://www.inegi.org.mx/contenidos/saladeprensa/boletines/2026/enti/ENTI2025_CP.pdf
-- Instituto Nacional de Estadística y Geografía. (2026b). *Encuesta Nacional sobre Disponibilidad y Uso de Tecnologías de la Información en los Hogares (ENDUTIH) 2025* (Comunicado de prensa 32/26). https://www.inegi.org.mx/contenidos/saladeprensa/boletines/2026/endutih/ENDUTIH_25.pdf
-- O'Neill, L. D., Mørcke, A. M., & Eika, B. (2016). The validity of student tutors' judgments in early detection of struggling in medical school. A prospective cohort study. *Advances in Health Sciences Education, 21*(5), 1061–1079. https://doi.org/10.1007/s10459-016-9677-6
-- Organización para la Cooperación y el Desarrollo Económicos. (2026). *PISA 2025 results (Volume I): Mexico*. OECD Publishing. https://www.oecd.org/en/publications/pisa-2025-results-volume-i-country-notes_2d4ff9ea-en/mexico_85702d30-en.html
-- Secretaría de Educación Pública. (s. f.). *Problemas de ecuaciones lineales* [Recurso de 1.º de secundaria, Fase 6]. Nueva Escuela Mexicana Digital. https://nuevaescuelamexicana.sep.gob.mx/contenido/coleccion/problemas-de-ecuaciones-lineales/
-- Secretaría de Educación Pública. (2025). *Sistema Educativo de los Estados Unidos Mexicanos. Principales cifras 2024–2025*. https://www.planeacion.sep.gob.mx/Doc/estadistica_e_indicadores/principales_cifras/principales_cifras_2024_2025.pdf
-- Toribio, L. (2026, 29 de septiembre). México, con la mayor carga de alumnos por docente en secundaria. *Excélsior*. https://www.excelsior.com.mx/nacional/mexico-con-mayor-carga-alumnos-por-docente-secundaria
+- Inicio inmediato: abrir el archivo o acceder a una URL, sin `npm install`.
+- Demostración estable: ejercicios, contenidos y vistas precargadas; sin depender de una API externa.
+- Portabilidad: un mismo entregable puede abrirse en móvil o escritorio.
+- Enfoque en validar la **solución educativa y la experiencia UX/UI**, antes que en la infraestructura.
+- Menor riesgo de fallos por claves API, servidores o conexiones inestables durante la presentación.
 
-Dentro de la app, la pantalla *Acerca del proyecto* lista además las referencias pedagógicas en las que se apoya el diseño: enseñar en el nivel adecuado, aprendizaje por dominio, andamiaje y metacognición.
+**Límites de esta elección:** a medida que crecen las materias y usuarios, un archivo único dificulta el mantenimiento, las pruebas por módulo, la colaboración, el control de permisos y la actualización de contenidos. Por ello, **no proponemos conservar esta estructura monolítica en producción**.
+
+## Arquitectura propuesta para producción
+
+La siguiente arquitectura es **una propuesta técnica futura; no está implementada en el repositorio actual**. Pensamos en un despliegue evolutivo, con separación clara entre interfaz, lógica pedagógica, datos, IA y sincronización.
+
+```mermaid
+flowchart TB
+    subgraph Cliente[Aplicación cliente]
+        WEB[React + TypeScript + Vite]
+        PWA[PWA + Service Worker + IndexedDB]
+        WEB --- PWA
+    end
+
+    subgraph Backend[API y servicios]
+        API[Node.js + NestJS]
+        AUTH[Autenticación y roles]
+        CUR[Currículo, cursos y actividades]
+        ADAPT[Evaluación y rutas adaptativas]
+        TEACH[Analítica y alertas docentes]
+        SYNC[Sincronización diferida]
+        API --> AUTH
+        API --> CUR
+        API --> ADAPT
+        API --> TEACH
+        API --> SYNC
+    end
+
+    DB[(PostgreSQL)]
+    STORE[(Almacenamiento de contenidos)]
+    AI[Servicio de IA con límites pedagógicos]
+    WEB -->|HTTPS| API
+    PWA -.->|Al recuperar conexión| SYNC
+    API --> DB
+    CUR --> STORE
+    ADAPT --> AI
+```
+
+### Stack profesional sugerido
+
+| Capa | Tecnologías y herramientas propuestas | Motivo |
+|---|---|---|
+| **Frontend** | **React + TypeScript + Vite** | Componentes reutilizables, tipado y desarrollo modular |
+| **Diseño** | **Tailwind CSS**, CSS variables/tokens, componentes accesibles, Storybook | Identidad consistente, temas, documentación visual y UI escalable |
+| **Gráficas y visualizaciones** | SVG, librería de gráficas accesibles según necesidad | Interacción con gráficos acompañados de tablas y texto |
+| **Backend** | **Node.js + NestJS** y API REST (u otro contrato documentado) | Reglas de negocio separadas, validación, permisos y pruebas |
+| **Persistencia** | **PostgreSQL + Prisma** | Datos relacionales de usuarios, cursos, intentos, grupos y mensajes |
+| **Contenido y recursos** | Almacenamiento de objetos compatible con S3 + CDN | Archivos educativos versionados y entrega eficiente |
+| **Sin conexión** | **PWA + Service Worker + IndexedDB** (por ejemplo, Dexie) | Lecciones disponibles sin red y registro de cambios locales |
+| **Sincronización** | Cola local, API idempotente y control de versiones de registros | Reenviar avances cuando regresa la conexión, evitando duplicados |
+| **IA** | API de un modelo de lenguaje detrás del servidor, reglas pedagógicas, validación y registros de evaluación | Generar orientación sin exponer claves ni delegar la evaluación matemática ciegamente |
+| **Seguridad** | OAuth 2.0 / OpenID Connect, control por roles, cifrado en tránsito, auditoría | Acceso diferenciado para alumnado y docentes |
+| **Calidad** | Vitest, Playwright, axe-core, Lighthouse, CI/CD con GitHub Actions | Pruebas automatizadas y accesibilidad verificable |
+| **Despliegue** | Vercel para frontend; servidor/API y base de datos administrados por separado | Escalabilidad y operación independiente |
+
+> El stack es una **recomendación de arquitectura**, no una lista de dependencias ya instaladas ni un compromiso cerrado de proveedor. Las decisiones finales dependerían de pruebas, presupuesto, seguridad, integración institucional y mantenimiento.
+
+### Módulos de software previstos
+
+- **Identidad y permisos:** estudiante, docente, administración y acceso a grupos autorizados.
+- **Gestión curricular:** institución, grado, materias, objetivos, lecciones y recursos aprobados por docentes.
+- **Motor de evaluación:** preguntas, intentos, rúbricas, pistas utilizadas y comprobaciones sin ayuda.
+- **Motor adaptativo:** estimación de dominio por habilidad, prerrequisitos, refuerzos y progresión.
+- **Tutor pedagógico:** conversación guiada con pistas escalonadas, ejemplos alternativos, verificación y derivación al docente cuando corresponda.
+- **Analítica educativa:** progreso individual/grupal, alertas explicables y evaluación de intervenciones.
+- **Sincronización offline-first:** almacenamiento local, cola de eventos, resolución de conflictos y sincronización cuando vuelva la red.
+
+### Flujo de IA responsable en producción
+
+La IA generativa se usaría como **interfaz de acompañamiento**, no como única fuente de verdad. Una posible secuencia sería:
+
+1. El estudiante envía una duda dentro de una lección validada.
+2. La plataforma identifica el contenido, el objetivo y los apoyos ya solicitados.
+3. El servicio recupera materiales curriculares autorizados y solicita una **pregunta orientadora**, una **pista** o **un ejemplo**, no una solución automática.
+4. Reglas deterministas o verificadores especializados revisan cálculos, opciones y restricciones cuando es posible.
+5. Se registra el tipo de apoyo; el dominio se acredita mediante **evaluación sin asistencia**, no únicamente por completar una conversación.
+6. El docente recibe **indicadores explicables**, no etiquetas irrevocables sobre una persona.
+
+Para contenidos generados por IA se requerirían pruebas de exactitud, revisión de materiales, moderación, límites de uso, criterios de privacidad y mecanismos para corregir errores.
+
+## Accesibilidad y diseño UX/UI
+
+La interfaz se diseñó siguiendo principios de **claridad, consistencia, reconocimiento antes que memoria, control del usuario y prevención de errores**. Incluye navegación responsiva, retroalimentación visible, encabezados jerárquicos y un asistente contextual para encontrar tareas o secciones.
+
+**Opciones disponibles en la demo:**
+
+- Temas **claro**, **oscuro** y **alto contraste**; también hay identidades visuales configurables.
+- Tamaño de texto y espaciado ajustables.
+- Indicadores de foco y navegación mediante controles de teclado.
+- Soporte para **reducir movimiento** y respeto por `prefers-reduced-motion`.
+- Diagramas con texto, números y etiquetas, evitando que el color sea el único medio de información.
+- Gráficas que incluyen **barras + línea de tendencia**, leyendas, valores y tablas alternativas.
+- Lectura en voz alta, si el navegador y dispositivo la admiten.
+
+**Objetivo de producción:** conformidad con **WCAG 2.2 nivel AA**, verificada con pruebas automáticas, revisión manual, lectores de pantalla y sesiones con estudiantes y docentes. **No declaramos certificación WCAG del prototipo.**
+
+## Uso de inteligencia artificial y bitácora
+
+Es importante distinguir entre **IA utilizada para investigar y construir la propuesta** y la **IA que operaría dentro del producto**.
+
+**Durante el hackathon**, se utilizaron asistentes de IA como apoyo para investigación, análisis de fuentes, redacción, ideación de funcionalidades, iteraciones de interfaz y desarrollo de la demostración. El equipo debe revisar y validar estas salidas. **Dentro del prototipo actual no hay un modelo de IA generativa conectado**: el tutor y el asistente de navegación emplean reglas y contenidos preparados.
+
+### Bitácora de IA del equipo
+
+La siguiente bitácora conserva las actividades documentadas durante el hackathon; los horarios señalados con ≈ son aproximados según las notas del equipo.
+
+| Fecha / momento | Herramienta | Objetivo / uso | Resultado obtenido | Decisión o validación humana |
+|---|---|---|---|---|
+| **11/11/2026 · ≈16:00** | Claude con búsqueda web | Explorar cifras de aprendizaje, uso de IA y conectividad en México/Veracruz | Síntesis de estadísticas y fuentes con observaciones de confiabilidad | Seleccionar indicadores rastreables a OCDE e INEGI; descartar afirmaciones no justificadas |
+| **11/11/2026 · ≈17:30** | Claude con búsqueda web | Revisar el planteamiento del problema y contrastar referencias | Observaciones sobre PISA, Bastani y redacción de la propuesta | Releer y ajustar la formulación; mantener solo críticas sustentadas |
+| **11/11/2026 · ≈17:50** | Claude con búsqueda web | Investigar detección docente de dificultades | Estudios indirectos sobre detección tardía; límites de extrapolación | **No** convertir un estudio universitario en una cifra de tiempo de detección en Veracruz |
+| **11/11/2026 · ≈18:40** | Claude | Estructurar un plan de implementación del prototipo | Propuesta de fases para tutor, diagnóstico, panel, offline e interfaz | Priorizar el flujo demostrable durante el tiempo disponible |
+| **11/11/2026 · ≈23:30** | Claude con búsqueda web y navegador de pruebas, según la bitácora original | Revisar el README y el estado de una versión previa del prototipo | Informe de revisión, fuentes y pruebas exploratorias | Documentar alcance y limitaciones; **esa revisión previa no acredita automáticamente la versión actual** |
+| **Iteraciones posteriores del prototipo** | ChatGPT | Ampliar catálogo, cinco modos de aprendizaje, ayudas visuales, UX/UI, temas accesibles y documentación | Prototipo HTML ampliado y propuestas de estructura profesional | Mantener la versión HTML por facilidad de ejecución y tiempo; distinguir demos funcionales de capacidades futuras |
+
+**Aprendizajes y correcciones del uso de IA:**
+
+- Una consulta sobre **detección de dificultades de aprendizaje** se interpretó inicialmente como detección de trabajos hechos con IA; fue necesario reformularla.
+- Algunas observaciones de revisión no correspondían al texto original y se corrigieron tras una nueva lectura.
+- Se descartaron sugerencias metodológicas no acordadas por el equipo; una propuesta generada por IA no equivale a una decisión del proyecto.
+- Los textos y ejercicios de demostración **no sustituyen una validación curricular y pedagógica con especialistas**.
+- Los controles de accesibilidad requieren pruebas con tecnologías de asistencia y personas usuarias, más allá de una revisión de código.
+
+**Transparencia:** no se introdujeron credenciales de un proveedor de IA en el cliente y no se entrenó un modelo con información de estudiantes. En una versión real, la IA operaría en servidor y se aplicaría una política específica de minimización, retención y protección de datos.
+
+## Datos utilizados, fuentes y privacidad
+
+### 1. Datos públicos para la investigación
+
+Los datos cuantitativos del planteamiento proceden de **OCDE/PISA 2025**, **INEGI/ENDUTIH 2025**, **Plan Veracruzano de Desarrollo 2025–2030** y artículos científicos identificados en el apartado de evidencias. Se utilizan para **justificar necesidades de diseño**, no para atribuir a EstudiandoAndo resultados que todavía no ha obtenido.
+
+Otros referentes consultados para orientar las estrategias pedagógicas incluyen:
+
+- **Teaching at the Right Level (TaRL):** [Banerjee et al., NBER Working Paper 22746](https://doi.org/10.3386/w22746).
+- **Mastery Learning:** [Education Endowment Foundation](https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/mastery-learning/).
+- **Metacognición y autorregulación:** [Education Endowment Foundation](https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/metacognition/).
+- **Enseñar en el nivel adecuado en México:** [Medición Independiente de Aprendizajes (MIA)](https://www.medicionmia.org.mx/about-1).
+- **Enseñanza del álgebra:** [Institute of Education Sciences, What Works Clearinghouse](https://ies.ed.gov/ncee/wwc/practiceguide/20).
+- **Referencia curricular inicial:** [SEP, problemas de ecuaciones lineales (1.º de secundaria)](https://nuevaescuelamexicana.sep.gob.mx/contenido/coleccion/problemas-de-ecuaciones-lineales/).
+
+### 2. Datos que utiliza la aplicación
+
+| Conjunto | Origen | Uso en el prototipo |
+|---|---|---|
+| 8 materias, 12 cursos, 24 lecciones y 72 preguntas | **Contenido redactado para la demostración** | Biblioteca, ejercicios, pistas, dibujos y explicaciones |
+| Diagnóstico de ecuaciones, habilidades iniciales y ejercicios de comprobación | Contenido y reglas locales de demostración | Ruta de refuerzo, tutor y progreso |
+| Ximena, Diego, Profa. Aranda y otros perfiles/grupos ilustrativos | **Datos ficticios** | Mostrar interacción estudiante-docente, gráficas y alertas |
+| Intentos, respuestas, resultados, favoritos, asignaciones y mensajes de la sesión | **Interacción local del visitante** | Actualizar las pantallas de ejemplo |
+| Preferencias de apariencia y accesibilidad | Configuradas por el visitante | Personalizar el diseño y la lectura |
+
+El prototipo puede mostrar perfiles adicionales con historiales y métricas precargadas. **No representa una base de datos de estudiantes reales.**
+
+### 3. Almacenamiento y protección de datos
+
+La demostración no solicita registro con nombre real, correo o contraseña. Los cambios se almacenan **en ese navegador**, mediante `localStorage` con el prefijo `estudiando-ando:`, siempre que el navegador lo permita. Si el almacenamiento no está disponible, la aplicación puede continuar con estado temporal en memoria.
+
+**No hay backend, API de IA ni transmisión institucional de avances.** Por tanto, cambiar de equipo o abrir la página desde otro dispositivo **no sincroniza** el historial. Los datos se pueden restablecer desde los controles de la propia demo o limpiando el almacenamiento del sitio.
+
+En producción, al tratar potencialmente con **menores de edad**, el tratamiento de datos requeriría bases jurídicas adecuadas, consentimiento cuando proceda, avisos de privacidad, permisos por rol, minimización, control de retención y revisión del marco legal mexicano aplicable. Ningún docente debería visualizar registros ajenos a sus grupos autorizados.
+
+## Validación e impacto esperado
+
+**No se ha realizado un piloto educativo con estudiantes reales, por lo que no afirmamos mejoras comprobadas de rendimiento, reducción de abandono ni precisión validada de alertas.** El prototipo permite demostrar una hipótesis que deberá evaluarse en condiciones reales.
+
+| Resultado que queremos evaluar | Indicador propuesto |
+|---|---|
+| Mejor comprensión de contenidos | Diferencia entre diagnóstico inicial y evaluación final con ejercicios distintos, **sin IA** |
+| Mayor autonomía | Disminución de pistas necesarias por habilidad, controlando la dificultad de los ejercicios |
+| Detección más oportuna | Tiempo entre errores recurrentes registrados y revisión de una alerta por el docente |
+| Retroalimentación útil | Mejora después de actividades recomendadas por el profesor |
+| Acceso en baja conectividad | Sesiones completadas sin conexión y sincronizadas correctamente después |
+| Usabilidad y accesibilidad | Éxito en tareas, tiempo por tarea, errores, pruebas con teclado y lectores de pantalla |
+
+Un siguiente paso razonable sería un **piloto pequeño, autorizado y acompañado por docentes**, con instrumentos de evaluación previamente definidos.
+
+## Limitaciones y próximos pasos
+
+### Limitaciones actuales
+
+- El **tutor** y la **guía de navegación** usan reglas y textos programados; no entienden libremente todas las preguntas.
+- Aunque el catálogo incluye distintas materias y niveles, **no existe todavía un enlace automático con planes y programas oficiales por institución**.
+- El sistema de ejercicios actual es finito y las explicaciones no cuentan con evaluación docente exhaustiva.
+- Las alertas y el seguimiento no están validados como instrumento diagnóstico; parte de las métricas proviene de datos ficticios.
+- La desconexión funciona con el documento **ya descargado o abierto**; no existe instalación PWA ni sincronización remota.
+- Las vistas de estudiante y docente comparten el estado de un navegador, **no** una plataforma multiusuario.
+- Las opciones de accesibilidad están implementadas como prototipo y **no equivalen a una certificación WCAG**.
+
+### Hoja de ruta de desarrollo
+
+**Fase 1 — Validación educativa y de usabilidad**  
+Probar el prototipo con docentes y estudiantes voluntarios; revisar exactitud de lecciones y criterios de evaluación; documentar hallazgos y corregir errores.
+
+**Fase 2 — Aplicación modular y plataforma de contenidos**  
+Migrar a **React + TypeScript**; implementar API, base de datos, autenticación, roles y un sistema de contenidos curricularmente revisados.
+
+**Fase 3 — Offline-first y sincronización**  
+Incorporar **PWA, IndexedDB y sincronización diferida**, comprobando conflictos, pérdida de conexión y recuperación de sesiones reales.
+
+**Fase 4 — IA pedagógica supervisada**  
+Conectar un modelo generativo bajo límites pedagógicos, verificar respuestas, incorporar explicaciones alternativas y evaluar seguridad y calidad con revisión humana.
+
+**Fase 5 — Piloto e impacto**  
+Medir aprendizaje autónomo, uso de pistas, intervención docente, accesibilidad y desempeño en dispositivos de baja gama antes de extender la solución.
+
+## Fuentes y bibliografía
+
+1. **OCDE (2026).** *PISA 2025 Results (Volume I): Mexico*. [Nota de país](https://www.oecd.org/en/publications/pisa-2025-results-volume-i-country-notes_2d4ff9ea-en/mexico_85702d30-en.html).
+2. **INEGI (2026).** *Encuesta Nacional sobre Disponibilidad y Uso de Tecnologías de la Información en los Hogares (ENDUTIH) 2025*. [Página de resultados](https://www.inegi.org.mx/programas/endutih/2025/).
+3. **Gobierno del Estado de Veracruz (2025).** *Plan Veracruzano de Desarrollo 2025–2030*, tabla 6.1.8. [Texto oficial](https://repositorio.veracruz.gob.mx/programadegobierno/wp-content/uploads/sites/4/2025/05/Gaceta-Num-Ext.210_PVD.pdf).
+4. **Bastani, H., Bastani, O., Sungu, A., Ge, H., Kabakcı, Ö. y Mariman, R. (2025).** *Generative AI without guardrails can harm learning: Evidence from high school mathematics*. *PNAS*, 122(26), e2422633122. [DOI](https://doi.org/10.1073/pnas.2422633122).
+5. **O'Neill, L. D., Mørcke, A. M. y Eika, B. (2016).** *The validity of student tutors' judgments in early detection of struggling in medical school*. *Advances in Health Sciences Education*, 21, 1061–1079. [DOI](https://doi.org/10.1007/s10459-016-9677-6).
+6. **Banerjee, A. et al. (2016).** *Mainstreaming an effective intervention: Evidence from randomized evaluations of Teaching at the Right Level in India*. NBER Working Paper 22746. [DOI](https://doi.org/10.3386/w22746).
+7. **Education Endowment Foundation.** [Mastery Learning](https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/mastery-learning/) y [Metacognition and Self-Regulated Learning](https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/metacognition/).
+8. **Medición Independiente de Aprendizajes (MIA).** [Campamentos MIA / Enseñar en el Nivel Adecuado](https://www.medicionmia.org.mx/about-1).
+9. **Institute of Education Sciences.** [Teaching Strategies for Improving Algebra Knowledge](https://ies.ed.gov/ncee/wwc/practiceguide/20).
+10. **Secretaría de Educación Pública.** [Problemas de ecuaciones lineales, 1.º de secundaria](https://nuevaescuelamexicana.sep.gob.mx/contenido/coleccion/problemas-de-ecuaciones-lineales/).
+
+**Fecha de documentación:** noviembre de 2026. Las cifras se presentan con su población, ámbito y periodo de referencia; no deben extrapolarse a todos los alumnos o escuelas sin análisis adicional.
 
 ## Equipo
 
-Equipo 16 - Parfaite : `Sergio Eduardo Mendoza Da Silveira`, `Ares Juddá Rivera Soto`,`Jose emiliano gutierrez grajales` , `Joab Emanuel Martínez Celayos`,  `Leonardo Alfredo Alejandre Sánchez` 
+**Equipo 16 — Parfaite**  
+**Hackathon Veracruz Tech Week 2026 · Reto 5: Aprender a la jarocha**
+
+- Sergio Eduardo Mendoza Da Silveira
+- Ares Juddá Rivera Soto
+- José Emiliano Gutiérrez Grajales
+- Joab Emanuel Martínez Celayos
+- Leonardo Alfredo Alejandre Sánchez
+
+---
+
+<div align="center">
+
+**EstudiandoAndo: no queremos que la IA aprenda por ti. Queremos que te ayude a aprender.**
+
+*Prototipo desarrollado como demostración tecnológica y pedagógica; no reemplaza la labor de instituciones y docentes.*
+
+</div>
