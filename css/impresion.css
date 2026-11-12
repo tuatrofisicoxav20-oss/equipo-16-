@@ -1,0 +1,416 @@
+/*
+ * Tecu Aprende · cuadernillo imprimible (js/ui/cuadernillo.js).
+ *
+ * En pantalla la sección .cuadernillo no se ve (es .solo-impresion del kit), así
+ * que las reglas de abajo solo se notan en papel. Mientras hay un cuadernillo
+ * armado, <html> lleva .imprimiendo-cuadernillo y al imprimir se oculta la app
+ * entera: solo salen las hojas del cuadernillo.
+ *
+ * Papel: carta, márgenes de 1.5 cm (caben las grapas), blanco y negro y letra de
+ * 12 pt o más. Cada .cuadernillo__hoja es una página; cada estudiante y la clave
+ * empiezan en página nueva y ningún ejercicio se corta entre páginas.
+ * Todo va en pt y cm: no depende del tamaño de letra elegido en la app.
+ */
+
+/* Base: medidas de papel, tinta negra sobre blanco ========================= */
+
+.cuadernillo {
+  color: #000000;
+  background: #ffffff;
+  font-family: var(--fuente, 'Nunito', system-ui, sans-serif);
+  font-size: 13pt;
+  line-height: 1.35;
+  text-align: start;
+}
+
+:where(.cuadernillo) :where(h1, h2, h3, p, dl, dt, dd, figure, ol, ul) {
+  margin: 0;
+  padding: 0;
+}
+
+.cuadernillo strong {
+  font-weight: 800;
+}
+
+.cuadernillo__h2 {
+  margin-bottom: 0.2cm;
+  font-size: 17pt;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+/* Portada: Tecu, marca, ruta y tema ======================================== */
+
+.cuadernillo__portada {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.45cm;
+  align-items: center;
+  padding-bottom: 0.25cm;
+  border-bottom: 2pt solid #000000;
+}
+
+.cuadernillo__tecu .tecu {
+  display: block;
+  width: 1.9cm;
+  height: 1.9cm;
+}
+
+.cuadernillo__marca {
+  font-size: 12pt;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cuadernillo__titulo {
+  font-size: 24pt;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.cuadernillo__tema {
+  font-size: 13pt;
+}
+
+.cuadernillo__folio {
+  align-self: start;
+  font-size: 12pt;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Nombre, Grupo y Fecha (y el resumen de la clave) ========================= */
+
+.cuadernillo__datos {
+  display: grid;
+  grid-template-columns: 3fr 1.3fr 1.5fr;
+  gap: 0.6cm;
+  margin: 0.45cm 0;
+}
+
+.cuadernillo__dato {
+  display: flex;
+  gap: 0.2cm;
+  align-items: baseline;
+}
+
+.cuadernillo__dato dt {
+  font-weight: 800;
+}
+
+.cuadernillo__datos dd {
+  flex: 1;
+  min-height: 0.8cm;
+  padding: 0 0.15cm;
+  border-bottom: 1pt solid #000000;
+  font-size: 15pt;
+  font-weight: 800;
+}
+
+.cuadernillo__resumen {
+  display: grid;
+  gap: 0.05cm;
+  margin-bottom: 0.4cm;
+  font-size: 12pt;
+}
+
+/* Antes de empezar: meta, balanza y regla de oro =========================== */
+
+.cuadernillo__antes {
+  margin-bottom: 0.45cm;
+}
+
+.cuadernillo__antes-cuerpo {
+  display: grid;
+  grid-template-columns: 7cm 1fr;
+  gap: 0.6cm;
+  align-items: center;
+}
+
+.cuadernillo__antes-cuerpo--texto {
+  grid-template-columns: 1fr;
+}
+
+.cuadernillo__antes-texto p + p {
+  margin-top: 0.2cm;
+}
+
+.cuadernillo__balanza svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.cuadernillo__balanza figcaption {
+  margin-top: 0.1cm;
+  font-size: 12pt;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.cuadernillo__balanza-ecuacion {
+  display: block;
+  font-size: 15pt;
+  font-weight: 800;
+}
+
+.cuadernillo__regla {
+  margin-top: 0.3cm;
+  padding: 0.18cm 0.4cm;
+  border: 2pt solid #000000;
+  border-radius: 8pt;
+  font-size: 14pt;
+  text-align: center;
+}
+
+/* Ejercicios: enunciado grande, renglones numerados y casilla ============== */
+
+.cuadernillo__instrucciones {
+  margin-bottom: 0.3cm;
+}
+
+.cuadernillo__ejercicio {
+  padding: 0.2cm 0.45cm 0.25cm;
+  border: 1.2pt solid #000000;
+  border-radius: 8pt;
+}
+
+.cuadernillo__ejercicio + .cuadernillo__ejercicio {
+  margin-top: 0.4cm;
+}
+
+.cuadernillo__ejercicio-cabeza {
+  display: flex;
+  gap: 0.5cm;
+  align-items: baseline;
+}
+
+.cuadernillo__ejercicio-titulo {
+  font-size: 13pt;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cuadernillo__enunciado {
+  flex: 1;
+  font-size: 22pt;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.cuadernillo__nivel {
+  padding: 0 0.25cm;
+  border: 1pt solid #000000;
+  border-radius: 999px;
+  font-size: 12pt;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cuadernillo__renglones {
+  list-style: none;
+  counter-reset: renglon;
+}
+
+.cuadernillo__renglones > li {
+  position: relative;
+  height: 0.8cm;
+  margin-left: 0.75cm;
+  border-bottom: 1pt solid #7f7f7f; /* línea de base gris */
+  counter-increment: renglon;
+}
+
+.cuadernillo__renglones > li::before {
+  content: counter(renglon);
+  position: absolute;
+  bottom: 0.06cm;
+  left: -0.75cm;
+  width: 0.55cm;
+  color: #404040;
+  font-size: 12pt;
+  font-weight: 700;
+  text-align: right;
+}
+
+.cuadernillo__pie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25cm 0.6cm;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25cm;
+}
+
+.cuadernillo__hueco {
+  display: inline-block;
+  width: 3cm;
+  height: 1em;
+  border-bottom: 1pt solid #000000;
+}
+
+.cuadernillo__hueco--nombre {
+  width: 7cm;
+}
+
+.cuadernillo__casilla {
+  display: flex;
+  gap: 0.25cm;
+  align-items: center;
+  font-weight: 700;
+}
+
+.cuadernillo__cuadro {
+  flex: none;
+  width: 0.6cm;
+  height: 0.6cm;
+  border: 1.5pt solid #000000;
+  border-radius: 2pt;
+}
+
+/* Encabezado de las hojas 2 en adelante (por si se separan las hojas) */
+.cuadernillo__cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1cm 0.5cm;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.4cm;
+  padding-bottom: 0.15cm;
+  border-bottom: 1.5pt solid #000000;
+  font-size: 12pt;
+}
+
+/* Clave para el docente ===================================================== */
+
+.cuadernillo__clave {
+  font-size: 12pt;
+}
+
+.cuadernillo__clave-cabeza {
+  margin-bottom: 0.3cm;
+  padding-bottom: 0.25cm;
+  border-bottom: 2pt solid #000000;
+}
+
+.cuadernillo__sello {
+  display: inline-block;
+  margin-top: 0.15cm;
+  padding: 0.05cm 0.3cm;
+  border: 2pt solid #000000;
+  border-radius: 4pt;
+  font-size: 13pt;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cuadernillo__vigilar,
+.cuadernillo__clave section + section {
+  margin-top: 0.4cm;
+}
+
+.cuadernillo__clave .cuadernillo__h2 {
+  font-size: 15pt;
+}
+
+.cuadernillo__tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12pt;
+  line-height: 1.3;
+}
+
+.cuadernillo__tabla :is(th, td) {
+  padding: 0.12cm 0.2cm;
+  border: 1pt solid #000000;
+  background: none;
+  font-size: 12pt;
+  text-align: start;
+  vertical-align: top;
+}
+
+.cuadernillo__tabla thead th {
+  font-weight: 800;
+}
+
+.cuadernillo__tabla thead th:nth-child(1) { width: 4.3cm; }
+.cuadernillo__tabla thead th:nth-child(2) { width: 4.4cm; }
+.cuadernillo__tabla thead th:nth-child(3) { width: 2.6cm; }
+
+.cuadernillo__tabla tbody th {
+  font-weight: 400;
+}
+
+.cuadernillo__clave-ecuacion {
+  display: block;
+  font-size: 13pt;
+  font-weight: 800;
+}
+
+.cuadernillo__clave-nivel {
+  display: block;
+}
+
+.cuadernillo__pasos {
+  padding-inline-start: 1.3em;
+}
+
+.cuadernillo__respuesta {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cuadernillo__tabla td p + p {
+  margin-top: 0.08cm;
+}
+
+/* Impresión: solo el cuadernillo, en hojas carta ============================ */
+
+@media print {
+  @page {
+    size: letter;
+    margin: 1.5cm;
+  }
+
+  /* La app entera (y avisos, diálogos y regiones para lector) se queda fuera. */
+  html.imprimiendo-cuadernillo body > :not(.cuadernillo) {
+    display: none !important;
+  }
+
+  html.imprimiendo-cuadernillo,
+  html.imprimiendo-cuadernillo body {
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* Página nueva para cada hoja, cada estudiante y la clave. */
+  .cuadernillo__alumno + .cuadernillo__alumno,
+  .cuadernillo__hoja + .cuadernillo__hoja,
+  .cuadernillo__clave {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Nada se corta entre páginas. */
+  .cuadernillo__portada,
+  .cuadernillo__datos,
+  .cuadernillo__antes,
+  .cuadernillo__ejercicio,
+  .cuadernillo__tabla tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .cuadernillo :is(h1, h2, h3) {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .cuadernillo p {
+    orphans: 3;
+    widows: 3;
+  }
+}

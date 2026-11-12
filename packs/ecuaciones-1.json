@@ -259,7 +259,7 @@
       "retroOtra": "Si {elTermino} solo desaparece, un lado cambia y el otro no: la balanza se inclina. Prueba otra opción."
     },
     "INVERSA_EQUIVOCADA": {
-      "texto": "{intro} El {coefNum} está multiplicando a la x: {coef} es {coefNum} veces x. ¿Qué operación lo deshace?",
+      "texto": "{intro} El {coefNum} está multiplicando a la x: {coef} quiere decir {coefNum} veces x. ¿Qué operación lo deshace?",
       "correcta": "Dividir los dos lados entre {coefNum}",
       "suya": "Restar {coefNum} en los dos lados",
       "otra": "Multiplicar los dos lados por {coefNum}",
@@ -279,7 +279,14 @@
       "otraAditivo": "Multiplicar por {terminoSinSigno} en los dos lados",
       "retroCorrectaAditivo": "¡Bien! Lo que suma se quita restando, y lo que resta se quita sumando.",
       "retroSuyaAditivo": "Dividir deshace una multiplicación, pero {elTermino} está {verbo}. Prueba otra opción.",
-      "retroOtraAditivo": "Multiplicar no quita un número que está sumando o restando. Prueba otra opción."
+      "retroOtraAditivo": "Multiplicar no quita un número que está sumando o restando. Prueba otra opción.",
+      "textoOpuesto": "{intro} El signo menos de {coef} quiere decir −1 veces x. ¿Qué operación deja la x sola?",
+      "correctaOpuesto": "Multiplicar los dos lados por −1",
+      "suyaOpuesto": "Sumar o restar 1 en los dos lados",
+      "otraOpuesto": "Quitarle el signo menos solo a la x",
+      "retroCorrectaOpuesto": "¡Eso es! Multiplicar los dos lados por −1 les cambia el signo a los dos: −x se vuelve x y la balanza sigue en equilibrio.",
+      "retroSuyaOpuesto": "Sumar o restar quita una cantidad suelta, pero el −1 no está suelto: está multiplicando a la x. Prueba otra opción.",
+      "retroOtraOpuesto": "Si solo le quitas el signo a la x, un lado cambia y el otro no: la balanza se inclina. Prueba otra opción."
     },
     "ARITMETICA": {
       "texto": "{intro} El paso estaba bien pensado; solo falló una cuenta. ¿Cuánto es {cuenta}?",
@@ -318,13 +325,17 @@
       "retroCorrectaDivide": "¡Exacto! Si divides un lado, divides el otro: así la igualdad se conserva.",
       "retroSuyaDivide": "Eso fue lo que pasó en ese renglón. Si solo divides un lado, la igualdad se rompe. Prueba otra opción.",
       "retroOtraDivide": "Restar no es la misma operación que dividir. Prueba otra opción.",
+      "otraDivideAlt": "Se le suma {coefNum}",
+      "retroOtraDivideAlt": "Sumar no es la misma operación que dividir. Prueba otra opción.",
       "textoMultiplica": "{intro} Ahí se multiplicó por {divisor} un solo lado. ¿Qué pasa con el otro lado?",
       "correctaMultiplica": "También se multiplica por {divisor}",
       "suyaMultiplica": "Se queda igual",
       "otraMultiplica": "Se le suma {divisor}",
       "retroCorrectaMultiplica": "¡Exacto! Si multiplicas un lado, multiplicas el otro: así la igualdad se conserva.",
       "retroSuyaMultiplica": "Eso fue lo que pasó en ese renglón. Si solo multiplicas un lado, la igualdad se rompe. Prueba otra opción.",
-      "retroOtraMultiplica": "Sumar no es la misma operación que multiplicar. Prueba otra opción."
+      "retroOtraMultiplica": "Sumar no es la misma operación que multiplicar. Prueba otra opción.",
+      "otraMultiplicaAlt": "Se le resta {divisor}",
+      "retroOtraMultiplicaAlt": "Restar no es la misma operación que multiplicar. Prueba otra opción."
     },
     "SIGNO_NEGATIVO": {
       "texto": "{intro} Sin hacer toda la cuenta: {b} entre {coefNum}, ¿da positivo o negativo?",

@@ -95,9 +95,14 @@ export function fmtEcuacion(eq) {
   return `${fmtLado(eq.L)} = ${fmtLado(eq.R)}`;
 }
 
-/** Convierte un texto escrito por el estudiante a formato de pantalla (− en vez de -). */
+/**
+ * Convierte un texto escrito por el estudiante a formato de pantalla (− en vez de -).
+ * Acepta también el − tipográfico (U+2212) y los demás guiones que entiende normalizar():
+ * "3x−5=20" queda "3x − 5 = 20" igual que "3x-5=20". Aplicarla dos veces no cambia nada.
+ */
 export function bonito(texto) {
   return String(texto ?? '')
+    .replace(/[−‐-―﹣˗➖]/g, '-')
     .replace(/\s*([=+])\s*/g, ' $1 ')
     .replace(/([\dxX)\]])\s*-\s*/g, `$1 ${MENOS} `) // resta: después de número, x o paréntesis
     .replace(/-\s*/g, MENOS) // signo de un negativo: −3 (sin espacio)
@@ -909,6 +914,51 @@ function esElCandidato(vS, c) {
   return c.fantasma ? vS.every((x, i) => x.eq(c.vector[i])) : coinciden(vS, c.vector);
 }
 
+/** Los términos (distintos de cero) de un lado que son x, o los que son números. */
+const terminosDe = (lado, esX) => lado.filter((t) => t.x === esX && !t.c.isZero());
+
+/**
+ * ¿Un error del último paso (`final`: dividir) puede explicar lo escrito? Solo si la x
+ * quedó en un solo término por lado: 5x − 4x = 14 − 2 da lo mismo que x = 12, pero ahí
+ * nadie dividió nada. Los números sí pueden quedar sin calcular (x = 15 − 3 es restar el 3).
+ */
+const xReducida = (eq) => terminosDe(eq.L, true).length <= 1 && terminosDe(eq.R, true).length <= 1;
+
+/**
+ * ¿El candidato explica lo escrito sin juntar términos que el estudiante dejó separados?
+ * Puede haber hecho cuentas que el candidato deja pendientes (5 − 20 → −15), pero si
+ * escribió −5x + 16x no juntó 2x + 14 − 5x en 11x, aunque los dos renglones den 2 = 11x.
+ * Se revisa en la orientación en que coinciden los vectores (volteado solo si no es fantasma).
+ */
+function sinJuntarDeMas(escrita, c, vS) {
+  const cabe = (s, k) => [true, false].every((esX) => terminosDe(s, esX).length <= terminosDe(k, esX).length);
+  const v = c.vector;
+  if (vS.every((x, i) => x.eq(v[i])) && cabe(escrita.L, c.eq.L) && cabe(escrita.R, c.eq.R)) return true;
+  return !c.fantasma && vS.every((x, i) => x.eq(v[(i + 2) % 4])) && cabe(escrita.L, c.eq.R) && cabe(escrita.R, c.eq.L);
+}
+
+/** ¿Los dos lados tienen los mismos términos, sin importar el orden? */
+function mismosTerminos(a, b) {
+  const resto = b.filter((t) => !t.c.isZero());
+  for (const t of a) {
+    if (t.c.isZero()) continue;
+    const k = resto.findIndex((u) => u.x === t.x && u.c.eq(t.c));
+    if (k < 0) return false;
+    resto.splice(k, 1);
+  }
+  return resto.length === 0;
+}
+
+/**
+ * ¿El estudiante escribió el renglón del candidato término a término (y no solo algo
+ * con las mismas sumas)? «2 = −5x + 16x» es el candidato que junta 2x + 14 en 16x,
+ * no el que junta 2x + 14 − 5x en 11x, aunque los dos den 2 = 11x.
+ */
+function escritoTalCual(escrita, c) {
+  if (mismosTerminos(escrita.L, c.eq.L) && mismosTerminos(escrita.R, c.eq.R)) return true;
+  return !c.fantasma && mismosTerminos(escrita.L, c.eq.R) && mismosTerminos(escrita.R, c.eq.L);
+}
+
 /**
  * ¿El número escrito parece un desliz de cuenta del número correcto?
  * Solo se aceptan deslices plausibles; si no, el motor prefiere decir
@@ -949,7 +999,23 @@ function cuentaDe(cand, componente) {
   return fmtLado(terms);
 }
 
-function buscarAritmetica(vS, correctos) {
+/**
+ * El único término que cambió al copiar un lado con la cuenta sin hacer
+ * (20 − 5 → 21 − 5 da {antes: 20, despues: 21}), o null si cambió más de uno.
+ */
+function terminoCambiado(delCandidato, delEstudiante) {
+  if (delCandidato.length !== delEstudiante.length) return null;
+  const resto = [...delEstudiante];
+  const sinPareja = [];
+  for (const t of delCandidato) {
+    const k = resto.findIndex((u) => u.c.eq(t.c));
+    if (k >= 0) resto.splice(k, 1);
+    else sinPareja.push(t);
+  }
+  return sinPareja.length === 1 ? { antes: sinPareja[0].c, despues: resto[0].c } : null;
+}
+
+function buscarAritmetica(vS, correctos, escrita) {
   for (const cand of correctos) {
     const vC = cand.vector;
     // Un candidato fantasma (−15 = −3x) no se compara volteado: citaría números que el estudiante no escribió.
@@ -958,24 +1024,42 @@ function buscarAritmetica(vS, correctos) {
       for (let i = 0; i < 4; i++) if (!orden[i].eq(vS[i])) difs.push(i);
       if (difs.length !== 1) continue;
       const i = difs[0];
-      if (!cercano(orden[i], vS[i])) continue;
+      const esX = i % 2 === 0;
+      const lado = escrita[i < 2 ? 'L' : 'R'];
+      const suyos = terminosDe(lado, esX);
+      // x + 4 = 10 → 10 = 4, x/4 − 1 = 2 → x/4 = 1: un término desapareció de un lado que sigue
+      // teniendo otros. No hay ningún 0 escrito que revisar ("escribiste 0" sería falso); sí
+      // cuentan el 0 escrito como lado completo (0 = 5) y los términos que suman 0 (x = 1 − 1).
+      if (vS[i].isZero() && !suyos.length && lado.some((t) => !t.c.isZero())) continue;
       // índice real dentro del candidato (por si estaba volteado)
       const iCand = orden === vC ? i : (i + 2) % 4;
-      const cuenta = cuentaDe(cand, iCand);
-      // 3x + 5 = 20 → 3x + 5 = 25: sin ninguna cuenta a la vista, un cambio igual al término del
-      // otro lado (el 5) es pasarlo sin quitarlo, no un error al copiar.
-      const otro = vS[(i + 2) % 4];
-      if (!cuenta && !otro.isZero() && orden[i].sub(vS[i]).abs().eq(otro.abs())) continue;
+      let esperado = orden[i];
+      let escrito = vS[i];
+      let cuenta = null;
+      if (suyos.length >= 2) {
+        // 3x = 21 − 5: dejó la cuenta sin hacer, así que no la hizo mal ("20 − 5 no da 16" sería
+        // falso). Lo que cambió es un término al copiarlo (el 20 se volvió 21).
+        const par = terminoCambiado(terminosDe(cand.eq[iCand < 2 ? 'L' : 'R'], esX), suyos);
+        if (!par || !cercano(par.antes, par.despues)) continue;
+        ({ antes: esperado, despues: escrito } = par);
+      } else {
+        if (!cercano(orden[i], vS[i])) continue;
+        cuenta = cuentaDe(cand, iCand);
+        // 3x + 5 = 20 → 3x + 5 = 25: sin ninguna cuenta a la vista, un cambio igual al término del
+        // otro lado (el 5) es pasarlo sin quitarlo, no un error al copiar.
+        const otro = vS[(i + 2) % 4];
+        if (!cuenta && !otro.isZero() && orden[i].sub(vS[i]).abs().eq(otro.abs())) continue;
+      }
       return {
         tipo: TIPOS.ARITMETICA,
         detalle: {
           variante: cuenta ? 'cuenta' : 'copia',
           cuenta,
-          esperado: fmtNum(orden[i]),
-          escrito: fmtNum(vS[i]),
-          esperadoValor: orden[i].toString(),
-          escritoValor: vS[i].toString(),
-          esX: i % 2 === 0,
+          esperado: fmtNum(esperado),
+          escrito: fmtNum(escrito),
+          esperadoValor: esperado.toString(),
+          escritoValor: escrito.toString(),
+          esX,
           componente: NOMBRE_COMPONENTE[i],
         },
         confianza: cand.ops >= 2 ? 'media' : 'alta',
@@ -987,16 +1071,19 @@ function buscarAritmetica(vS, correctos) {
 }
 
 /**
- * El candidato que mejor explica el renglón: menos pasos y, a igualdad, el de mayor prioridad.
- * `empate`: otra regla de OTRO tipo lo explica con los mismos pasos (la prioridad decidió, no la evidencia).
+ * El candidato que mejor explica el renglón: menos pasos; a igualdad, el que coincide término
+ * a término con lo escrito (`esLiteral`) y luego el de mayor prioridad.
+ * `empate`: otra regla de OTRO tipo lo explica con los mismos pasos e igual de literal
+ * (la prioridad decidió, no la evidencia).
  */
-function elegir(lista) {
+function elegir(lista, esLiteral = () => false) {
+  const lit = new Map(lista.map((c) => [c, esLiteral(c) ? 0 : 1]));
   const orden = [...lista].sort(
-    (p, q) => p.ops - q.ops || PRIORIDAD.indexOf(p.mal.tipo) - PRIORIDAD.indexOf(q.mal.tipo),
+    (p, q) => p.ops - q.ops || lit.get(p) - lit.get(q) || PRIORIDAD.indexOf(p.mal.tipo) - PRIORIDAD.indexOf(q.mal.tipo),
   );
   const mejor = orden[0];
   const alternativas = [...new Set(orden.map((c) => c.mal.tipo))].filter((t) => t !== mejor.mal.tipo);
-  const empate = orden.some((c) => c.ops === mejor.ops && c.mal.tipo !== mejor.mal.tipo);
+  const empate = orden.some((c) => c.ops === mejor.ops && lit.get(c) === lit.get(mejor) && c.mal.tipo !== mejor.mal.tipo);
   // Copia: los candidatos viven en la memoria de clasificar() y no se deben poder modificar desde fuera.
   return { tipo: mejor.mal.tipo, detalle: { ...mejor.mal.detalle }, ops: mejor.ops, alternativas, empate };
 }
@@ -1076,15 +1163,22 @@ function clasificarExacto(previa, escrita) {
   const conError = esDespeje ? memo.conErrorDespeje : memo.conError;
   const correctos = esDespeje ? memo.correctosDespeje : memo.correctos;
 
-  const exactos = conError.filter((c) => esElCandidato(vS, c));
+  // Coincidencias exactas. Se descartan las que juntan términos que el estudiante dejó separados
+  // (no explican lo que escribió, solo dan las mismas sumas). Los errores del último paso
+  // (dividir) siempre dan el número ya calculado y el estudiante puede dejar la cuenta escrita
+  // (x = 15 − 3 es restar el 3), así que a ellos solo se les pide que la x haya quedado reducida.
+  const exactos = conError.filter(
+    (c) => esElCandidato(vS, c) && (c.final ? xReducida(escrita) : sinJuntarDeMas(escrita, c, vS)),
+  );
   if (exactos.length) {
-    const elegido = elegir(exactos);
+    // A igualdad de pasos, gana el que coincide término a término con lo escrito.
+    const elegido = elegir(exactos, (c) => escritoTalCual(escrita, c));
     // Una explicación que necesita 3 operaciones seguidas es posible, no segura; tampoco
     // cuando otra regla, de otro tipo, explica el renglón con los mismos pasos.
     return { ...sinEmpate(elegido), confianza: elegido.ops >= 3 || elegido.empate ? 'media' : 'alta' };
   }
 
-  const arit = buscarAritmetica(vS, correctos);
+  const arit = buscarAritmetica(vS, correctos, escrita);
   if (arit) return { ...arit, alternativas: [] };
 
   // Nivel 2: el estudiante ya escribió "x = valor" y ese valor es el que da un

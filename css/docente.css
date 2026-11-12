@@ -1,0 +1,1042 @@
+/*
+ * Panel docente (js/views/docente.js).
+ *
+ * styles.css pone el kit (barra superior, tarjetas, chips, insignias, botones,
+ * tablas, .tabla-desplazable, tonos [data-tono]…). Aquí solo va el acomodo
+ * propio del panel, con clases docente-* y tokens del kit.
+ * Escritorio primero (1280–1440 px), usable en tableta y celular, y una versión
+ * densa (.docente-compacto) para el iframe del modo presentación.
+ * Nada depende solo del color: cada celda lleva su número y lo resaltado lleva
+ * la marca "Actualizado".
+ */
+
+/* ------------------------------------------------------------------ */
+/* Estructura                                                          */
+/* ------------------------------------------------------------------ */
+
+.docente {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-6);
+}
+
+.docente p {
+  margin: 0;
+}
+
+/* Barra superior: marca, secciones y el indicador "En vivo" */
+.docente-barra {
+  gap: var(--espacio-2) var(--espacio-4);
+}
+
+.docente-barra > .docente-marca:first-child {
+  flex: 0 0 auto;
+}
+
+.docente-marca .tecu {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.docente-nav {
+  flex: 1 1 auto;
+}
+
+.docente-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docente-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo);
+  padding: 0 var(--espacio-3);
+  border-radius: var(--radio);
+  color: var(--color-texto);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.docente-nav a:hover {
+  background: var(--color-primario-suave);
+  color: var(--color-primario);
+  text-decoration: underline;
+}
+
+.docente-vivo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-2);
+  margin-inline-start: auto;
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+  font-variant-numeric: tabular-nums;
+}
+
+.docente-vivo__hora strong {
+  color: var(--color-texto);
+}
+
+.docente-vivo__chip {
+  gap: 0.45em;
+}
+
+.docente-vivo__punto {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: docente-latido 1.8s ease-out infinite;
+}
+
+/* Encabezado: grupo, tema y la nota del grupo simulado */
+.docente-encabezado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.docente-tema {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-size: var(--texto-grande);
+}
+
+.docente-tema .icono {
+  color: var(--color-primario);
+}
+
+.docente-tema__fecha {
+  color: var(--color-texto-sec);
+  font-weight: 600;
+}
+
+.docente-nota {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--espacio-1) var(--espacio-3);
+  border: var(--borde-fino) dashed var(--color-borde);
+  border-radius: var(--radio);
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+  line-height: 1.4;
+}
+
+.docente-nota .icono {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  margin-top: 0.05em;
+}
+
+/* Lo que más se repite + indicadores, lado a lado en escritorio */
+.docente-resumen {
+  display: grid;
+  gap: var(--espacio-5);
+  align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .docente-resumen {
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem);
+  }
+}
+
+/* Secciones */
+.docente-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  scroll-margin-top: var(--espacio-3);
+}
+
+.docente-seccion__cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2) var(--espacio-4);
+}
+
+.docente-seccion__titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.docente-seccion__titulo .icono {
+  color: var(--color-primario);
+}
+
+.docente-seccion__nota {
+  color: var(--color-texto-sec);
+}
+
+.docente .vacio {
+  padding: var(--espacio-5) var(--espacio-4);
+}
+
+/* ------------------------------------------------------------------ */
+/* Lo que más se repite                                                */
+/* ------------------------------------------------------------------ */
+
+.docente-repetido {
+  padding: var(--espacio-5);
+}
+
+.docente-principal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4) var(--espacio-5);
+  border: var(--borde-control) solid var(--tono);
+  border-inline-start-width: 0.5rem;
+  border-radius: var(--radio-grande);
+  background: var(--tono-suave);
+}
+
+.docente-principal__cabeza {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+}
+
+.docente-principal__icono {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--tono);
+  color: var(--sobre-tono);
+}
+
+.docente-principal__nombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  color: var(--tono);
+}
+
+/* Barra con número (la barra es decorativa: el número va en texto) */
+.docente-dato {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-3);
+}
+
+.docente-dato__barra {
+  flex: 1 1 10rem;
+  height: 0.875rem;
+  overflow: hidden;
+  border: var(--borde-fino) solid var(--tono);
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+}
+
+.docente-dato__barra > span {
+  display: block;
+  min-width: 0.25rem;
+  height: 100%;
+  background: var(--tono);
+}
+
+.docente-dato__texto {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Un renglón real con el error: «3x + 5 = 20 → 3x = 20 + 5» */
+.docente-ejemplo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio);
+  background: var(--color-papel, #fffdf6);
+}
+
+.docente-ejemplo__etiqueta {
+  font-weight: 800;
+}
+
+.docente-ejemplo__renglon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: var(--texto-grande);
+  font-weight: 700;
+}
+
+.docente-ejemplo__renglon--error {
+  color: var(--color-error);
+}
+
+.docente-ejemplo__renglon--error .math {
+  text-decoration: underline wavy var(--color-error);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+}
+
+.docente-ejemplo__flecha {
+  display: inline-flex;
+  color: var(--color-texto-sec);
+}
+
+/* La actividad para toda la clase */
+.docente-accion {
+  padding: var(--espacio-3) var(--espacio-4);
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+}
+
+.docente-accion__titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin-bottom: var(--espacio-1);
+  color: var(--color-primario);
+  font-size: var(--texto-base);
+}
+
+.docente-siguientes__titulo {
+  margin-top: var(--espacio-2);
+}
+
+.docente-siguientes {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docente-siguientes > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 1.1fr);
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-4);
+  padding: var(--espacio-2) 0;
+  border-top: var(--borde-fino) solid var(--color-borde-suave);
+}
+
+.docente-siguientes__nombre {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-weight: 700;
+}
+
+.docente-siguientes__nombre .icono {
+  color: var(--tono);
+}
+
+/* ------------------------------------------------------------------ */
+/* Indicadores                                                         */
+/* ------------------------------------------------------------------ */
+
+.docente-indicadores {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.docente-kpis {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+}
+
+@media (min-width: 40rem) and (max-width: 63.99rem) {
+  .docente-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.docente-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3) var(--espacio-4);
+}
+
+.docente-kpi > * {
+  margin: 0;
+}
+
+.docente-kpi__etiqueta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-weight: 800;
+}
+
+.docente-kpi__etiqueta .icono {
+  color: var(--color-primario);
+}
+
+.docente-kpi__valor {
+  color: var(--color-texto);
+  font-size: 2.25rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.docente-kpi__de {
+  color: var(--color-texto-sec);
+  font-size: var(--texto-grande);
+  font-weight: 700;
+}
+
+.docente-kpi__detalle {
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+}
+
+/* ------------------------------------------------------------------ */
+/* A quién llamar                                                      */
+/* ------------------------------------------------------------------ */
+
+.docente-llamadas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docente-llamada {
+  --llamada: var(--color-borde);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  border-top: 0.375rem solid var(--llamada);
+}
+
+.docente-llamada[data-motivo='atorado'] { --llamada: var(--color-error); }
+.docente-llamada[data-motivo='por_revisar'] { --llamada: var(--color-info); }
+.docente-llamada[data-motivo='inactivo'] { --llamada: var(--color-alerta); }
+
+.docente-llamada__cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.docente-llamada__nombre {
+  margin-inline-end: auto;
+}
+
+.docente-llamada__porque {
+  font-weight: 700;
+}
+
+.docente-llamada__plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3);
+  border-radius: var(--radio);
+  background: var(--color-superficie-2);
+}
+
+.docente-llamada__plan-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  color: var(--color-primario);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+}
+
+.docente-llamada__boton {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+/* Insignia "En vivo" (celulares que sincronizan) */
+.docente-envivo {
+  height: auto;
+  min-height: 1.5rem;
+  padding: 0.125rem 0.5rem;
+}
+
+.docente-envivo .icono {
+  width: 1em;
+  height: 1em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mapa de dificultades                                                */
+/* ------------------------------------------------------------------ */
+
+.docente-mapa caption {
+  padding: var(--espacio-3) var(--espacio-4);
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.docente-mapa__ayuda {
+  display: block;
+  color: var(--color-texto);
+  font-weight: 700;
+}
+
+.docente-mapa :is(th, td) {
+  padding: var(--espacio-1) var(--espacio-2);
+  vertical-align: middle;
+}
+
+.docente-mapa thead .docente-th {
+  padding: 0;
+  vertical-align: bottom;
+}
+
+/* Encabezado que ordena: todo el encabezado es el botón (≥ 44 px) */
+.docente-orden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.125rem;
+  width: 100%;
+  min-height: var(--objetivo);
+  padding: var(--espacio-2);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-texto);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.docente-th--nombre .docente-orden,
+.docente-th--estado .docente-orden {
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: var(--espacio-1);
+  text-align: start;
+}
+
+.docente-th[data-tono] .docente-orden > .icono {
+  color: var(--tono);
+}
+
+.docente-orden__flecha {
+  display: inline-flex;
+  opacity: 0.4;
+}
+
+.docente-th[aria-sort] {
+  background: var(--color-primario-suave);
+}
+
+.docente-th[aria-sort] .docente-orden__flecha {
+  color: var(--color-primario);
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .docente-orden:hover {
+    background: var(--color-primario-suave);
+    text-decoration: underline;
+  }
+}
+
+.docente-orden:focus-visible {
+  outline-offset: -3px;
+}
+
+/* Nombre: botón que abre la ficha (1 clic) */
+.docente-celda-nombre {
+  min-width: 11.5rem;
+}
+
+.docente-celda-nombre__contenido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--espacio-2);
+}
+
+.docente-alumno {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo);
+  margin-inline-start: calc(-1 * var(--espacio-1));
+  padding: 0 var(--espacio-1);
+  border: 0;
+  border-radius: var(--radio-chico);
+  background: transparent;
+  color: var(--color-primario);
+  font-weight: 800;
+  text-align: start;
+  text-decoration: underline;
+  text-decoration-thickness: max(1px, 0.07em);
+  text-underline-offset: 0.2em;
+}
+
+@media (hover: hover) {
+  .docente-alumno:hover {
+    background: var(--color-primario-suave);
+    text-decoration-thickness: 2px;
+  }
+}
+
+.docente-celda-estado {
+  white-space: nowrap;
+}
+
+/* Celdas: número + intensidad del tono de cada error (nunca solo color) */
+.docente-celda {
+  min-width: 4.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.docente-celda[data-nivel='0'] {
+  color: var(--color-texto-sec);
+  font-weight: 500;
+}
+
+.docente-celda[data-nivel='1'] {
+  background: var(--tono-suave);
+  color: var(--tono);
+}
+
+.docente-celda[data-nivel='2'] {
+  background: var(--tono-suave);
+  background: color-mix(in srgb, var(--tono) 30%, var(--color-superficie));
+  color: var(--color-texto);
+}
+
+.docente-celda[data-nivel='3'] {
+  background: var(--tono);
+  color: var(--sobre-tono);
+  font-weight: 900;
+}
+
+.docente-celda--total {
+  border-inline-start: var(--borde-control) solid var(--color-borde-suave);
+  color: var(--color-texto);
+  font-weight: 900;
+}
+
+/* Leyenda de intensidad */
+.docente-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-2);
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+}
+
+.docente-leyenda__titulo {
+  font-weight: 800;
+}
+
+.docente-leyenda ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1) var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docente-leyenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+}
+
+.docente-leyenda__muestra {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 1.5rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radio-chico);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.docente-leyenda__muestra[data-nivel='0'] {
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  background: var(--color-superficie);
+  color: var(--color-texto-sec);
+}
+
+.docente-leyenda__muestra[data-nivel='1'] {
+  background: var(--tono-suave);
+  color: var(--tono);
+}
+
+.docente-leyenda__muestra[data-nivel='2'] {
+  background: var(--tono-suave);
+  background: color-mix(in srgb, var(--tono) 30%, var(--color-superficie));
+  color: var(--color-texto);
+}
+
+.docente-leyenda__muestra[data-nivel='3'] {
+  background: var(--tono);
+  color: var(--sobre-tono);
+}
+
+/* Qué significa cada columna */
+.docente-glosario {
+  padding: 0 var(--espacio-4);
+  border: var(--borde-fino) solid var(--color-borde-suave);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+}
+
+.docente-glosario dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--espacio-3) var(--espacio-5);
+  margin: var(--espacio-1) 0 var(--espacio-4);
+}
+
+.docente-glosario dt {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  color: var(--tono);
+  font-weight: 800;
+}
+
+.docente-glosario dd {
+  margin: 0;
+  color: var(--color-texto-sec);
+  font-size: var(--texto-chico);
+}
+
+/* ------------------------------------------------------------------ */
+/* Grupos de refuerzo                                                  */
+/* ------------------------------------------------------------------ */
+
+.docente-grupos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docente-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.docente-grupo__cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.docente-grupo__titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.docente-grupo__bloque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
+
+.docente-grupo__subtitulo {
+  color: var(--tono);
+  font-size: var(--texto-chico);
+  font-weight: 800;
+}
+
+.docente-ejercicios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docente-ejercicios > li {
+  padding: 0.125rem 0.625rem;
+  border: var(--borde-fino) solid var(--tono);
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  font-weight: 700;
+}
+
+.docente-grupo__boton {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+/* ------------------------------------------------------------------ */
+/* Lo nuevo (sincronización en vivo) y el modo presentación            */
+/* ------------------------------------------------------------------ */
+
+.docente-actualizado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.0625rem 0.5rem;
+  border: var(--borde-fino) solid var(--color-acento-fuerte);
+  border-radius: var(--radio-pildora);
+  background: var(--color-acento-suave);
+  color: var(--color-acento-fuerte);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.docente-actualizado .icono {
+  width: 1em;
+  height: 1em;
+}
+
+.docente-tabla .docente-mapa tr[data-nuevo] > th[scope='row'] {
+  background: var(--color-acento-suave);
+  box-shadow: inset 0.3125rem 0 0 var(--color-acento-fuerte), 1px 0 0 var(--color-borde-suave);
+  animation: docente-destello 1.2s ease-in-out 3;
+}
+
+.docente-mapa tr[data-nuevo] > td {
+  box-shadow: inset 0 2px 0 var(--color-acento-fuerte), inset 0 -2px 0 var(--color-acento-fuerte);
+}
+
+:is(.docente-principal, .docente-kpi, .docente-llamada, .docente-grupo)[data-nuevo] {
+  box-shadow: 0 0 0 3px var(--color-acento-fuerte), var(--sombra-grande);
+  animation: docente-pulso 1.2s ease-in-out 3;
+}
+
+[data-seccion][data-presentando] {
+  outline: 4px solid var(--color-acento);
+  outline-offset: 6px;
+  border-radius: var(--radio-grande);
+  animation: docente-presentar 0.9s ease-out 2;
+}
+
+@keyframes docente-latido {
+  0% { box-shadow: 0 0 0 0 rgb(25 108 63 / 0.55); }
+  70%,
+  100% { box-shadow: 0 0 0 0.45rem rgb(25 108 63 / 0); }
+}
+
+@keyframes docente-destello {
+  50% { background-color: #fde3a7; }
+}
+
+@keyframes docente-pulso {
+  50% { box-shadow: 0 0 0 7px rgb(245 165 36 / 0.45), var(--sombra-grande); }
+}
+
+@keyframes docente-presentar {
+  from { outline-offset: 16px; outline-color: transparent; }
+}
+
+/* Movimiento reducido: lo resaltado se queda quieto (sigue visible con su marca). */
+html.reducir-movimiento :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > th, [data-presentando]) {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.docente-vivo__punto, [data-nuevo], [data-nuevo] > th, [data-presentando]) {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Pantallas angostas (tableta vertical y celular)                     */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 47.99rem) {
+  .docente {
+    gap: var(--espacio-5);
+  }
+
+  .docente-repetido,
+  .docente-principal {
+    padding: var(--espacio-4);
+  }
+
+  .docente-siguientes > li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .docente-vivo {
+    margin-inline-start: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Versión compacta (iframe del modo presentación, ~600 × 700 px)      */
+/* ------------------------------------------------------------------ */
+
+.docente-compacto {
+  font-size: 0.9375rem;
+}
+
+.docente-compacto .barra-superior {
+  min-height: 0;
+  padding-block: var(--espacio-2);
+}
+
+.docente-titulo {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.docente-compacto .contenido {
+  padding: var(--espacio-3) var(--espacio-3) var(--espacio-5);
+}
+
+.docente-compacto .docente {
+  gap: var(--espacio-4);
+}
+
+.docente-compacto .docente-seccion {
+  gap: var(--espacio-2);
+}
+
+.docente-compacto .docente-seccion__titulo {
+  font-size: var(--titulo-3);
+}
+
+.docente-compacto .docente-repetido {
+  padding: var(--espacio-3);
+}
+
+.docente-compacto .docente-principal {
+  gap: var(--espacio-2);
+  padding: var(--espacio-3);
+}
+
+.docente-compacto .docente-principal__icono {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.docente-compacto .docente-principal__nombre {
+  font-size: var(--titulo-3);
+}
+
+.docente-compacto .docente-accion {
+  padding: var(--espacio-2) var(--espacio-3);
+  font-size: var(--texto-chico);
+}
+
+.docente-compacto .docente-siguientes > li {
+  padding-block: var(--espacio-1);
+  font-size: var(--texto-chico);
+}
+
+.docente-compacto .docente-llamadas {
+  gap: var(--espacio-2);
+}
+
+.docente-compacto .docente-llamada {
+  gap: var(--espacio-2);
+  padding: var(--espacio-3);
+  font-size: var(--texto-chico);
+}
+
+.docente-compacto .docente-llamada__plan {
+  padding: var(--espacio-2);
+}
+
+.docente-compacto .docente-mapa caption {
+  padding: var(--espacio-2) var(--espacio-3);
+}
+
+.docente-compacto .docente-celda {
+  min-width: 3.5rem;
+}
+
+.docente-compacto .docente-celda-nombre {
+  min-width: 8.5rem;
+}
+
+.docente-compacto .docente-grupos {
+  gap: var(--espacio-2);
+}
+
+.docente-compacto .docente-grupo {
+  gap: var(--espacio-2);
+  padding: var(--espacio-3);
+  font-size: var(--texto-chico);
+}
+
+/* ------------------------------------------------------------------ */
+/* Colores forzados e impresión                                        */
+/* ------------------------------------------------------------------ */
+
+@media (forced-colors: active) {
+  .docente-dato__barra > span,
+  .docente-vivo__punto {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .docente-celda[data-nivel='3'] {
+    text-decoration: underline;
+  }
+
+  [data-nuevo],
+  [data-seccion][data-presentando] {
+    outline: 3px solid Highlight;
+  }
+}
+
+@media print {
+  .docente-tabla {
+    overflow: visible;
+    border: 0;
+  }
+
+  .docente-nav,
+  .docente-glosario {
+    display: none;
+  }
+
+  [data-nuevo],
+  [data-presentando],
+  [data-nuevo] > * {
+    animation: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}

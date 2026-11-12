@@ -281,6 +281,28 @@ function distractor(d) {
   return 'Ninguna de estas';
 }
 
+/**
+ * UN_SOLO_LADO al dividir o multiplicar un solo lado: la opción equivocada es sumar o
+ * restar el mismo número del otro lado. ¿Daría, por casualidad, el mismo valor de x?
+ * Con 2x = 4, «se le resta 2» da 4 − 2 = 2 = 4 ÷ 2; con x/2 = 2, «se le suma 2» da
+ * 2 + 2 = 4 = 2 · 2. Vale igual si se dividió el lado de la x o el de los números.
+ *   dividir entre n (n·x = b), restar n:     b(n − 1) = n²
+ *   multiplicar por k (x/k = b), sumar k:   b(k − 1) = k
+ */
+function otraUnLadoCoincide(d, multiplica) {
+  try {
+    const b = fraccion(d.b);
+    if (multiplica) {
+      const k = fraccion(d.divisor);
+      return b.mul(k.sub(1)).eq(k);
+    }
+    const n = fraccion(d.coefNum);
+    return b.mul(n.sub(1)).eq(n.mul(n));
+  } catch {
+    return false;
+  }
+}
+
 /** Rota las opciones para que la correcta no siempre quede en el mismo lugar. */
 function ordenar(opciones, semilla) {
   const k = Math.abs(semilla) % opciones.length;
@@ -335,7 +357,8 @@ export function preguntaOrientadora(tipo, delAlumno, pack) {
   });
 
   if (tipo === TIPOS.ARITMETICA) {
-    if (variante === 'copia' || !d.cuenta) {
+    // Sin cuenta que hacer (x = 25/3 = 26/3: «¿Cuánto es 25/3?» se contesta solo), se pregunta como copia.
+    if (variante === 'copia' || !d.cuenta || d.cuenta === d.esperado) {
       texto = rellenar(q.textoCopia, d);
       opciones = [
         op('a', q.correctaCopia, true, q.retroCorrectaCopia),
@@ -374,14 +397,25 @@ export function preguntaOrientadora(tipo, delAlumno, pack) {
       op('b', q.suyaAditivo, false, q.retroSuyaAditivo),
       op('c', q.otraAditivo, false, q.retroOtraAditivo),
     ];
+  } else if (tipo === TIPOS.INVERSA_EQUIVOCADA && d.coefNum === '−1' && q.textoOpuesto) {
+    // −x = 5: dividir entre −1 y multiplicar por −1 son la misma operación (las dos serían correctas).
+    // Se pregunta como en la pista de ese paso: «Multiplica los dos lados por −1».
+    texto = rellenar(q.textoOpuesto, d);
+    opciones = [
+      op('a', q.correctaOpuesto, true, q.retroCorrectaOpuesto),
+      op('b', q.suyaOpuesto, false, q.retroSuyaOpuesto),
+      op('c', q.otraOpuesto, false, q.retroOtraOpuesto),
+    ];
   } else if (tipo === TIPOS.UN_SOLO_LADO && String(variante).startsWith('divide')) {
     // Con x/4 la operación de un solo lado fue multiplicar por 4.
     const s = d.divisor && q.textoMultiplica ? 'Multiplica' : 'Divide';
+    // La opción equivocada nunca debe dar, por casualidad, el valor correcto de x.
+    const alt = q[`otra${s}Alt`] && otraUnLadoCoincide(d, s === 'Multiplica') ? 'Alt' : '';
     texto = rellenar(q[`texto${s}`], d);
     opciones = [
       op('a', q[`correcta${s}`], true, q[`retroCorrecta${s}`]),
       op('b', q[`suya${s}`], false, q[`retroSuya${s}`]),
-      op('c', q[`otra${s}`], false, q[`retroOtra${s}`]),
+      op('c', q[`otra${s}${alt}`], false, q[`retroOtra${s}${alt}`]),
     ];
   } else {
     texto = rellenar(q.texto, d);
