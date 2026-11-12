@@ -376,7 +376,7 @@ strong { font-weight: 700; }
   justify-content: space-between;
   align-items: center;
 }
-.footer__links { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; align-items: center; justify-content: center; }
+.footer__links { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
 
 /* ---------- 5. Componentes ---------- */
 
@@ -1807,6 +1807,20 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
 :root[data-theme="dark"] .cat-course-card::before{background:linear-gradient(90deg,var(--brand),var(--accent))}
 @media (prefers-color-scheme:dark){:root[data-theme="system"] :is(.cat-subj,.cat-subject-icon){color:var(--ink);background:var(--surface-2);border:1px solid var(--line-strong)}:root[data-theme="system"] .cat-subject-card{border-top-color:var(--brand)}}
 
+
+/* Integridad académica · demo: etiquetas y formas además del color */
+.integrity-panel{border:1px solid var(--line);border-left:5px solid var(--brand);border-radius:1.15rem;background:var(--surface);padding:1rem 1.1rem;box-shadow:0 12px 28px -22px rgba(0,0,0,.24)}
+.integrity-panel h2,.integrity-panel h3{margin:0 0 .45rem;font-size:1.08rem}.integrity-panel p{margin:.35rem 0}.integrity-panel ul{margin:.45rem 0;padding-left:1.35rem}.integrity-panel .cluster{margin-top:.8rem}
+.integrity-flag{border-left-color:var(--warn);background:var(--surface)}
+.integrity-meta{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}.integrity-meta span{border:1px solid var(--line);border-radius:.65rem;padding:.3rem .55rem;background:var(--surface-2);font-size:.83rem}
+.integrity-banner{margin-bottom:1rem}.integrity-events{padding:0;list-style:none;display:grid;gap:.9rem}.integrity-events>li{min-width:0}
+.integrity-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+.integrity-status{font-weight:700;color:var(--ink)}
+:root[data-theme="contrast"] .integrity-panel{border:3px solid currentColor;border-left-width:7px;background:Canvas;color:CanvasText}
+:root[data-theme="contrast"] .integrity-meta span{border:2px solid currentColor;background:Canvas;color:CanvasText}
+:root[data-theme="dark"] .integrity-panel{box-shadow:none}
+@media(max-width:32rem){.integrity-panel{padding:.8rem}.integrity-actions .btn{flex:1 1 auto}.integrity-meta span{max-width:100%;overflow-wrap:anywhere}}
+
 </style>
 </head>
 <body>
@@ -2963,6 +2977,85 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
      ========================================================= */
   const normalize = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
+  /* =========================================================
+     Integridad académica (demostración, análisis local).
+     No clasifica como copia pedir explicaciones, pistas o ejemplos.
+     No comparte el texto libre con el profesor; conserva únicamente
+     tipo de solicitud, tema, alumno, momento y contexto horario.
+     ========================================================= */
+  const guardNorm = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  TA.integrity = {
+    classContext() {
+      const d = new Date();
+      const minutes = d.getHours()*60+d.getMinutes();
+      const scheduled = d.getDay()>=1 && d.getDay()<=5 && minutes>=7*60 && minutes<14*60;
+      const demo = Boolean(TA.state.integrity?.demoClass);
+      return { active: demo || scheduled, demo, schedule: 'Lunes a viernes, 07:00–14:00 (horario ilustrativo; no vinculado a una escuela)' };
+    },
+    detect(text) {
+      const t = guardNorm(text).replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+      // Solicitud explícita de obtener el producto final. No es una prueba de fraude.
+      const explicit = [
+        /(?:dame|dime|pasame|envia|mandame|cual es|quiero) (?:la |el )?(?:respuesta|resultado|solucion|respuestas|soluciones)(?: final| correcta| exacta)?/,
+        /(?:hazme|haz|resuelve|resuelveme|contesta|contestame|completa) (?:la |el |mi |este |esta )?(?:tarea|examen|ejercicio|problema|pregunta|actividad|trabajo)/,
+        /(?:solo|unicamente|nada mas) (?:dame|quiero|pon|escribe) (?:la |el )?(?:respuesta|resultado|solucion)/,
+        /(?:sin explicar|sin pasos|para copiar|lo voy a copiar|copiar y pegar)/,
+        /(?:resuelvelo|resuelveme esto|dame las respuestas|cuanto vale x|cuanto es x|dime cuanto vale x)/
+      ];
+      return explicit.some(rx=>rx.test(t)) ? 'solicitud_de_respuesta_directa' : null;
+    },
+    record(text) {
+      const category = this.detect(text);
+      if (!category) return null;
+      const state = TA.state.integrity;
+      const context = this.classContext();
+      const id = TA.util.uid();
+      const event = { id, studentId:TA.state.studentId, subject:'Matemáticas', topic:'Ecuaciones lineales · tutor guiado', category, at:Date.now(), inClass:context.active, demo:context.demo, status:'new' };
+      state.events.unshift(event);
+      state.events = state.events.slice(0,40);
+      return event;
+    },
+    lastForStudent(id) { return (TA.state.integrity?.events||[]).filter(e=>e.studentId===id); },
+    panelStudent() {
+      const ctx=this.classContext();
+      const n=this.lastForStudent(TA.state.studentId).length;
+      return html`<section class="integrity-panel integrity-banner" aria-labelledby="integ-student-title">
+        <h2 id="integ-student-title">${icon('shield',20)} Aprende con apoyo, no con respuestas copiadas</h2>
+        <p>El tutor puede explicar de otra forma, dibujar, dar ejemplos y ofrecer pistas; <strong>no entrega el resultado final a petición</strong>. Un ejercicio nuevo sin ayudas comprueba lo aprendido.</p>
+        <p class="muted small"><strong>Horario de clase:</strong> ${ctx.demo?'Simulación activada para la demo':ctx.active?'Dentro del horario ilustrativo':'Fuera del horario ilustrativo'}. ${ctx.schedule}.</p>
+        <div class="cluster">
+          <button type="button" class="btn btn--secondary btn--sm" data-action="integrity-toggle-class" aria-pressed="${ctx.demo}">${ctx.demo?'Desactivar horario simulado':'Simular una clase ahora'}</button>
+          <button type="button" class="btn btn--primary btn--sm" data-action="integrity-demo">${icon('shield',17)}Demostrar intento de copiar</button>
+        </div>
+        <p class="small muted">${n?`Solicitudes directas detectadas en este perfil: ${n}. `:''}Solo se registran solicitudes explícitas; el profesor recibe un aviso para revisión, no un castigo automático. Los datos de esta demo permanecen en el navegador.</p>
+      </section>`;
+    },
+    panelTeacher() {
+      const all=TA.state.integrity?.events||[];
+      const current=all.filter(e=>['x','d'].includes(e.studentId));
+      const pending=current.filter(e=>e.status==='new');
+      return html`<section class="integrity-panel integrity-flag integrity-banner" aria-labelledby="integrity-teacher-heading">
+        <h2 id="integrity-teacher-heading">${icon('shield',21)} Integridad académica · revisión docente</h2>
+        <p>El tutor evita dar respuestas finales solicitadas directamente y redirige a pistas. Si detecta esa solicitud, registra <strong>estudiante, materia, tema y contexto horario</strong> para tu revisión.</p>
+        <div class="integrity-meta"><span><strong>${current.length}</strong> solicitudes registradas</span><span><strong>${pending.length}</strong> por revisar</span><span><strong>${current.filter(e=>e.inClass).length}</strong> durante horario de clase (real o simulado)</span></div>
+        <p class="small muted">Una solicitud directa no demuestra copia ni uso indebido. Evita sanciones automáticas; conversa con el estudiante y evalúa su comprensión. Horario ficticio 07:00–14:00 L–V, no conectado a una institución.</p>
+        ${current.length?html`<ul class="integrity-events">
+          ${current.map(e=>{const student=data.students[e.studentId];return html`<li><article class="integrity-panel" aria-labelledby="integrity-${e.id}">
+            <h3 id="integrity-${e.id}">${student?.name||('Estudiante '+e.studentId)} · petición de respuesta directa</h3>
+            <div class="integrity-meta"><span>${e.subject}</span><span>${e.topic}</span><span>${new Date(e.at).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</span><span>${e.inClass?'En horario de clase':'Fuera del horario'}</span>${e.demo?html`<span>Horario simulado</span>`:''}</div>
+            <p>El tutor <strong>no entregó la respuesta</strong> y propuso razonar con preguntas o pistas. No se comparte el texto original de la conversación.</p>
+            <p class="integrity-status">Estado: ${e.status==='new'?'Por revisar':e.status==='rev'?'Revisada':'Descartada'}</p>
+            <div class="integrity-actions">
+              <button type="button" class="btn btn--secondary btn--sm" data-action="integrity-review" data-id="${e.id}">${e.status==='rev'?'Reabrir revisión':'Marcar revisada'}</button>
+              <button type="button" class="btn btn--ghost btn--sm" data-action="integrity-discard" data-id="${e.id}">Descartar aviso</button>
+              <button type="button" class="btn btn--primary btn--sm" data-action="feedback" data-id="${e.studentId}">Enviar apoyo</button>
+            </div>
+          </article></li>`})}
+        </ul>`:html`<p class="muted">Aún no hay solicitudes registradas. Para probarlo: cambia a Estudiante → Tu tutor → «Simular una clase ahora» → «Demostrar intento de copiar». Regresa a Docente → Apoyos.</p>`}
+      </section>`;
+    }
+  };
+
   S.tutorReply = (text) => {
     const tutor = S.profile().tutor;
     const p = S.progress();
@@ -2971,6 +3064,10 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
       p.guideStep = Math.min(p.guideStep + 1, tutor.guide.length - 1);
       return tutor.guide[p.guideStep];
     };
+
+    if (TA.integrity.detect(text)) {
+      return `Puedo ayudarte a entender el problema, pero no voy a hacer la tarea ni darte una respuesta para copiar. Empecemos con una pregunta: ${tutor.guide[p.guideStep]} También puedes pedir una explicación con dibujos, un ejemplo cotidiano o una pista.`;
+    }
 
     const numMatch = t.match(/x\s*=\s*(-?\d+)/) || t.match(/^\s*(-?\d+)\s*$/) || t.match(/\bes\s+(-?\d+)\b/);
     if (numMatch) {
@@ -3306,13 +3403,7 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
         return html`<li class="ladder__step is-locked"><span class="ladder__n">${icon('lock', 13)}</span><p>Pista ${i + 1} · se abre después de la anterior</p></li>`;
       })}
     </ol>
-    ${p.hints >= tutor.hints.length
-      ? (p.solutionShown
-        ? html`<div class="solution" id="solution" tabindex="-1"><h3>Solución paso a paso</h3><ol class="steps">${tutor.solution.map((s) => html`<li>${s}</li>`)}</ol>
-            <p class="muted small">Ahora intenta un ejercicio parecido sin ayuda para comprobar que lo entendiste.</p><a class="btn btn--secondary btn--sm" href="#/comprobar">Intentar sin pistas</a></div>`
-        : html`<button type="button" class="btn btn--ghost" data-action="show-solution">${icon('eye', 18)}Ver la solución paso a paso</button>
-            <p class="muted small">Úsala solo si ya lo intentaste: ver la solución no es lo mismo que entenderla.</p>`)
-      : ''}`;
+      ${p.hints >= tutor.hints.length ? html`<div class="integrity-panel" role="note"><strong>Ya utilizaste las pistas.</strong><p>Ahora explica el primer paso con tus palabras y resuelve un ejercicio nuevo sin ayuda. El tutor no muestra la respuesta final de la actividad.</p><a class="btn btn--secondary btn--sm" href="#/comprobar">Comprobar sin pistas</a></div>` : ''}`;
   }
 
   S.views.tutor = () => {
@@ -3322,6 +3413,7 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
     return html`
       ${ui.pageHeader({ title: 'Tu tutor', lead: online ? 'Te guía con preguntas y pistas; no hace la tarea por ti.' : 'Sin internet: usa las pistas y ejercicios guardados. Tus preguntas se envían después.' })}
       ${online ? '' : ui.netBanner('student')}
+      ${TA.integrity.panelStudent()}
       <div class="grid grid--tutor">
         <section class="card chat-card" aria-labelledby="chat-t">
           <div class="card__head"><h2 class="card__title" id="chat-t">${icon('calc', 20)}<span>Problema: ${tutor.problem}</span></h2></div>
@@ -3354,7 +3446,7 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
           ${ui.card({
             id: 'c-rules', title: 'Cómo usar bien a EstudiandoAndo', titleIcon: 'shield', className: 'is-secondary',
             body: html`<ul class="list-icons">
-              <li>${icon('bulb', 18)}<span>Primero preguntas y pistas; la solución, solo si la pides.</span></li>
+              <li>${icon('bulb', 18)}<span>Siempre preguntas, pistas y explicaciones: nunca una respuesta final lista para copiar.</span></li>
               <li>${icon('shield', 18)}<span>EstudiandoAndo puede equivocarse: compara con tu libro o pregunta a tu maestra o maestro.</span></li>
               <li>${icon('target', 18)}<span>Para avanzar demuestras que entendiste, sin ayuda.</span></li>
             </ul>`
@@ -3594,14 +3686,11 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
       TA.save();
       TA.render();
       TA.announce(`Pista ${p.hints}: ${tutor.hints[p.hints - 1]}`);
-      if (p.hints >= tutor.hints.length) TA.focus.to('[data-action="show-solution"]');
+      if (p.hints >= tutor.hints.length) TA.focus.to('#c-hints');
     },
 
     'show-solution': () => {
-      S.progress().solutionShown = true;
-      TA.save();
-      TA.render();
-      TA.focus.to('#solution');
+      TA.go('/comprobar');
     },
 
     'tutor-quick': (el) => {
@@ -3630,6 +3719,32 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
       TA.save();
       TA.render();
       S.scrollChat();
+    }
+  });
+
+  Object.assign(TA.actions, {
+    'integrity-toggle-class': () => {
+      TA.state.integrity.demoClass = !TA.state.integrity.demoClass;
+      TA.save(); TA.render();
+      TA.announce(TA.state.integrity.demoClass?'Horario escolar simulado activado':'Horario escolar simulado desactivado');
+    },
+    'integrity-demo': () => {
+      const message = 'Dame la respuesta exacta para copiar en la tarea';
+      S.pushMessage('me', message);
+      TA.integrity.record(message);
+      S.pushMessage('tutor', S.tutorReply(message));
+      TA.save(); TA.render(); S.scrollChat();
+      TA.toast('El tutor evitó dar la respuesta. Hay un aviso de revisión docente en Apoyos.',{tone:'info'});
+    },
+    'integrity-review': (el) => {
+      const event=TA.state.integrity.events.find(e=>e.id===el.dataset.id);
+      if(!event)return;
+      event.status=event.status==='rev'?'new':'rev'; TA.save();TA.render();
+    },
+    'integrity-discard': (el) => {
+      const event=TA.state.integrity.events.find(e=>e.id===el.dataset.id);
+      if(!event)return;
+      event.status='dis';TA.save();TA.render();
     }
   });
 
@@ -3720,6 +3835,15 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
       }
       TA.state.drafts.chatError = '';
       const p = S.progress();
+      const flagged = TA.integrity.detect(text);
+      if(flagged){
+        S.pushMessage('me', text);
+        TA.integrity.record(text);
+        S.pushMessage('tutor', S.tutorReply(text));
+        TA.save(); TA.render(); S.scrollChat();
+        TA.announce('El tutor ofrece orientación sin entregar el resultado. Se registró una solicitud para revisión docente.');
+        return;
+      }
       if (!TA.net.isOnline()) {
         S.pushMessage('me', text, { status: 'queued' });
         p.pendingSync += 1;
@@ -3858,6 +3982,7 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
        <li class="kpi tone-rose"><span class="tile-icon">${icon('chart',22)}</span><div><p class="kpi__value">${trend[4].score-trend[0].score>=0?'+':''}${trend[4].score-trend[0].score}</p><p class="kpi__label">Puntos desde la semana 1</p></div></li>
       </ul>
       ${TA.catalog.views.teacherSummary()}
+      ${TA.state.integrity.events?.length?html`<section class="integrity-panel integrity-flag"><strong>${TA.state.integrity.events.filter(e=>e.status==='new').length} solicitudes directas por revisar.</strong><p>El tutor evitó entregar respuestas finales. Consulta quién, tema y contexto horario antes de decidir si requiere acompañamiento.</p><a href="#/alertas" class="btn btn--secondary btn--sm">Revisar integridad académica</a></section>`:''}
       <div class="grid grid--2 dashboard-charts">
        ${ui.card({title:`Evolución del grupo ${group.label}`,titleIcon:'chart',body:TA.charts.line({title:`Avance del grupo ${group.label}`,points:trend,help:'Historial ficticio de cinco semanas para mostrar la evolución; la semana actual incorpora cambios de las cuentas de demostración.'})})}
        ${ui.card({title:'Comparación entre mis grupos',titleIcon:'users',body:html`${TA.charts.compareGroups(data.teacherGroups,group.id)}`})}
@@ -3927,6 +4052,7 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
     const count = (s) => alerts.filter((a) => T.alertState(a.id).status === s).length;
     return html`
       ${ui.pageHeader({ title: `Alertas · ${T.activeGroup().label}`, lead: 'Detección temprana a partir de intentos, respuestas y errores recurrentes. Muestra ficticia de la demostración.', actions: T.freshness() })}
+      ${TA.integrity.panelTeacher()}
       <div class="note note--accent">${icon('shield', 22)}<p><strong>Son apoyos para decidir, no diagnósticos definitivos.</strong> Puedes revisarlas, modificarlas o descartarlas según lo que conoces de cada estudiante y del grupo.${TA.net.isOnline() ? '' : ' Las alertas nuevas aparecerán cuando los estudiantes sincronicen.'}</p></div>
       ${ui.segmented({
         name: 'alert-filter', legend: 'Mostrar alertas', action: 'alert-filter', value: filter,
@@ -5166,6 +5292,7 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
       role: 'student',
       studentId: 'x',
       simulateOffline: false,
+      integrity: { demoClass: false, events: [] },
       dataMode: 'auto', // auto | local
       catalog: {results:{x:{},d:{}},bookmarks:{x:[],d:[]},assignments:{}},
       prefs: clone(DEFAULT_PREFS),
@@ -5193,6 +5320,8 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
       base.prefs = { ...DEFAULT_PREFS, ...(saved.prefs || {}) };
       base.teacher = { ...defaultState().teacher, ...(saved.teacher || {}), aiLoading: false };
       base.catalog = { ...defaultState().catalog, ...(saved.catalog || {}) };
+      base.integrity = { ...defaultState().integrity, ...(saved.integrity || {}) };
+      if (!Array.isArray(base.integrity.events)) base.integrity.events = [];
     }
     base.realOnline = navigator.onLine !== false;
     base.ui = { visualStep: 0, balanceStep: 0, typing: false, demoOpen: false, firstRender: true };
@@ -5203,11 +5332,11 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
   TA.state = loadState();
 
   TA.save = () => {
-    const { role, studentId, simulateOffline, dataMode, prefs, progress, teacher, catalog } = TA.state;
-    TA.store.set(STORE_KEY, { role, studentId, simulateOffline, dataMode, prefs, progress, teacher, catalog });
+    const { role, studentId, simulateOffline, dataMode, prefs, progress, teacher, catalog, integrity } = TA.state;
+    TA.store.set(STORE_KEY, { role, studentId, simulateOffline, dataMode, prefs, progress, teacher, catalog, integrity });
     // Mantener la vista previa sincronizada incluso cuando file:// bloquea localStorage.
     if (window.self !== window.top) {
-      window.parent.postMessage({ type: 'estudiando-ando:state', state: { role, studentId, simulateOffline, dataMode, prefs, progress, teacher, catalog } }, '*');
+      window.parent.postMessage({ type: 'estudiando-ando:state', state: { role, studentId, simulateOffline, dataMode, prefs, progress, teacher, catalog, integrity } }, '*');
     }
   };
 
@@ -5217,7 +5346,7 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
   /** Copia en memoria lo que otra ventana o el marco de vista previa guardó. */
   function syncFromStorage() {
     const fresh = loadState();
-    ['role', 'studentId', 'simulateOffline', 'dataMode', 'prefs', 'progress', 'teacher', 'catalog'].forEach((k) => { TA.state[k] = fresh[k]; });
+    ['role', 'studentId', 'simulateOffline', 'dataMode', 'prefs', 'progress', 'teacher', 'catalog', 'integrity'].forEach((k) => { TA.state[k] = fresh[k]; });
   }
 
   /* =========================================================
@@ -5970,7 +6099,7 @@ html[data-motion="reduce"] .cat-draw-progress span{transition:none}
     const msg = e.data;
     if (!msg || typeof msg !== 'object') return;
     if (msg.type === 'estudiando-ando:state' && msg.state && typeof msg.state === 'object') {
-      const keys = ['role', 'studentId', 'simulateOffline', 'dataMode', 'prefs', 'progress', 'teacher', 'catalog'];
+      const keys = ['role', 'studentId', 'simulateOffline', 'dataMode', 'prefs', 'progress', 'teacher', 'catalog', 'integrity'];
       if (EMBEDDED && e.source === window.parent) {
         keys.forEach(k => { if (Object.hasOwn(msg.state,k)) TA.state[k] = msg.state[k]; });
         applyPrefs();
