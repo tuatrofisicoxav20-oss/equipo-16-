@@ -365,9 +365,9 @@
   font-weight: 800;
 }
 
-.cuadernillo__tabla thead th:nth-child(1) { width: 4.5cm; }
-.cuadernillo__tabla thead th:nth-child(2) { width: 4cm; }
-.cuadernillo__tabla thead th:nth-child(3) { width: 2.4cm; }
+.cuadernillo__tabla thead th:nth-child(1) { width: 4.4cm; }
+.cuadernillo__tabla thead th:nth-child(2) { width: 4.6cm; }
+.cuadernillo__tabla thead th:nth-child(3) { width: 2.3cm; }
 
 .cuadernillo__tabla tbody th {
   font-weight: 400;

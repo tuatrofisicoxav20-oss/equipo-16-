@@ -356,12 +356,15 @@ function resumirUno(id, items, nombre, ahora, totalPorOmision) {
     if (tipo === 'duda') continue;
     const datos = esObjeto(ev.datos) ? ev.datos : {};
     const ejercicio = comoTexto(ev.ejercicio);
-    const claveEjercicio = ejercicio ? bonito(ejercicio) : `#${k}`;
 
     // Pistas: el cuaderno manda el total acumulado del ejercicio, así que se toma el máximo.
     const p = conteo(ev.pistasUsadas);
-    if (p) pistas.set(claveEjercicio, Math.max(pistas.get(claveEjercicio) || 0, p));
-    if (tipo === 'solucion' || ev.pidioSolucion === true) soluciones.add(claveEjercicio);
+    const pidioSolucion = tipo === 'solucion' || ev.pidioSolucion === true;
+    if (p || pidioSolucion) {
+      const clave = ejercicio ? bonito(ejercicio) : `#${k}`;
+      if (p) pistas.set(clave, Math.max(pistas.get(clave) || 0, p));
+      if (pidioSolucion) soluciones.add(clave);
+    }
 
     if ((tipo === 'ruta' || DE_RUTA.has(tipo)) && (typeof ev.ruta === 'string' || ev.ruta === null)) {
       ruta = ev.ruta ? tipoError(ev.ruta) : null;
@@ -378,16 +381,8 @@ function resumirUno(id, items, nombre, ahora, totalPorOmision) {
         if (tipo === 'practica' || tipo === 'comprobacion') desdeAvance[error.tipo] = (desdeAvance[error.tipo] || 0) + 1;
       }
       if (ejercicio) {
-        const proc = {
-          ejercicio,
-          renglones: renglonesDe(ev),
-          error,
-          resultado: typeof ev.resultado === 'string' ? ev.resultado : null,
-          tipoEvento: tipo,
-          fecha: typeof ev.fecha === 'string' ? ev.fecha : null,
-        };
-        ultimoCualquiera = proc;
-        if (error) ultimoConError = proc;
+        ultimoCualquiera = { ev, error, ejercicio };
+        if (error) ultimoConError = ultimoCualquiera;
       }
     }
 
@@ -414,8 +409,8 @@ function resumirUno(id, items, nombre, ahora, totalPorOmision) {
       if (ev.resultado === 'correcto') {
         practicasBien += 1;
         const numero = Number(datos.numero);
-        const ultima3 = Number.isFinite(numero) && numero > 0 ? numero >= 3 : practicasBien >= 3;
-        if (datos.extra === true || ultima3) actividad = 'comprobacion';
+        const terminoPracticas = Number.isFinite(numero) && numero > 0 ? numero >= 3 : practicasBien >= 3;
+        if (datos.extra === true || terminoPracticas) actividad = 'comprobacion';
         desdeAvance = {};
       }
     } else if (tipo === 'solucion') {
@@ -474,7 +469,7 @@ function resumirUno(id, items, nombre, ahora, totalPorOmision) {
     pistasUsadas,
     solucionesPedidas: soluciones.size,
     comprobaciones,
-    ultimoProcedimiento: ultimoConError ?? ultimoCualquiera,
+    ultimoProcedimiento: procedimientoDe(ultimoConError ?? ultimoCualquiera),
     dudas: [...dudasPorId.values()],
     porRevisar: conteoErrores[NC] || 0,
     eventos: items.map(({ ev }) => ev),
@@ -482,6 +477,20 @@ function resumirUno(id, items, nombre, ahora, totalPorOmision) {
     diagnostico: { hechos, total: totalDiagnostico, terminado },
     erroresSinAvanzar,
     reinicios,
+  };
+}
+
+/** Procedimiento para la ficha (solo se arma el que se muestra). */
+function procedimientoDe(ref) {
+  if (!ref) return null;
+  const { ev, error, ejercicio } = ref;
+  return {
+    ejercicio,
+    renglones: renglonesDe(ev),
+    error,
+    resultado: typeof ev.resultado === 'string' ? ev.resultado : null,
+    tipoEvento: ev.tipo,
+    fecha: typeof ev.fecha === 'string' ? ev.fecha : null,
   };
 }
 

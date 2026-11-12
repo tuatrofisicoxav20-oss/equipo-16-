@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Prueba de la ficha del estudiante · Tecu Aprende</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../css/cuaderno.css">
+  <link rel="stylesheet" href="../css/ficha.css">
+  <style>
+    /* Solo para esta página de prueba (no forma parte de la app). */
+    body { padding: 1rem; }
+    .demo { display: flex; flex-direction: column; gap: 2rem; max-width: 52rem; margin: 0 auto; }
+    .demo h1 { font-size: 1.5rem; }
+    .demo h2 { font-size: 1.25rem; }
+    .demo :is(h1, h2, p, ul, ol) { margin: 0; }
+    .demo__caso { display: flex; flex-direction: column; gap: 0.75rem; }
+    .demo__alumnos { display: grid; gap: 0.75rem; padding: 0; list-style: none; }
+    .demo__alumno {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem;
+      padding: 0.75rem 1rem; border: 1px solid var(--color-borde-suave); border-radius: var(--radio);
+      background: var(--color-superficie);
+    }
+    .demo__alumno p { color: var(--color-texto-sec); font-size: var(--texto-chico); }
+    .demo__controles { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .demo__registro { padding-left: 1.25rem; font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+  <main class="demo" id="contenido">
+    <header class="demo__caso">
+      <h1>Prueba de la ficha del estudiante</h1>
+      <p>Página de prueba de <code>js/ui/ficha.js</code> con el paquete real. No está enlazada desde la app.
+        Los eventos los escribe el motor (<code>analizarProcedimiento</code>) y se resumen con
+        <code>resumirAlumnos()</code> de <code>js/data/analitica.js</code>.</p>
+      <p class="texto-sec" id="origen">Cargando…</p>
+    </header>
+
+    <section class="demo__caso" aria-labelledby="t-alumnos">
+      <h2 id="t-alumnos">Estudiantes de ejemplo</h2>
+      <ul class="demo__alumnos" id="alumnos"></ul>
+    </section>
+
+    <section class="demo__caso" aria-labelledby="t-opciones">
+      <h2 id="t-opciones">Preferencias y casos especiales</h2>
+      <div class="demo__controles">
+        <button type="button" class="boton boton--secundario" data-demo="contraste" aria-pressed="false">Alto contraste</button>
+        <button type="button" class="boton boton--secundario" data-demo="texto" aria-pressed="false">Texto muy grande</button>
+        <button type="button" class="boton boton--secundario" data-demo="movimiento" aria-pressed="false">Reducir movimiento</button>
+        <button type="button" class="boton boton--secundario" data-demo="en-vivo">Llega actividad nueva de Ana en 3 s</button>
+      </div>
+      <p class="texto-sec texto-chico">«Llega actividad nueva»: abre la ficha de Ana antes de 3 segundos; se actualiza en su lugar sin perder el foco.</p>
+    </section>
+
+    <section class="demo__caso" aria-labelledby="t-registro">
+      <h2 id="t-registro">Lo que recibe la vista</h2>
+      <ol class="demo__registro" id="registro"></ol>
+    </section>
+  </main>
+
+  <div id="anuncios" class="solo-lector" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="alertas" class="solo-lector" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="avisos" class="avisos" aria-hidden="true"></div>
+
+  <script type="module">
+    import { abrirFicha, cerrarFicha, fichaAbierta } from '../js/ui/ficha.js';
+    import { analizarProcedimiento } from '../js/core/engine.js';
+    import { respuestaTecu } from '../js/core/textos.js';
+    import { html } from '../js/ui/dom.js';
+
+    const pack = await fetch('../packs/ecuaciones-1.json').then((r) => r.json());
+    const AHORA = Date.now();
+    const MIN = 60 * 1000;
+    const H = 60 * MIN;
+    const D = 24 * H;
+
+    /* ---------------- Eventos de ejemplo (mismo esquema que store.js) ---------------- */
+
+    let n = 0;
+    const copia = (x) => JSON.parse(JSON.stringify(x));
+
+    function evento(alumno, hace, datos) {
+      n += 1;
+      return { id: `${alumno}-e${String(n).padStart(3, '0')}`, alumno, fecha: new Date(AHORA - hace).toISOString(), sincronizado: true, ...datos };
+    }
+
+    /** Procedimiento revisado por el motor. sinDetalle: como los eventos de antes (sin error.detalle). */
+    function proc(alumno, hace, tipo, ejercicio, renglones, extra = {}, { sinDetalle = false } = {}) {
+      const a = analizarProcedimiento([ejercicio, ...renglones]);
+      const e = a.estado === 'error' ? a.error : null;
+      const error = e
+        ? copia({ tipo: e.tipo, renglon: e.renglon, variante: e.detalle?.variante ?? null, texto: e.texto, anterior: e.anterior, confianza: e.confianza, ...(sinDetalle ? {} : { detalle: e.detalle }) })
+        : null;
+      const resultado = ['correcto', 'error', 'incompleto'].includes(a.estado) ? a.estado : 'sin_entender';
+      return evento(alumno, hace, { tipo, ejercicio, renglones, resultado, error, ...extra });
+    }
+
+    function duda(alumno, hace, texto, contestada = true) {
+      const respuesta = contestada ? respuestaTecu(texto, pack) : null;
+      return evento(alumno, hace, {
+        tipo: 'duda',
+        datos: { dudaId: `${alumno}-d${n + 1}`, texto, respondida: respuesta !== null, respuesta, fechaRespuesta: respuesta ? new Date(AHORA - hace + 4000).toISOString() : null },
+      });
+    }
+
+    const [D1, D2, D3, D4] = pack.diagnostico.map((d) => d.ecuacion);
+    const titulo = (tipo) => pack.errores[tipo].ruta.titulo;
+    const diag = (alumno, hace, numero, ejercicio, renglones, op) =>
+      proc(alumno, hace, 'diagnostico', ejercicio, renglones, { datos: { numero, id: `d${numero}`, sinTerminar: false } }, op);
+    const ruta = (alumno, hace, tipo) =>
+      evento(alumno, hace, { tipo: 'ruta', ruta: tipo, datos: tipo ? { titulo: titulo(tipo), sinErrores: false } : { titulo: 'Demuestra lo que sabes', sinErrores: true, correctos: 4, total: 4 } });
+    const practica = (alumno, hace, rutaTipo, numero, ejercicio, renglones, pistasUsadas = 0, pidioSolucion = false, op) =>
+      proc(alumno, hace, 'practica', ejercicio, renglones, { ruta: rutaTipo, pistasUsadas, pidioSolucion, datos: { nivel: numero, numero, extra: false } }, op);
+    const comprobacion = (alumno, hace, rutaTipo, intento, ejercicio, renglones) => {
+      const e = proc(alumno, hace, 'comprobacion', ejercicio, renglones, { ruta: rutaTipo, pistasUsadas: 0, pidioSolucion: false, datos: { intento } });
+      e.aprobado = e.resultado === 'correcto';
+      return e;
+    };
+
+    function eventosDeEjemplo() {
+      n = 0;
+      const ST = 'SIGNO_TRANSPOSICION';
+      const UL = 'UN_SOLO_LADO';
+      const AR = 'ARITMETICA';
+      return [
+        // Ana (en vivo): signo al transponer en el renglón 2 del diagnóstico 1; ahora va bien en su práctica.
+        diag('ana', 2 * D + 2 * H, 1, D1, ['3x = 25', 'x = 25/3']),
+        diag('ana', 2 * D + 1.9 * H, 2, D2, ['x/4 = 3', 'x = 12']),
+        diag('ana', 2 * D + 1.8 * H, 3, D3, ['3x = 12', 'x = 4']),
+        diag('ana', 2 * D + 1.7 * H, 4, D4, ['−2x = 8', 'x = −4']),
+        ruta('ana', 2 * D + 1.7 * H - MIN, ST),
+        evento('ana', 2 * D + 1.4 * H, { tipo: 'pregunta', ruta: ST, aprobado: true, datos: { intentos: 2 } }),
+        evento('ana', 2 * D + 1.2 * H, { tipo: 'visual', ruta: ST, aprobado: true, datos: { modo: 'quitar', omitida: false } }),
+        duda('ana', 2 * D + H, '¿Por qué el 5 pasa restando si estaba sumando?'),
+        practica('ana', 3 * H, ST, 1, 'x + 4 = 10', ['x = 6']),
+        practica('ana', 2.7 * H, ST, 2, '2x + 3 = 11', ['2x = 8', 'x = 4'], 1),
+
+        // Luis (en vivo): inversa equivocada en el renglón 3; sigue en el diagnóstico.
+        diag('luis', 65 * MIN, 1, D1, ['3x = 15', 'x = 12']),
+        diag('luis', 55 * MIN, 2, D2, ['x/4 = 3', 'x = 12']),
+        duda('luis', 45 * MIN, '¿Por qué no puedo restar el 3 si está pegado a la x?', false),
+
+        // Sofía: diagnóstico sin errores → comprobación final aprobada → dominó el tema.
+        diag('sim-01', 6 * D + 40 * MIN, 1, D1, ['3x = 15', 'x = 5']),
+        diag('sim-01', 6 * D + 35 * MIN, 2, D2, ['x/4 = 3', 'x = 12']),
+        diag('sim-01', 6 * D + 30 * MIN, 3, D3, ['3x = 12', 'x = 4']),
+        diag('sim-01', 6 * D + 25 * MIN, 4, D4, ['−2x = 8', 'x = −4']),
+        ruta('sim-01', 6 * D + 24 * MIN, null),
+        comprobacion('sim-01', 5 * D, null, 1, '6x + 4 = 2x + 20', ['4x = 16', 'x = 4']),
+        evento('sim-01', 5 * D - MIN, { tipo: 'dominio', ruta: null, ejercicio: '6x + 4 = 2x + 20', aprobado: true, datos: { intentos: 1 } }),
+
+        // Diego: un solo lado; en la comprobación sin ayuda, un error que Tecu no reconoce (2 veces) → se atoró.
+        diag('sim-02', 4 * D + 3 * H, 1, D1, ['3x = 20', 'x = 20/3']),
+        diag('sim-02', 4 * D + 2.9 * H, 2, D2, ['x/4 = 2', 'x = 8']),
+        diag('sim-02', 4 * D + 2.8 * H, 3, D3, ['3x = 12', 'x = 4']),
+        diag('sim-02', 4 * D + 2.7 * H, 4, D4, ['−2x = 8', 'x = −4']),
+        ruta('sim-02', 4 * D + 2.7 * H - MIN, UL),
+        evento('sim-02', 4 * D + 2 * H, { tipo: 'pregunta', ruta: UL, aprobado: true, datos: { intentos: 1 } }),
+        evento('sim-02', 4 * D + 1.5 * H, { tipo: 'visual', ruta: UL, aprobado: true, datos: { modo: 'quitar', omitida: false } }),
+        practica('sim-02', 3 * D + 3 * H, UL, 1, '2x + 6 = 14', ['2x = 14', 'x = 7'], 2),
+        duda('sim-02', 3 * D + 2.9 * H, '¿Si quito el 6 de un lado también lo tengo que quitar del otro?'),
+        evento('sim-02', 3 * D + 2.8 * H, { tipo: 'solucion', ruta: UL, ejercicio: '2x + 6 = 14', pidioSolucion: true, pistasUsadas: 3, datos: { nivel: 1, numero: 1 } }),
+        practica('sim-02', 3 * D + 2.7 * H, UL, 1, '2x + 6 = 14', ['2x = 8', 'x = 4'], 3, true),
+        practica('sim-02', 3 * D + 2 * H, UL, 2, '3x + 4 = 19', ['3x = 15', 'x = 5'], 1),
+        practica('sim-02', 2 * D + 5 * H, UL, 3, '5x − 2 = 13', ['5x = 15', 'x = 3']),
+        comprobacion('sim-02', 2 * D + 4 * H, UL, 1, '4x + 7 = 31', ['4x = 24', 'x = 8']),
+        comprobacion('sim-02', D + 3 * H, UL, 2, '2x + 3 = 11', ['2x = 8', 'x = 7']),
+        duda('sim-02', D + 2 * H, 'No entiendo qué hice mal en la comprobación', false),
+
+        // Camila: eventos de antes (sin error.detalle); no entra desde hace 10 días; último error «probable».
+        diag('sim-04', 11 * D, 1, D1, ['x = 6'], { sinDetalle: true }),
+        diag('sim-04', 11 * D - 5 * MIN, 2, D2, ['x/4 = 3', 'x = 12'], { sinDetalle: true }),
+        diag('sim-04', 11 * D - 10 * MIN, 3, D3, ['3x = 12', 'x = 3'], { sinDetalle: true }),
+        diag('sim-04', 11 * D - 15 * MIN, 4, D4, ['−2x = 8', 'x = −4'], { sinDetalle: true }),
+        ruta('sim-04', 11 * D - 16 * MIN, AR),
+        evento('sim-04', 10 * D + 2 * H, { tipo: 'pregunta', ruta: AR, aprobado: true, datos: { intentos: 1 } }),
+        evento('sim-04', 10 * D + 1.5 * H, { tipo: 'visual', ruta: AR, aprobado: true, datos: { modo: 'comprobar', omitida: true } }),
+        practica('sim-04', 10 * D + H, AR, 1, '−2x + 6 = 0', ['x = −3'], 1, false, { sinDetalle: true }),
+      ];
+    }
+
+    const NOMBRES = { 'sim-01': 'Sofía M.', 'sim-02': 'Diego R.', 'sim-03': 'Valeria P.', 'sim-04': 'Camila T.' };
+    const ORDEN = ['ana', 'luis', 'sim-01', 'sim-02', 'sim-03', 'sim-04'];
+    const CASO = {
+      ana: 'En vivo · signo al transponer en el renglón 2 · en su ruta',
+      luis: 'En vivo · inversa equivocada en el renglón 3 · en diagnóstico',
+      'sim-01': 'Dominó el tema sin errores',
+      'sim-02': 'Error que Tecu no reconoce · se atoró en la comprobación sin ayuda',
+      'sim-03': 'Sin actividad',
+      'sim-04': 'Sin entrar hace 10 días · eventos sin «detalle» · error probable (confianza media)',
+    };
+
+    /* ---------------- Resúmenes ---------------- */
+
+    let resumirAlumnos = null;
+    try {
+      ({ resumirAlumnos } = await import('../js/data/analitica.js'));
+    } catch (error) {
+      console.warn('[demo] Sin js/data/analitica.js: uso el respaldo local', error);
+    }
+
+    /** Respaldo mínimo con la forma de ResumenAlumno (solo si analitica.js no carga). */
+    function resumirLocal(eventos, { ahora, nombres }) {
+      const ids = [...new Set([...eventos.map((e) => e.alumno), ...Object.keys(nombres)])];
+      return ids.map((id) => {
+        const evs = eventos.filter((e) => e.alumno === id).sort((a, b) => a.fecha.localeCompare(b.fecha));
+        const conError = evs.filter((e) => e.error);
+        const conteoErrores = {};
+        conError.forEach((e) => { conteoErrores[e.error.tipo] = (conteoErrores[e.error.tipo] || 0) + 1; });
+        const ultimo = conError.at(-1) || evs.filter((e) => e.renglones).at(-1);
+        const comps = evs.filter((e) => e.tipo === 'comprobacion');
+        const aprobadas = comps.filter((e) => e.aprobado).length;
+        const ultima = evs.at(-1)?.fecha ?? null;
+        const dias = ultima ? Math.floor((ahora - Date.parse(ultima)) / D) : null;
+        const rutaEv = evs.filter((e) => e.tipo === 'ruta').at(-1);
+        const estado = evs.some((e) => e.tipo === 'dominio') ? 'dominado'
+          : comps.length - aprobadas >= 2 && !aprobadas ? 'atorado'
+          : dias !== null && dias >= 7 ? 'inactivo'
+          : rutaEv ? 'en_ruta'
+          : evs.some((e) => e.tipo === 'diagnostico') ? 'diagnostico' : 'sin_actividad';
+        return {
+          id, nombre: nombres[id] || { ana: 'Ana', luis: 'Luis' }[id] || id, simulado: id.startsWith('sim-'), enVivo: !id.startsWith('sim-'),
+          estado, conteoErrores, errorDominante: Object.keys(conteoErrores)[0] ?? null, ruta: rutaEv?.ruta ?? null,
+          ultimaActividad: ultima, diasSinActividad: dias,
+          pistasUsadas: evs.reduce((s, e) => s + (e.tipo === 'practica' ? e.pistasUsadas || 0 : 0), 0),
+          solucionesPedidas: evs.filter((e) => e.tipo === 'solucion').length,
+          comprobaciones: { intentos: comps.length, aprobadas, falladas: comps.length - aprobadas },
+          ultimoProcedimiento: ultimo ? { ejercicio: ultimo.ejercicio, renglones: ultimo.renglones, error: ultimo.error, resultado: ultimo.resultado, tipoEvento: ultimo.tipo, fecha: ultimo.fecha } : null,
+          dudas: evs.filter((e) => e.tipo === 'duda'),
+          porRevisar: conteoErrores.NO_CLASIFICADO || 0,
+          eventos: evs,
+          actividad: rutaEv ? 'practica' : null,
+          diagnostico: { hechos: evs.filter((e) => e.tipo === 'diagnostico').length, total: 4, terminado: Boolean(rutaEv) },
+        };
+      });
+    }
+
+    const eventos = eventosDeEjemplo();
+    function resumir(lista) {
+      const opciones = { ahora: AHORA, nombres: NOMBRES };
+      const todos = resumirAlumnos ? resumirAlumnos(lista, opciones) : resumirLocal(lista, opciones);
+      return new Map(todos.map((r) => [r.id, r]));
+    }
+    let resumenes = resumir(eventos);
+    document.getElementById('origen').textContent = resumirAlumnos
+      ? 'Resúmenes: resumirAlumnos() de js/data/analitica.js.'
+      : 'Resúmenes: respaldo local de esta página (js/data/analitica.js no cargó).';
+
+    /* ---------------- Lista de estudiantes ---------------- */
+
+    const lista = document.getElementById('alumnos');
+    lista.innerHTML = String(html`${ORDEN.map((id) => {
+      const r = resumenes.get(id);
+      return html`<li class="demo__alumno">
+        <div><strong>${r.nombre}</strong><p>${CASO[id]}</p></div>
+        <button type="button" class="boton boton--primario" data-ficha="${id}" data-alumno="${id}" data-foco="ficha:${id}" aria-haspopup="dialog">Ver ficha<span class="solo-lector"> de ${r.nombre}</span></button>
+      </li>`;
+    })}`);
+
+    /* ---------------- Registro de lo que recibe la vista ---------------- */
+
+    const registro = document.getElementById('registro');
+    window.registro = [];
+    function anotar(texto) {
+      window.registro.push(texto);
+      const li = document.createElement('li');
+      li.textContent = texto;
+      registro.appendChild(li);
+    }
+
+    window.demo = { fallarImpresion: false };
+    const opciones = {
+      onImprimir: (r) => {
+        if (window.demo.fallarImpresion) throw new Error('Falla simulada al imprimir');
+        anotar(`onImprimir → ${r.nombre} (${r.id})`);
+      },
+      onCerrar: (r) => anotar(`onCerrar → ${r.nombre}`),
+      ahora: AHORA,
+    };
+
+    function abrir(id) {
+      return abrirFicha(resumenes.get(id), pack, opciones);
+    }
+
+    /** Llega una práctica nueva de Ana: se vuelve a resumir y, si su ficha está abierta, se actualiza en su lugar. */
+    function llegaActividad() {
+      eventos.push(proc('ana', 0, 'practica', '3x − 4 = 11', ['3x = 7', 'x = 7/3'], { ruta: 'SIGNO_TRANSPOSICION', pistasUsadas: 0, pidioSolucion: false, datos: { nivel: 3, numero: 3 } }));
+      resumenes = resumir(eventos);
+      if (fichaAbierta() === 'ana') abrirFicha(resumenes.get('ana'), pack, { ...opciones, ahora: Date.now() });
+      anotar('Llegó actividad nueva de Ana');
+    }
+
+    Object.assign(window.demo, { pack, abrir, cerrar: cerrarFicha, fichaAbierta, llegaActividad, resumenes: () => resumenes });
+
+    document.addEventListener('click', (evento) => {
+      const boton = evento.target.closest('[data-ficha], [data-demo]');
+      if (!boton) return;
+      if (boton.dataset.ficha) {
+        abrir(boton.dataset.ficha);
+        return;
+      }
+      const accion = boton.dataset.demo;
+      const raizHtml = document.documentElement;
+      if (accion === 'contraste' || accion === 'movimiento') {
+        const clase = accion === 'contraste' ? 'alto-contraste' : 'reducir-movimiento';
+        boton.setAttribute('aria-pressed', String(raizHtml.classList.toggle(clase)));
+      } else if (accion === 'texto') {
+        const grande = raizHtml.dataset.texto !== 'muy-grande';
+        if (grande) raizHtml.dataset.texto = 'muy-grande';
+        else delete raizHtml.dataset.texto;
+        boton.setAttribute('aria-pressed', String(grande));
+      } else if (accion === 'en-vivo') {
+        setTimeout(llegaActividad, 3000);
+        anotar('Actividad nueva de Ana programada en 3 s');
+      }
+    });
+
+    document.documentElement.dataset.listo = 'true';
+  </script>
+</body>
+</html>

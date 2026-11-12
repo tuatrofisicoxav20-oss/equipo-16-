@@ -479,7 +479,7 @@ function filaClave(e, conVigilar) {
       <span class="cuadernillo__clave-ecuacion">${e.numero}. ${htmlEcuacion(e.texto)}</span>
       ${etiqueta ? html`<span class="cuadernillo__clave-nivel">${etiqueta}</span>` : ''}
     </th>
-    <td>${e.pasos.length ? html`<ol class="cuadernillo__pasos">${e.pasos.map((p) => html`<li class="math">${p}</li>`)}</ol>` : 'Ya está resuelta.'}</td>
+    <td>${e.pasos.length ? html`<ol class="cuadernillo__pasos">${e.pasos.map((p) => html`<li>${htmlEcuacion(p)}</li>`)}</ol>` : 'Ya está resuelta.'}</td>
     <td class="math cuadernillo__respuesta">${e.respuesta}</td>
     ${conVigilar ? html`<td>${e.vigilar ? vigilarHTML(e.vigilar) : 'Este ejercicio no da pie a ese error.'}</td>` : ''}
   </tr>`;
@@ -492,7 +492,7 @@ function clave(d) {
     <header class="cuadernillo__clave-cabeza">
       <p class="cuadernillo__marca">Tecu Aprende · Cuadernillo</p>
       <h1 class="cuadernillo__titulo">Clave de respuestas</h1>
-      <p class="cuadernillo__sello">Solo para el docente · No repartir</p>
+      <p class="cuadernillo__sello">Solo para el docente</p>
     </header>
     <dl class="cuadernillo__resumen">
       ${dato('Cuadernillo', d.titulo)}${dato('Ruta', `${d.ruta.titulo} · ${d.ejercicios.length} ejercicios`)}${dato('Estudiantes', estudiantes)}
