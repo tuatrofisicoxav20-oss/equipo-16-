@@ -1,5 +1,5 @@
 /* =========================================================
-   Tecu Aprende · acerca del proyecto
+   Estudiando Ando · acerca del proyecto
    Planteamiento, propuesta, fundamento pedagógico, impacto
    esperado, fuentes y declaración de accesibilidad.
    ========================================================= */
@@ -68,7 +68,7 @@
   A.view = () => html`
     ${ui.pageHeader({
       eyebrow: 'Equipo 16 · Propuesta',
-      title: 'Acerca de Tecu Aprende',
+      title: 'Acerca de Estudiando Ando',
       lead: 'Una plataforma de aprendizaje adaptativo, alineada con los planes y programas de estudio oficiales de México, que usa IA para acompañar al estudiante sin pensar por él y para que el docente detecte dificultades a tiempo.'
     })}
 

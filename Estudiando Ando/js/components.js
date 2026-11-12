@@ -1,5 +1,5 @@
 /* =========================================================
-   Tecu Aprende · componentes de interfaz reutilizables
+   Estudiando Ando · componentes de interfaz reutilizables
    Cada función devuelve HTML seguro (TA.html) y no modifica
    el estado: solo lo lee. Así la interfaz es predecible.
    ========================================================= */
@@ -32,7 +32,7 @@
     if (s === 'online') {
       const text = context === 'teacher'
         ? 'Datos casi en vivo. Puedes pedir recomendaciones a la IA y enviar retroalimentación al instante.'
-        : 'Tecu puede conversar contigo y guiarte con preguntas y pistas. Tu avance se guarda al momento.';
+        : 'Estudiando Ando puede conversar contigo y guiarte con preguntas y pistas. Tu avance se guarda al momento.';
       return html`<div class="banner banner--ok" role="note">${icon('wifi', 22)}<div><p class="banner__title">Con internet</p><p>${text}</p></div></div>`;
     }
     const pending = TA.sync.pendingCount();
