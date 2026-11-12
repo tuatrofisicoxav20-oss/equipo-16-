@@ -1,11 +1,17 @@
-# Tecu Aprende · Estudiando Ando
+# Estudiando Ando
 
 Prototipo de una plataforma web y móvil de aprendizaje adaptativo con IA para secundaria en Veracruz. Tiene dos módulos:
 
 - **Estudiante:** diagnóstico, ruta personalizada, lecciones en varios formatos, un tutor que guía con preguntas y pistas progresivas sin dar la respuesta, una comprobación sin ayuda, avances, mensajes del docente y uso sin internet con sincronización.
 - **Docente:** mapa de aprendizaje del grupo, alertas tempranas (son sugerencias, no diagnósticos), seguimiento individual, retroalimentación, planeación de clase e indicadores de intervención.
 
-Los datos son ficticios. La barra «Demostración» permite cambiar de perfil, elegir estudiante y simular que no hay conexión.
+Los datos son ficticios. La barra «Demostración» permite cambiar de perfil, elegir estudiante y simular que no hay conexión. También tiene el control **Vista**, con tres opciones:
+
+- **Automática** (predeterminada): se adapta a la pantalla real.
+- **Móvil:** en una pantalla ancha, la app se muestra dentro de un marco de teléfono de 390 × 844 px y funciona igual que en un celular.
+- **Escritorio:** en un teléfono o tableta se amplía el viewport a 1280 px, como la opción «versión de escritorio» del navegador. En una ventana angosta de computadora, la vista de escritorio se muestra reducida.
+
+Las respuestas y los ajustes se comparten entre las vistas.
 
 ## Cómo ejecutarlo
 

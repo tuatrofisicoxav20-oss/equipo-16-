@@ -86,6 +86,7 @@
     flame: '<path d="M12 3c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-10Z"/>',
     star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9Z"/>',
     phone: '<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+    monitor: '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
     right: '<path d="m9 6 6 6-6 6"/>',
     left: '<path d="m15 6-6 6 6 6"/>',
     down: '<path d="m6 9 6 6 6-6"/>',
@@ -171,6 +172,7 @@
     set(key, value) {
       try { global.localStorage.setItem(PREFIX + key, JSON.stringify(value)); } catch (_) { /* sin almacenamiento: se trabaja en memoria */ }
     },
+    keyFor: (key) => PREFIX + key,
     clear() {
       try {
         Object.keys(global.localStorage).filter((k) => k.startsWith(PREFIX)).forEach((k) => global.localStorage.removeItem(k));

@@ -23,7 +23,8 @@
     simple: false, // navegación simplificada
     voice: false, // botones de lectura en voz alta
     saver: true,
-    wifiOnly: true
+    wifiOnly: true,
+    device: 'auto' // auto | mobile | desktop: vista de la demostración
   };
 
   function studentProgress(id) {
@@ -88,6 +89,67 @@
 
   TA.prefersReducedMotion = () => TA.state.prefs.motion === 'reduce'
     || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** Copia en memoria lo que otra ventana o el marco de vista previa guardó. */
+  function syncFromStorage() {
+    const fresh = loadState();
+    ['role', 'studentId', 'simulateOffline', 'dataMode', 'prefs', 'progress', 'teacher'].forEach((k) => { TA.state[k] = fresh[k]; });
+  }
+
+  /* =========================================================
+     Vista: automática, móvil o escritorio
+     - Automática: se adapta a la pantalla real (por defecto).
+     - Móvil en pantalla ancha: la app se muestra dentro de un
+       marco de teléfono (iframe de 390 px), así se comporta
+       exactamente como en un celular.
+     - Escritorio en pantalla angosta: en teléfonos y tabletas
+       se amplía el viewport (como «ver versión de escritorio»);
+       en una ventana angosta de computadora se muestra reducida.
+     ========================================================= */
+  const EMBEDDED = (() => { try { return window.self !== window.top; } catch (_) { return true; } })();
+  const DESKTOP_WIDTH = 1280;
+  const mq = {
+    phoneFits: window.matchMedia('(min-width: 30em)'),
+    desktop: window.matchMedia('(min-width: 60em)'),
+    coarse: window.matchMedia('(pointer: coarse)')
+  };
+  const VIEW_TEXT = {
+    auto: 'Vista automática: se adapta al tamaño de tu pantalla.',
+    mobile: 'Vista móvil activada.',
+    desktop: 'Vista de escritorio activada.'
+  };
+  const msgOrigin = () => (window.location.protocol === 'file:' || window.location.origin === 'null' ? '*' : window.location.origin);
+
+  /** 'app' (sin marco), 'phone' (marco de teléfono) o 'desktop' (escritorio reducido). */
+  function viewMode() {
+    const d = TA.state.prefs.device;
+    if (EMBEDDED || d === 'auto') return 'app';
+    if (d === 'mobile') return mq.phoneFits.matches ? 'phone' : 'app';
+    return mq.desktop.matches || mq.coarse.matches ? 'app' : 'desktop';
+  }
+
+  function applyViewport() {
+    const wide = !EMBEDDED && TA.state.prefs.device === 'desktop' && mq.coarse.matches;
+    // En pantallas táctiles se ensancha el viewport y se ajusta el zoom para que quepa completo (se puede ampliar con los dedos).
+    const fit = Math.min(1, (window.screen.width || DESKTOP_WIDTH) / DESKTOP_WIDTH).toFixed(3);
+    const content = wide
+      ? `width=${DESKTOP_WIDTH}, initial-scale=${fit}, viewport-fit=cover`
+      : 'width=device-width, initial-scale=1, viewport-fit=cover';
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta.getAttribute('content') !== content) meta.setAttribute('content', content);
+  }
+
+  const viewControl = () => (EMBEDDED ? '' : ui.segmented({
+    name: 'device',
+    legend: 'Vista',
+    action: 'device',
+    value: TA.state.prefs.device,
+    options: [
+      { value: 'auto', label: 'Automática', icon: 'compass' },
+      { value: 'mobile', label: 'Móvil', icon: 'phone' },
+      { value: 'desktop', label: 'Escritorio', icon: 'monitor' }
+    ]
+  }));
 
   /* =========================================================
      Conexión y sincronización
@@ -237,8 +299,9 @@
   function demoBar() {
     const s = TA.state;
     return html`<section aria-label="Controles de la demostración"><details class="demo"${attr(s.ui.demoOpen, 'open')} data-toggle="demo">
-      <summary class="demo__summary">${icon('compass', 18)}<span>Demostración</span><span class="demo__hint">Prototipo con datos ficticios · cambia de perfil, estudiante o conexión</span>${icon('down', 18)}</summary>
+      <summary class="demo__summary">${icon('compass', 18)}<span>Demostración</span><span class="demo__hint">Prototipo con datos ficticios · cambia la vista, el perfil, el estudiante o la conexión</span>${icon('down', 18)}</summary>
       <div class="demo__body">
+        ${viewControl()}
         ${ui.segmented({ name: 'role', legend: 'Perfil', action: 'demo-role', value: s.role, options: [{ value: 'student', label: 'Estudiante', icon: 'user' }, { value: 'teacher', label: 'Docente', icon: 'users' }] })}
         ${s.role === 'student' ? html`<div class="field field--inline">
           <label for="demo-student">Estudiante de ejemplo</label>
@@ -287,6 +350,9 @@
   const appEl = () => document.getElementById('app');
 
   TA.render = () => {
+    const mode = viewMode();
+    document.documentElement.dataset.view = mode;
+    if (mode !== 'app') { renderStage(mode); return; }
     const app = appEl();
     const active = document.activeElement;
     const key = active && app.contains(active) ? TA.focus.keyOf(active) : null;
@@ -303,6 +369,63 @@
     if (key) TA.focus.restore(key, app);
   };
 
+  /* ---------- Escenario con marco (vista móvil o de escritorio simulada) ---------- */
+  function stageIntro(mode) {
+    const phone = mode === 'phone';
+    return html`
+      <h1 id="page-title" class="stage__title">${phone ? 'Vista móvil' : 'Vista de escritorio'}</h1>
+      <p>${phone
+        ? 'Así se ve Tecu Aprende en un teléfono de 390 × 844 px. Úsala con normalidad: dentro del marco puedes navegar, responder y escribir.'
+        : `Así se ve Tecu Aprende en una pantalla de computadora de ${DESKTOP_WIDTH} px de ancho, reducida para que quepa en tu ventana.`}</p>
+      ${viewControl()}
+      <p class="stage__note">${icon('info', 18)}<span>Tus respuestas y ajustes se comparten entre las vistas. Elige «Automática» para volver a la vista que corresponde a tu pantalla.</span></p>`;
+  }
+
+  function fitDesktop() {
+    const box = document.querySelector('.device--desktop');
+    if (box) box.style.setProperty('--scale', String(box.clientWidth / DESKTOP_WIDTH));
+  }
+  const stageObserver = 'ResizeObserver' in window ? new ResizeObserver(fitDesktop) : null;
+
+  function renderStage(mode) {
+    const app = appEl();
+    const stage = app.querySelector('.stage');
+    const active = document.activeElement;
+    const key = active && app.contains(active) ? TA.focus.keyOf(active) : null;
+    const label = mode === 'phone' ? 'vista móvil' : 'vista de escritorio';
+    if (stage && stage.dataset.stage === mode) {
+      // Mismo marco: solo se actualiza el texto; el iframe no se recarga.
+      document.getElementById('stage-intro').innerHTML = String(stageIntro(mode));
+    } else {
+      const src = `${window.location.pathname}${window.location.hash}`;
+      app.innerHTML = String(html`
+        <div class="stage" data-stage="${mode}">
+          <header class="topbar" role="banner">
+            <span class="brand">
+              <span class="brand__mark">${mascot({ size: 30, face: true })}</span>
+              <span class="brand__text">Tecu Aprende<span class="brand__sub">Demostración · ${label}</span></span>
+            </span>
+            <div class="topbar__actions">
+              <button type="button" class="btn btn--ghost-inverse btn--icon-label" data-action="open-a11y" aria-haspopup="dialog">${icon('access', 20)}<span class="hide-sm">Accesibilidad</span><span class="sr-only show-sm">Accesibilidad</span></button>
+            </div>
+          </header>
+          <main id="contenido" class="stage__main" tabindex="-1">
+            <div class="stage__intro" id="stage-intro">${stageIntro(mode)}</div>
+            <div class="device device--${mode}">
+              <iframe id="device-frame" class="device__frame" src="${src}" title="Tecu Aprende en ${label}"></iframe>
+            </div>
+          </main>
+        </div>`);
+      document.title = `${mode === 'phone' ? 'Vista móvil' : 'Vista de escritorio'} · Tecu Aprende`;
+      if (stageObserver) {
+        stageObserver.disconnect();
+        if (mode === 'desktop') stageObserver.observe(app.querySelector('.device'));
+      }
+    }
+    if (mode === 'desktop') fitDesktop();
+    if (key) TA.focus.restore(key, app);
+  }
+
   /** Al cambiar de pantalla: dibujar, mover el foco al título y anunciarlo. */
   function onRoute() {
     const route = TA.route();
@@ -313,7 +436,19 @@
     if (route.path === '/alumnos' && route.params.id) TA.state.teacher.selected = route.params.id;
     TA.speech.stop();
     TA.dialog.close();
+    if (viewMode() !== 'app') {
+      // La dirección cambió fuera del marco (por ejemplo, a mano): el marco la sigue.
+      const frame = document.getElementById('device-frame');
+      if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'tecu:go', hash: window.location.hash }, msgOrigin());
+      TA.render();
+      TA.state.ui.firstRender = false;
+      return;
+    }
     TA.render();
+    if (EMBEDDED) {
+      // Dentro del marco: se informa la pantalla actual para conservarla al cambiar de vista.
+      window.parent.postMessage({ type: 'tecu:route', hash: window.location.hash, title: document.title }, msgOrigin());
+    }
     const first = TA.state.ui.firstRender;
     TA.state.ui.firstRender = false;
     if (route.anchor) {
@@ -442,7 +577,8 @@
     },
 
     'reset-prefs': () => {
-      TA.state.prefs = { ...clone(DEFAULT_PREFS), saver: TA.state.prefs.saver, wifiOnly: TA.state.prefs.wifiOnly };
+      const { saver, wifiOnly, device } = TA.state.prefs;
+      TA.state.prefs = { ...clone(DEFAULT_PREFS), saver, wifiOnly, device };
       applyPrefs();
       TA.save();
       TA.render();
@@ -505,6 +641,17 @@
       TA.render();
       if (TA.dialog.isOpen() && document.getElementById('a11y-panel')) TA.dialog.update(a11yPanel());
       if (el.type === 'checkbox') TA.announce(el.checked ? 'Activado.' : 'Desactivado.');
+    },
+    device: (el) => {
+      TA.state.prefs.device = el.value;
+      TA.state.ui.demoOpen = true; // el control sigue visible después de cambiar
+      applyViewport();
+      TA.save();
+      TA.render();
+      lastMode = viewMode();
+      if (!appEl().contains(document.activeElement)) TA.focus.restore(`id:device-${el.value}`);
+      if (lastMode === 'app') window.scrollTo(0, 0);
+      TA.announce(VIEW_TEXT[el.value]);
     },
     'data-mode': (el) => changeNetwork(() => { TA.state.dataMode = el.value; }),
     'demo-offline': (el) => changeNetwork(() => { TA.state.simulateOffline = el.checked; }),
@@ -578,16 +725,55 @@
 
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyPrefs);
 
+  /* Si cambia el tamaño de la ventana, la vista elegida se recalcula. */
+  let lastMode = null;
+  [mq.phoneFits, mq.desktop, mq.coarse].forEach((m) => m.addEventListener('change', () => {
+    if (EMBEDDED || TA.state.prefs.device === 'auto') return;
+    applyViewport();
+    if (viewMode() !== lastMode) TA.render();
+    lastMode = viewMode();
+  }));
+
+  /* Al girar el teléfono cambia el ancho de la pantalla: se recalcula el zoom de la vista de escritorio. */
+  window.addEventListener('orientationchange', applyViewport);
+
+  /* Otra ventana o el marco guardó cambios: se reflejan aquí sin recargar. */
+  window.addEventListener('storage', (e) => {
+    if (e.key !== null && e.key !== TA.store.keyFor(STORE_KEY)) return;
+    syncFromStorage();
+    applyPrefs();
+    applyViewport();
+    TA.render();
+    lastMode = viewMode();
+    if (TA.dialog.isOpen() && document.getElementById('a11y-panel')) TA.dialog.update(a11yPanel());
+  });
+
+  /* Mensajes entre la página y el marco de vista previa. */
+  window.addEventListener('message', (e) => {
+    const msg = e.data;
+    if (!msg || typeof msg !== 'object' || typeof msg.hash !== 'string' || !msg.hash.startsWith('#/') || msg.hash.length > 200) return;
+    if (msg.type === 'tecu:route') {
+      const frame = document.getElementById('device-frame');
+      if (!frame || e.source !== frame.contentWindow) return;
+      window.history.replaceState(null, '', msg.hash);
+      if (typeof msg.title === 'string') document.title = `${msg.title.slice(0, 120)} (${viewMode() === 'phone' ? 'vista móvil' : 'vista de escritorio'})`;
+    } else if (msg.type === 'tecu:go' && EMBEDDED && e.source === window.parent && window.location.hash !== msg.hash) {
+      window.location.hash = msg.hash;
+    }
+  });
+
   /* =========================================================
      Inicio
      ========================================================= */
   function init() {
     applyPrefs();
+    applyViewport();
+    lastMode = viewMode();
     if (!window.location.hash.startsWith('#/')) {
       window.history.replaceState(null, '', `#${HOME[TA.state.role]}`);
     }
     onRoute();
-    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    if (!EMBEDDED && 'serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
       navigator.serviceWorker.register('sw.js').catch(() => { /* sin modo offline instalable */ });
     }
   }
