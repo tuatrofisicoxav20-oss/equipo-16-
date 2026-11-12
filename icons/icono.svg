@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="512" height="512">
+  <title>Tecu Aprende</title>
+  <defs>
+    <clipPath id="tecu-icono-recorte">
+      <rect width="120" height="120" rx="26"/>
+    </clipPath>
+  </defs>
+  <rect width="120" height="120" rx="26" fill="#0b5d7a"/>
+  <g clip-path="url(#tecu-icono-recorte)">
+    <circle cx="60" cy="60" r="48" fill="#14789c"/>
+    <g transform="translate(-6 7) scale(1.1)" stroke-linejoin="round">
+      <path d="M60 22 C67 22 73 21.5 79 19.5 L84.5 11 L87.5 16 L95.5 5.5 C98.5 15 99.5 24 98.2 32 C106 46 106.5 77 99 93 C91.5 106 77 111 60 111 C43 111 28.5 106 21 93 C13.5 77 14 46 21.8 32 C20.5 24 21.5 15 24.5 5.5 L32.5 16 L35.5 11 L41 19.5 C47 21.5 53 22 60 22 Z" fill="#a0652f" stroke="#3b2210" stroke-width="3"/>
+      <path d="M36 30 C44 24.5 76 24.5 84 30 C76 28.5 44 28.5 36 30 Z" fill="#b8783c"/>
+      <ellipse cx="60" cy="88" rx="27" ry="21" fill="#f0d19c"/>
+      <path d="M27 70.5 Q60 81 93 70.5 L93.5 78 Q60 89 26.5 78 Z" fill="#d62f3c" stroke="#8c1623" stroke-width="1.8"/>
+      <path d="M45 80.5 L75 80.5 L61.2 98.5 Q60 100 58.8 98.5 Z" fill="#d62f3c" stroke="#8c1623" stroke-width="1.8"/>
+      <g fill="#fff"><circle cx="52" cy="84" r="1.5"/><circle cx="60" cy="84.5" r="1.5"/><circle cx="68" cy="84" r="1.5"/><circle cx="56" cy="89.5" r="1.5"/><circle cx="64" cy="89.5" r="1.5"/><circle cx="36" cy="76.5" r="1.5"/><circle cx="84" cy="76.5" r="1.5"/></g>
+      <circle cx="44" cy="50" r="18" fill="#f7e6c4"/>
+      <circle cx="76" cy="50" r="18" fill="#f7e6c4"/>
+      <circle cx="44" cy="50" r="12.5" fill="#ffc73a" stroke="#3b2210" stroke-width="2.6"/>
+      <circle cx="76" cy="50" r="12.5" fill="#ffc73a" stroke="#3b2210" stroke-width="2.6"/>
+      <circle cx="44.6" cy="50.8" r="7.2" fill="#24140a"/>
+      <circle cx="76.6" cy="50.8" r="7.2" fill="#24140a"/>
+      <circle cx="47.2" cy="48" r="2.6" fill="#fff"/>
+      <circle cx="79.2" cy="48" r="2.6" fill="#fff"/>
+      <path d="M54.2 59 Q60 55.6 65.8 59 Q63.8 66.4 60 71.6 Q56.2 66.4 54.2 59 Z" fill="#f39a2e" stroke="#a95a12" stroke-width="1.8"/>
+    </g>
+  </g>
+</svg>

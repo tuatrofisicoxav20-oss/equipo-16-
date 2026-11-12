@@ -1,0 +1,485 @@
+/*
+ * Balanza interactiva (js/ui/balanza.js).
+ * Solo usa variables del kit (styles.css), siempre con valor de respaldo, para
+ * que se vea bien aunque el kit todavía no cargue.
+ * Movimiento: transiciones cortas basadas en --duracion; se apagan con
+ * prefers-reduced-motion y con html.reducir-movimiento.
+ */
+
+.balanza {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3, 0.75rem);
+  width: 100%;
+  max-width: 34rem;
+  margin-inline: auto;
+  color: var(--color-texto, #1d2a33);
+}
+
+.balanza p {
+  margin: 0;
+}
+
+.balanza__instruccion {
+  line-height: 1.45;
+}
+
+/* ---------- escena SVG ---------- */
+
+.balanza__escena {
+  border-radius: var(--radio-grande, 1rem);
+  background: var(--color-superficie, #ffffff);
+  border: 1px solid var(--color-borde, #c5d0d8);
+  padding: var(--espacio-2, 0.5rem) var(--espacio-1, 0.25rem) 0;
+}
+
+.balanza__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: var(--fuente-math, var(--fuente, system-ui, sans-serif));
+}
+
+.balanza__svg text {
+  text-anchor: middle;
+}
+
+.balanza__base,
+.balanza__columna,
+.balanza__poste,
+.balanza__viga {
+  fill: var(--color-texto-sec, #4f5d68);
+}
+
+.balanza__plato {
+  fill: var(--color-superficie-2, #e8eef2);
+  stroke: var(--color-texto-sec, #4f5d68);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.balanza__pivote {
+  fill: var(--color-superficie, #ffffff);
+  stroke: var(--color-texto-sec, #4f5d68);
+  stroke-width: 2.5;
+}
+
+.balanza__fiel {
+  stroke: var(--color-texto, #1d2a33);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.balanza__cuadrante,
+.balanza__rayas {
+  fill: none;
+  stroke: var(--color-borde, #9aa8b3);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.balanza__rayas {
+  stroke-width: 2;
+}
+
+.balanza__centro {
+  fill: var(--color-texto-sec, #4f5d68);
+  transition: fill var(--duracion, 250ms) ease;
+}
+
+.balanza--equilibrio .balanza__centro {
+  fill: var(--color-exito, #1e7d45);
+}
+
+.balanza__visor rect {
+  fill: var(--color-superficie, #ffffff);
+  stroke: var(--color-texto-sec, #4f5d68);
+  stroke-width: 2;
+}
+
+.balanza__visor text {
+  fill: var(--color-texto, #1d2a33);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Movimiento del brazo y los platillos (se inclinan juntos). */
+.balanza__brazo {
+  transform-box: view-box;
+  transform-origin: 170px 178px;
+}
+
+.balanza__brazo,
+.balanza__platillo {
+  transition: transform calc(var(--duracion, 250ms) * 2.4) cubic-bezier(0.3, 1.4, 0.55, 1);
+}
+
+/* ---------- piezas ---------- */
+
+.balanza__item {
+  transition: transform calc(var(--duracion, 250ms) * 1.6) ease-in-out;
+}
+
+.balanza__pieza {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.balanza__pieza--caja rect {
+  fill: var(--color-superficie, #ffffff);
+  stroke: var(--color-acento, #b85c00);
+  stroke-width: 2.5;
+}
+
+.balanza__pieza--caja path {
+  fill: none;
+  stroke: var(--color-acento, #b85c00);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.balanza__pieza--caja text {
+  fill: var(--color-texto, #1d2a33);
+  font-size: 15px;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.balanza__pieza--pesa circle {
+  fill: var(--color-primario, #0b5d7a);
+  stroke: var(--color-primario-hover, #08465c);
+  stroke-width: 1.5;
+}
+
+.balanza__pieza--pesa text {
+  fill: var(--color-sobre-primario, #ffffff);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Negativas: borde punteado y fondo claro; el signo − va escrito en la pieza. */
+.balanza__pieza--caja.balanza__pieza--negativa rect {
+  fill: var(--color-superficie-2, #e8eef2);
+  stroke-dasharray: 4 2.5;
+}
+
+.balanza__pieza--pesa.balanza__pieza--negativa circle {
+  fill: var(--color-superficie, #ffffff);
+  stroke: var(--color-primario, #0b5d7a);
+  stroke-width: 2;
+  stroke-dasharray: 3.5 2.5;
+}
+
+.balanza__pieza--pesa.balanza__pieza--negativa text {
+  fill: var(--color-texto, #1d2a33);
+  font-size: 11px;
+}
+
+.balanza__item--entra > .balanza__pieza {
+  animation: balanza-entrar calc(var(--duracion, 250ms) * 1.4) ease-out both;
+}
+
+.balanza__item--sale > .balanza__pieza {
+  animation: balanza-salir calc(var(--duracion, 250ms) * 1.8) ease-in forwards;
+}
+
+.balanza__pieza--niega {
+  animation: balanza-niega 0.5s ease-in-out;
+}
+
+@keyframes balanza-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.6);
+  }
+}
+
+@keyframes balanza-salir {
+  to {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.7);
+  }
+}
+
+@keyframes balanza-niega {
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+/* ---------- marcas sobre los platillos ---------- */
+
+.balanza__contorno {
+  fill: none;
+  stroke: var(--color-texto-sec, #4f5d68);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.balanza__etiqueta rect {
+  fill: var(--color-superficie, #ffffff);
+  stroke: var(--color-texto-sec, #4f5d68);
+  stroke-width: 1.5;
+}
+
+.balanza__etiqueta text {
+  fill: var(--color-texto, #1d2a33);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.balanza__etiqueta--exito rect {
+  stroke: var(--color-exito, #1e7d45);
+  stroke-width: 2;
+}
+
+.balanza__etiqueta--alerta rect {
+  stroke: var(--color-alerta, #a15c00);
+  stroke-dasharray: 3 2;
+}
+
+.balanza__etiqueta--total rect {
+  fill: var(--color-superficie-2, #e8eef2);
+}
+
+/* ---------- textos ---------- */
+
+.balanza__ecuacion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-1, 0.25rem);
+  text-align: center;
+}
+
+.balanza__ecuacion-etiqueta {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-texto-sec, #4f5d68);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.balanza__ecuacion-texto {
+  font-family: var(--fuente-math, var(--fuente, system-ui, sans-serif));
+  font-size: 1.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.balanza__ecuacion-texto--rota {
+  color: var(--color-error, #b3261e);
+}
+
+.balanza__detalle {
+  text-align: center;
+  color: var(--color-texto-sec, #4f5d68);
+  line-height: 1.5;
+}
+
+.balanza__detalle .math {
+  color: var(--color-texto, #1d2a33);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.balanza__leyenda {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2, 0.5rem);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.balanza__muestra {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  border: 2px dashed var(--color-acento, #b85c00);
+  border-radius: 0.4rem;
+  background: var(--color-superficie-2, #e8eef2);
+  font-family: var(--fuente-math, var(--fuente, system-ui, sans-serif));
+  font-style: italic;
+  font-weight: 700;
+}
+
+.balanza__muestra--pesa {
+  border-color: var(--color-primario, #0b5d7a);
+  border-radius: 50%;
+  font-style: normal;
+}
+
+/* ---------- controles ---------- */
+
+.balanza__controles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.balanza__controles .boton {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.balanza__controles .boton--bloque {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.balanza__subetiqueta {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.balanza__controles .boton[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.balanza__ajuste {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2, 0.5rem);
+}
+
+.balanza__ajuste-nombre {
+  font-weight: 600;
+}
+
+.balanza__ajuste .balanza__paso {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.balanza__ajuste-valor {
+  min-width: 3ch;
+  text-align: center;
+  font-family: var(--fuente-math, var(--fuente, system-ui, sans-serif));
+  font-size: 1.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lo que "presiona" resolver() en el modo presentación. */
+.balanza__boton--pulsado {
+  outline: 3px solid var(--color-foco, #f2a900);
+  outline-offset: 2px;
+  transform: scale(0.97);
+}
+
+/* ---------- narración y cierre ---------- */
+
+.balanza__narracion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2, 0.5rem);
+  padding: var(--espacio-3, 0.75rem);
+  border-radius: var(--radio, 0.75rem);
+  border-left: 0.3rem solid var(--color-info, #1f5f99);
+  background: var(--color-superficie-2, #e8eef2);
+  line-height: 1.45;
+}
+
+.balanza__narracion:empty {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.balanza__narracion[data-tono='exito'] {
+  border-left-color: var(--color-exito, #1e7d45);
+}
+
+.balanza__narracion[data-tono='alerta'] {
+  border-left-color: var(--color-alerta, #a15c00);
+}
+
+.balanza__icono-tono {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--color-info, #1f5f99);
+  color: var(--color-superficie, #ffffff);
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+[data-tono='exito'] > .balanza__icono-tono {
+  background: var(--color-exito, #1e7d45);
+}
+
+[data-tono='alerta'] > .balanza__icono-tono {
+  background: var(--color-alerta, #a15c00);
+}
+
+.balanza__cierre {
+  padding: var(--espacio-3, 0.75rem);
+  border-radius: var(--radio, 0.75rem);
+  border: 2px solid var(--color-exito, #1e7d45);
+  background: var(--color-superficie, #ffffff);
+  line-height: 1.45;
+}
+
+.balanza__cierre[hidden] {
+  display: none;
+}
+
+.balanza .balanza__cierre-titulo {
+  margin-bottom: var(--espacio-1, 0.25rem);
+  font-weight: 700;
+  color: var(--color-exito, #1e7d45);
+}
+
+/* Alto contraste: trazos más gruesos. */
+html.alto-contraste .balanza__plato,
+html.alto-contraste .balanza__pieza--caja rect,
+html.alto-contraste .balanza__contorno {
+  stroke-width: 3;
+}
+
+html.alto-contraste .balanza__escena {
+  border-width: 2px;
+}
+
+/* Movimiento reducido: sin transiciones ni animaciones (los cambios son inmediatos). */
+@media (prefers-reduced-motion: reduce) {
+  .balanza *,
+  .balanza *::before,
+  .balanza *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+html.reducir-movimiento .balanza *,
+html.reducir-movimiento .balanza *::before,
+html.reducir-movimiento .balanza *::after {
+  animation: none !important;
+  transition: none !important;
+}

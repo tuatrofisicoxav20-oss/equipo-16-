@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Prueba de Tecu y la balanza</title>
+  <link rel="icon" href="../icons/icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../css/tecu.css">
+  <link rel="stylesheet" href="../css/balanza.css">
+  <style>
+    /* Respaldo mínimo por si styles.css todavía no existe: el kit (sin capa) gana siempre. */
+    @layer respaldo {
+      body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f4f6f8; color: #1d2a33; }
+      .boton { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: 0.5rem 1rem;
+        border-radius: 0.75rem; border: 2px solid #0b5d7a; background: #fff; color: #0b5d7a; font: inherit; font-weight: 600; cursor: pointer; }
+      .boton--primario { background: #0b5d7a; color: #fff; }
+      .boton:focus-visible { outline: 3px solid #f2a900; outline-offset: 2px; }
+      .solo-lector { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+        clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+      .math { font-variant-numeric: tabular-nums; }
+    }
+
+    .demo { max-width: 60rem; margin: 0 auto; padding: 1rem; display: grid; gap: 1.5rem; }
+    .demo h1 { margin: 0; font-size: 1.5rem; }
+    .demo h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+    .demo-nota { margin: 0; color: #4f5d68; }
+    .demo-ajustes { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .demo-ajustes label { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; }
+    .demo-ajustes input { width: 1.25rem; height: 1.25rem; }
+    .demo-tecus { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
+    .demo-tecus figure { margin: 0; text-align: center; font-size: 0.8rem; color: #4f5d68; }
+    .demo-tecus--oscuro { background: #13202a; padding: 0.75rem; border-radius: 0.75rem; }
+    .demo-tecus--oscuro figure { color: #c9d4dc; }
+    .demo-balanzas { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); }
+    .demo-caso { display: grid; gap: 0.75rem; align-content: start; padding: 1rem; border-radius: 1rem; background: #fff;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+    .demo-caso h3 { margin: 0; font-size: 1.05rem; }
+    .demo-registro { margin: 0; font-size: 0.875rem; color: #4f5d68; }
+    .demo-fila { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <main class="demo" id="contenido">
+    <header class="demo-encabezado">
+      <h1>Prueba de Tecu y la balanza</h1>
+      <p class="demo-nota">Página de prueba (no enlazada desde la app). Las balanzas usan las ecuaciones y los textos de
+        <code>packs/ecuaciones-1.json</code>.</p>
+    </header>
+
+    <section class="demo-ajustes" aria-label="Ajustes de prueba">
+      <label><input type="checkbox" id="ajuste-movimiento"> Reducir movimiento</label>
+      <label><input type="checkbox" id="ajuste-contraste"> Alto contraste</label>
+    </section>
+
+    <section aria-labelledby="titulo-tecu">
+      <h2 id="titulo-tecu">Tecu en todos sus estados</h2>
+      <div class="demo-tecus" id="tecus-grandes"></div>
+      <div class="demo-tecus" id="tecus-chicos"></div>
+      <div class="demo-tecus demo-tecus--oscuro" id="tecus-oscuro"></div>
+    </section>
+
+    <section aria-labelledby="titulo-balanzas">
+      <h2 id="titulo-balanzas">Balanzas (una por modo)</h2>
+      <div class="demo-balanzas" id="balanzas"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { tecuSVG, ESTADOS_TECU } from '../js/ui/tecu.js';
+    import { montarBalanza } from '../js/ui/balanza.js';
+
+    const raizHtml = document.documentElement;
+    document.getElementById('ajuste-movimiento').addEventListener('change', (e) => {
+      raizHtml.classList.toggle('reducir-movimiento', e.target.checked);
+    });
+    document.getElementById('ajuste-contraste').addEventListener('change', (e) => {
+      raizHtml.classList.toggle('alto-contraste', e.target.checked);
+    });
+
+    const figura = (estado, tamano) => `<figure>${tecuSVG({ estado, tamano })}<figcaption>${estado} · ${tamano}px</figcaption></figure>`;
+    document.getElementById('tecus-grandes').innerHTML = ESTADOS_TECU.map((e) => figura(e, 160)).join('');
+    document.getElementById('tecus-chicos').innerHTML = ESTADOS_TECU.map((e) => figura(e, 40)).join('');
+    document.getElementById('tecus-oscuro').innerHTML = ESTADOS_TECU.map((e) => figura(e, 64)).join('');
+
+    // Registro para las pruebas automáticas (scripts de Playwright).
+    const demo = { completados: {}, resumenes: {}, cambios: {}, apis: {} };
+    window.demo = demo;
+
+    const pack = await fetch('../packs/ecuaciones-1.json').then((r) => r.json());
+    const casos = Object.entries(pack.errores)
+      .filter(([, error]) => error.ruta?.visual)
+      .map(([tipo, error]) => ({ tipo, nombre: error.nombre || tipo, ...error.ruta.visual }));
+
+    const lista = document.getElementById('balanzas');
+    for (const caso of casos) {
+      const id = caso.tipo.toLowerCase().replace(/_/g, '-');
+      const seccion = document.createElement('section');
+      seccion.className = 'demo-caso';
+      seccion.id = `caso-${id}`;
+      seccion.setAttribute('aria-labelledby', `titulo-${id}`);
+      seccion.innerHTML = `
+        <h3 id="titulo-${id}">${caso.modo}${caso.unLado ? ' (un solo lado)' : ''}: ${caso.ecuacion} <small>· ${caso.nombre}</small></h3>
+        <div class="demo-balanza"></div>
+        <p class="demo-registro" data-registro>onCompletar: 0 veces</p>
+        <div class="demo-fila">
+          <button type="button" class="boton boton--secundario" data-demo="resolver">Resolver paso a paso</button>
+          <button type="button" class="boton boton--secundario" data-demo="reiniciar">Reiniciar</button>
+        </div>`;
+      lista.appendChild(seccion);
+      demo.completados[id] = 0;
+      demo.cambios[id] = 0;
+      const registro = seccion.querySelector('[data-registro]');
+      const api = montarBalanza(seccion.querySelector('.demo-balanza'), {
+        modo: caso.modo,
+        ecuacion: caso.ecuacion,
+        unLado: Boolean(caso.unLado),
+        textos: { instruccion: caso.instruccion, cierre: caso.cierre },
+        onCompletar(resumen) {
+          demo.completados[id] += 1;
+          demo.resumenes[id] = resumen;
+          registro.textContent = `onCompletar: ${demo.completados[id]} ${demo.completados[id] === 1 ? 'vez' : 'veces'} · ${JSON.stringify(resumen)}`;
+        },
+        onCambio() {
+          demo.cambios[id] += 1;
+        },
+      });
+      demo.apis[id] = api;
+      seccion.querySelector('[data-demo="resolver"]').addEventListener('click', () => api.resolver());
+      seccion.querySelector('[data-demo="reiniciar"]').addEventListener('click', () => {
+        api.reiniciar();
+        registro.textContent = `onCompletar: ${demo.completados[id]} veces (reiniciada)`;
+      });
+    }
+    demo.listo = true;
+  </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+/*
+ * Tecu, el tecolote (js/ui/tecu.js).
+ * Los colores viven dentro del SVG; aquí solo hay acomodo y animaciones.
+ * Todas las animaciones se apagan con prefers-reduced-motion y con
+ * html.reducir-movimiento: el dibujo queda quieto y completo (las "Z" y el
+ * "?" se siguen viendo).
+ */
+
+.tecu {
+  display: inline-block;
+  flex: none;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+  vertical-align: middle;
+}
+
+/* Las piezas que se animan giran o se escalan sobre su propio centro. */
+.tecu__ojos,
+.tecu__duda,
+.tecu__insignia {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.tecu__cuerpo {
+  transform-box: view-box;
+  transform-origin: 60px 111px;
+}
+
+.tecu__ala--izq {
+  transform-box: view-box;
+  transform-origin: 30px 64px;
+}
+
+.tecu__ala--der {
+  transform-box: view-box;
+  transform-origin: 90px 64px;
+}
+
+/* Parpadeo suave cada ~4 s en los estados con ojos abiertos. */
+.tecu--normal .tecu__ojos,
+.tecu--pensando .tecu__ojos,
+.tecu--atento .tecu__ojos,
+.tecu--sin-senal .tecu__ojos {
+  animation: tecu-parpadeo 4.2s ease-in-out infinite;
+}
+
+.tecu--pensando .tecu__ojos {
+  animation-delay: 1.3s;
+}
+
+@keyframes tecu-parpadeo {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+/* Feliz: un par de saltitos y aleteo al aparecer; luego se queda quieto. */
+.tecu--feliz .tecu__cuerpo {
+  animation: tecu-salto 0.55s ease-out 2;
+}
+
+.tecu--feliz .tecu__ala--izq {
+  animation: tecu-aleteo-izq 0.28s ease-in-out 4 alternate;
+}
+
+.tecu--feliz .tecu__ala--der {
+  animation: tecu-aleteo-der 0.28s ease-in-out 4 alternate;
+}
+
+@keyframes tecu-salto {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  45% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes tecu-aleteo-izq {
+  to {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes tecu-aleteo-der {
+  to {
+    transform: rotate(-14deg);
+  }
+}
+
+/* Pensando: el "?" flota despacio. */
+.tecu--pensando .tecu__duda {
+  animation: tecu-flotar 2.6s ease-in-out infinite;
+}
+
+@keyframes tecu-flotar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Dormido: respira y las "Z" suben y se desvanecen. */
+.tecu--dormido .tecu__cuerpo {
+  animation: tecu-respirar 3.6s ease-in-out infinite;
+}
+
+.tecu--dormido .tecu__z {
+  animation: tecu-zeta 3.2s ease-in-out infinite;
+}
+
+.tecu--dormido .tecu__z--2 {
+  animation-delay: -1.6s;
+}
+
+@keyframes tecu-respirar {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+
+  50% {
+    transform: scale(1.025, 0.985);
+  }
+}
+
+@keyframes tecu-zeta {
+  0% {
+    opacity: 0;
+    transform: translate(-3px, 5px);
+  }
+
+  25%,
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(4px, -8px);
+  }
+}
+
+/* Atento: las cejas "saltan" una vez al aparecer. */
+.tecu--atento .tecu__cejas {
+  animation: tecu-cejas 0.5s ease-out 1;
+}
+
+@keyframes tecu-cejas {
+  0% {
+    transform: translateY(3px);
+  }
+
+  60% {
+    transform: translateY(-1.5px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Sin señal: la insignia aparece con un pequeño rebote. */
+.tecu--sin-senal .tecu__insignia {
+  animation: tecu-insignia 0.45s ease-out 1;
+}
+
+@keyframes tecu-insignia {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Movimiento reducido: todo quieto. */
+@media (prefers-reduced-motion: reduce) {
+  .tecu,
+  .tecu * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+html.reducir-movimiento .tecu,
+html.reducir-movimiento .tecu * {
+  animation: none !important;
+  transition: none !important;
+}

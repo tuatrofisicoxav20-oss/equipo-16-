@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Prueba del cuaderno · Tecu Aprende</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../css/cuaderno.css">
+  <style>
+    /* Solo para esta página de prueba (no forma parte de la app). */
+    body {
+      margin: 0;
+      padding: 1rem;
+      background: var(--color-fondo, #f6f8fa);
+      color: var(--color-texto, #1d2733);
+      font-family: var(--fuente, system-ui, sans-serif);
+      line-height: 1.5;
+    }
+    .demo { display: flex; flex-direction: column; gap: 2rem; max-width: 40rem; margin: 0 auto; }
+    .demo h1 { margin: 0; font-size: 1.5rem; }
+    .demo h2 { margin: 0 0 0.25rem; font-size: 1.25rem; }
+    .demo p { margin: 0; }
+    .demo__caso { display: flex; flex-direction: column; gap: 0.75rem; }
+    .demo__controles { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .demo__controles button {
+      min-height: 2.75rem; padding: 0.5rem 0.75rem; border: 1px solid currentColor;
+      border-radius: 0.5rem; background: transparent; color: inherit; font: inherit; cursor: pointer;
+    }
+    .demo__registro { margin: 0; padding-left: 1.25rem; font-size: 0.875rem; }
+    .demo :focus-visible { outline: 3px solid var(--color-foco, #005fcc); outline-offset: 2px; }
+    .solo-lector {
+      position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+      clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="demo" id="contenido">
+    <header>
+      <h1>Prueba del cuaderno</h1>
+      <p>Página de prueba del componente <code>js/ui/cuaderno.js</code> con el paquete real. No está enlazada desde la app.</p>
+    </header>
+
+    <section class="demo__caso" aria-labelledby="t-diagnostico">
+      <h2 id="t-diagnostico">Modo diagnóstico</h2>
+      <p>Sin ayudas y sin marcas en vivo: el estudiante escribe y toca «Revisar».</p>
+      <div class="demo__controles">
+        <button type="button" data-demo="ana">Reproducir a Ana</button>
+        <button type="button" data-demo="luis">Reproducir a Luis</button>
+        <button type="button" data-demo="reiniciar" data-cual="diagnostico">Reiniciar</button>
+      </div>
+      <div id="cuaderno-diagnostico"></div>
+    </section>
+
+    <section class="demo__caso" aria-labelledby="t-practica">
+      <h2 id="t-practica">Modo práctica</h2>
+      <p>Con pistas, «Ver solución» y marcas ✓/⚠ al agregar cada renglón.</p>
+      <div class="demo__controles">
+        <button type="button" data-demo="reiniciar" data-cual="practica">Reiniciar</button>
+      </div>
+      <div id="cuaderno-practica"></div>
+    </section>
+
+    <section class="demo__caso" aria-labelledby="t-libre">
+      <h2 id="t-libre">Modo libre</h2>
+      <p>Igual que práctica, con x en los dos lados.</p>
+      <div class="demo__controles">
+        <button type="button" data-demo="reiniciar" data-cual="libre">Reiniciar</button>
+      </div>
+      <div id="cuaderno-libre"></div>
+    </section>
+
+    <section class="demo__caso" aria-labelledby="t-registro">
+      <h2 id="t-registro">Lo que recibe la vista</h2>
+      <div class="demo__controles">
+        <button type="button" data-demo="movimiento" aria-pressed="false">Reducir movimiento</button>
+      </div>
+      <ol class="demo__registro" id="registro"></ol>
+    </section>
+  </main>
+
+  <div id="anuncios" class="solo-lector" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="alertas" class="solo-lector" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="avisos" class="avisos" aria-hidden="true"></div>
+
+  <script type="module">
+    import { montarCuaderno } from '../js/ui/cuaderno.js';
+
+    const pack = await fetch('../packs/ecuaciones-1.json').then((r) => r.json());
+
+    const CASOS = {
+      diagnostico: { ejercicio: pack.diagnostico[0].ecuacion, modo: 'diagnostico', ayudas: false, validarEnVivo: false },
+      practica: { ejercicio: '2x + 3 = 11', modo: 'practica', ayudas: true, validarEnVivo: true },
+      libre: { ejercicio: '5x + 2 = 2x + 14', modo: 'libre', ayudas: true, validarEnVivo: true },
+    };
+
+    const registro = document.getElementById('registro');
+    window.eventos = [];
+    function anotar(cual, tipo, datos) {
+      window.eventos.push({ cual, tipo, datos });
+      const li = document.createElement('li');
+      li.textContent = `${cual} · ${tipo}${datos ? ` · ${JSON.stringify(datos)}` : ''}`;
+      registro.appendChild(li);
+    }
+
+    window.cuadernos = {};
+    function montar(cual) {
+      window.cuadernos[cual]?.destruir();
+      const caso = CASOS[cual];
+      window.cuadernos[cual] = montarCuaderno(document.getElementById(`cuaderno-${cual}`), {
+        ...caso,
+        pack,
+        nivelTitulo: 3,
+        onRevisar: ({ analisis, renglones, pistasUsadas, pidioSolucion }) =>
+          anotar(cual, 'revisar', {
+            estado: analisis.estado,
+            renglon: analisis.error?.renglon ?? analisis.renglon ?? null,
+            tipo: analisis.error?.tipo ?? null,
+            confianza: analisis.error?.confianza ?? null,
+            renglones,
+            pistasUsadas,
+            pidioSolucion,
+          }),
+        onPista: (nivel) => anotar(cual, 'pista', { nivel }),
+        onSolucion: () => anotar(cual, 'solucion'),
+      });
+    }
+    Object.keys(CASOS).forEach(montar);
+
+    const GUIONES = { ana: ['3x = 25', 'x = 25/3'], luis: ['3x = 15', 'x = 12'] };
+    async function reproducir(quien) {
+      montar('diagnostico');
+      const c = window.cuadernos.diagnostico;
+      for (const renglon of GUIONES[quien]) await c.escribirRenglon(renglon);
+      c.revisar();
+    }
+
+    document.addEventListener('click', (evento) => {
+      const boton = evento.target.closest('[data-demo]');
+      if (!boton) return;
+      const accion = boton.dataset.demo;
+      if (accion === 'reiniciar') montar(boton.dataset.cual);
+      else if (accion === 'movimiento') {
+        const activo = document.documentElement.classList.toggle('reducir-movimiento');
+        boton.setAttribute('aria-pressed', String(activo));
+      } else reproducir(accion);
+    });
+
+    document.documentElement.dataset.listo = 'true';
+  </script>
+</body>
+</html>
